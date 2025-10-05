@@ -13,6 +13,8 @@ import type { EventEndNode, EventStartNode } from "./event";
 import { EvaluatorType, EventValueType, InterpreteAs, type ColorEasedEvaluatorKPA2, type EasedEvaluatorDataOfType, type EvaluatorDataKPA2, type EventValueESType, type EventValueTypeOfType, type ExpressionEvaluatorDataKPA2, type NumericEasedEvaluatorKPA2, type RGB, type TextEasedEvaluatorKPA2 } from "./chartTypes";
 
 
+/// #declaration:global
+
 /**
  * **求值器**
  * 
@@ -167,3 +169,5 @@ export class ExpressionEvaluator<T> extends Evaluator<T> {
         }
     }
 }
+
+/// #enddeclaration

@@ -8,6 +8,8 @@ import { JumpArray } from "./jumparray";
 import { TimeCalculator } from "./time";
 import { hex2rgb, NodeType, rgb2hex } from "./util";
 
+/// #declaration:global
+
 const TC = TimeCalculator;
 
 export type HEX = number;
@@ -725,3 +727,5 @@ export class NNNList {
         this.getNode(noteNode.startTime).add(noteNode);
     }
 }
+
+/// #enddeclaration

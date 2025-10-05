@@ -1,5 +1,7 @@
 
 
+/// #declaration:global
+
 /** 尽管JSON中有布尔值字面量，RPEJSON中没有使用它 */
 export type Bool = 1 | 0
 /** 三元组，用带分数表示的时间 */
@@ -506,3 +508,5 @@ export enum NoteType {
 
 
 export type ValueTypeOfEventType<T extends EventType> = [number, number, number, number, number, number, number, number, number, string, RGB][T]
+
+/// #enddeclaration

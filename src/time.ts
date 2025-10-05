@@ -3,6 +3,9 @@ import { EventEndNode, EventNodeLike, EventNodeSequence, EventStartNode, type An
 import { JumpArray } from "./jumparray";
 import { NodeType } from "./util";
 
+
+/// #declaration:global
+
 /**
  * 
  */
@@ -300,3 +303,6 @@ export class TimeCalculator {
 }
 
 export const TC = TimeCalculator;
+
+
+/// #enddeclaration

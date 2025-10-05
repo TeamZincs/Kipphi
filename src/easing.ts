@@ -4,6 +4,8 @@ import { type TupleCoord } from "./util";
 import Environment from "./env";
 
 
+/// #declaration:global
+
 const easeOutElastic = (x: number): number => {
     const c4 = (2 * Math.PI) / 3;
     
@@ -537,3 +539,5 @@ rpeEasingArray.forEach((easing, index) => {
     }
     easing.rpeId = index;
 })
+
+/// #enddeclaration

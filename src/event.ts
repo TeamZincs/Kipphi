@@ -6,7 +6,7 @@ import { JumpArray } from "./jumparray";
 import { TimeCalculator, TC } from "./time";
 import { NodeType } from "./util";
 
-
+/// #declaration:global
 export class EventNodeLike<T extends NodeType, VT = number> {
     type: T;
     /** 后一个事件节点 */
@@ -850,3 +850,4 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
     }
 }
 
+/// #enddeclaration

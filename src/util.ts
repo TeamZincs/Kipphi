@@ -1,5 +1,6 @@
 import type { RGB } from "./chartTypes";
 
+/// #declaration:global
 
 export enum NodeType {
   HEAD=0,
@@ -21,3 +22,5 @@ export const hex2rgb = (hex: number): RGB => {
 export const numberToRatio = (num: number): [number, number] => {
     return [Math.round(num * 10000), 10000]
 }
+
+/// #enddeclaration

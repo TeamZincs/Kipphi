@@ -6,7 +6,7 @@ import { HNList, NNList, Note, NoteNode, NNNList } from "./note";
 import { TimeCalculator } from "./time";
 import { NodeType } from "./util";
 import Environment from "./env";
-
+/// #declaration:global
 const TC = TimeCalculator
 
 export interface EventLayer {
@@ -602,3 +602,4 @@ export class JudgeLine {
         return descendantsAndSelf.has(toBeFather);
     }
 }
+/// #enddeclaration

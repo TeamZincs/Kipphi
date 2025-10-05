@@ -4,6 +4,7 @@ import { NodeType } from "./util";
 const MIN_LENGTH = 128
 const MAX_LENGTH = 1024
 const MINOR_PARTS = 16;
+/// #declaration:global
 
 type EndNextFn<T extends TwoDirectionNodeLike> = (node: T) => [endBeats: number, next: T];
 
@@ -229,3 +230,5 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
     }
 }
 
+
+/// #enddeclaration

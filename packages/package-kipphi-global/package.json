@@ -1,0 +1,24 @@
+{
+  "name": "kipphi-global",
+  "version": "2.0.0",
+  "description": "Parse your Phigros chart into an editor-friendly format",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TeamZincs/kipphi.git"
+  },
+  "keywords": [
+    "phigros",
+    "chart",
+    "editor"
+  ],
+  "author": "TeamZincs",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/TeamZincs/kipphi/issues"
+  },
+  "homepage": "https://github.com/TeamZincs/kipphi#readme"
+}

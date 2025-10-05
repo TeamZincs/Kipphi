@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    // Environment setup & latest features
+    "lib": ["ES2017"],
+    "target": "ES2016",
+    "module": "es2020",
+    "moduleDetection": "force",
+    "allowJs": true,
+    "outFile": "../dist/index.d.ts",
+
+    "emitDeclarationOnly": true,
+    "declaration": true,
+
+
+    // Best practices
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+
+    // Some stricter flags (disabled by default)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "include": [
+    "../index.ts"
+  ],
+  "exclude": ["../dist"]
+}

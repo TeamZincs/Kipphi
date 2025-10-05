@@ -8,7 +8,7 @@ import type { NNList, HNList, NNOrHead } from "./note";
 import { TC, TimeCalculator } from "./time";
 import { NodeType, numberToRatio } from "./util";
 
-
+/// #declaration:global
 
 const getInnerEasing = (easing: Easing) => easing instanceof SegmentedEasing ? easing.easing : easing;
 
@@ -420,3 +420,6 @@ export class RPEChartCompiler {
         return newSeq;
     }
 }
+
+
+/// #enddeclaration

@@ -70,15 +70,13 @@ import { ProgramUpdateLevel } from "typescript";
 import { ColorEasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorOfType } from "./evaluator";
 
 
+/// #declaration:global
+
 
 export type BasicEventName = "moveX" | "moveY" | "rotate" | "alpha" | "speed";
 
 
-
-
-
-
-type Plain<T> = {[k: string]: T}
+type Plain<T> = Record<string, T>;
 
 
 /**
@@ -88,7 +86,7 @@ type Plain<T> = {[k: string]: T}
  * @param guard 
  * @returns 
  */
- function dictForIn<T, RT>(obj: Plain<T>, expr: (v: T) => RT, guard?: (v: T) => boolean): Plain<RT> {
+function dictForIn<T, RT>(obj: Plain<T>, expr: (v: T) => RT, guard?: (v: T) => boolean): Plain<RT> {
     let ret: Plain<RT> = {}
     for (let key in obj) {
         const each = obj[key]
@@ -480,3 +478,4 @@ export class JudgeLineGroup {
 }
 
 
+/// #enddeclaration
