@@ -177,7 +177,8 @@ export enum EasingType {
     normal,
     template,
     bezier,
-    segmented
+    segmented,
+    wrapper
 }
 
 export interface NormalEasingData {
@@ -188,6 +189,11 @@ export interface NormalEasingData {
 export interface TemplateEasingData {
     identifier: string;
     type: EasingType.template;
+}
+
+export interface WrapperEasingData {
+    type: EasingType.wrapper;
+    identifier: string;
 }
 
 export interface BezierEasingData {
@@ -202,7 +208,7 @@ export interface SegmentedEasingData {
     inner: EasingDataKPA2;
 }
 
-export type EasingDataKPA2 = NormalEasingData | TemplateEasingData | BezierEasingData | SegmentedEasingData;
+export type EasingDataKPA2 = NormalEasingData | TemplateEasingData | BezierEasingData | SegmentedEasingData | WrapperEasingData;
 
 export enum EvaluatorType {
     eased,
@@ -219,7 +225,6 @@ interface EasedEvaluatorDataKPA2<T> {
 export type NumericEasedEvaluatorKPA2 = EasedEvaluatorDataKPA2<number>;
 export type ColorEasedEvaluatorKPA2 = EasedEvaluatorDataKPA2<RGB>;
 export interface TextEasedEvaluatorKPA2 extends EasedEvaluatorDataKPA2<string> {
-    font: string;
     interpretedAs: InterpreteAs;
 }
 
@@ -360,12 +365,13 @@ export interface JudgeLineDataRPEExtended extends JudgeLineDataRPE {
     children: number[]
 }
 
-export interface CustomEasingData {
+export interface TemplateEasingBodyData {
     content: string;
     name: string;
-    usedBy: string[];
-    dependencies: string[];
+    // usedBy: string[];
+    // dependencies: string[];
 }
+
 
 
 // 使用对应标识符来标记事件节点序列
@@ -428,6 +434,13 @@ export interface EventNodeSequenceDataKPA2<VT> {
     endValue: VT;
 }
 
+export interface WrapperEasingBodyData {
+    jsExpr: string;
+    start: number;
+    end: number;
+    id: string;
+}
+
 export interface ChartDataKPA {
     version: number;
     offset: number;
@@ -448,7 +461,7 @@ export interface ChartDataKPA {
         name: number;
         level: number;
     }
-    envEasings: CustomEasingData[]; // New!
+    envEasings: TemplateEasingBodyData[]; // New!
     eventNodeSequences: EventNodeSequenceDataKPA<any>[];
     orphanLines: JudgeLineDataKPA[];
     bpmList: BPMSegmentData[];
@@ -477,8 +490,9 @@ export interface ChartDataKPA2 {
         name: number;
         level: number;
     }
-    envEasings: CustomEasingData[];
-    eventNodeSequences: EventNodeSequenceDataKPA2<any>[];
+    templateEasings: TemplateEasingBodyData[];
+    wrapperEasings: WrapperEasingBodyData[]
+    eventNodeSequences: EventNodeSequenceDataKPA2<unknown>[];
     orphanLines: JudgeLineDataKPA[];
     bpmList: BPMSegmentData[];
     judgeLineGroups: string[];
@@ -509,4 +523,5 @@ export enum NoteType {
 
 export type ValueTypeOfEventType<T extends EventType> = [number, number, number, number, number, number, number, number, number, string, RGB][T]
 
+export type ExtendedEventTypeName = "scaleX" | "scaleY" | "text" | "color"
 /// #enddeclaration

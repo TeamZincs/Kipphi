@@ -2,13 +2,12 @@
 import { VERSION } from "./version";
 
 import {
-    TimeCalculator,
-    BPMSequence
-} from "./time";
+    TimeCalculator} from "./bpm";
 
 import {
     BezierEasing,
     Easing,
+    NormalEasing,
     rpeEasingArray,
     SegmentedEasing,
     TemplateEasingLib,
@@ -16,10 +15,6 @@ import {
 
 import {
     EventNodeSequence,
-    type AnyEN,
-    type ENOrHead,
-    type ENOrTail,
-    EventNodeLike,
     EventStartNode,
     EventEndNode,
     EventNode,
@@ -34,19 +29,13 @@ import {
 } from "./judgeline";
 
 import {
-    Note,
-    NNList,
     NNNList,
-    type NNNOrHead,
     type NNNOrTail,
     NNNode
 } from "./note";
 
 import {
-    type RGB,
     type TimeT,
-    type EventType,
-    type EventNodeSequenceDataKPA,
     type ValueTypeOfEventType,
     type BPMSegmentData,
     type ChartDataRPE,
@@ -57,6 +46,7 @@ import {
     type EvaluatorDataKPA2,
     EvaluatorType,
     type EasedEvaluatorDataOfType,
+    EventType,
     EventValueType,
     type EventValueTypeOfType,
     type EventValueESType,
@@ -64,11 +54,11 @@ import {
     type TextEasedEvaluatorKPA2,
     type EventNodeSequenceDataKPA2,
     type ChartDataKPA2,
-    type EventDataKPA2
+    type EventDataKPA2,
+    InterpreteAs
 } from "./chartTypes";
-import { ProgramUpdateLevel } from "typescript";
 import { ColorEasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorOfType } from "./evaluator";
-
+import { err, ERROR_IDS, KPAError }  from "./env";
 
 /// #declaration:global
 
@@ -76,26 +66,7 @@ import { ColorEasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvalua
 export type BasicEventName = "moveX" | "moveY" | "rotate" | "alpha" | "speed";
 
 
-type Plain<T> = Record<string, T>;
 
-
-/**
- * 相当于 Python 推导式
- * @param obj
- * @param expr 
- * @param guard 
- * @returns 
- */
-function dictForIn<T, RT>(obj: Plain<T>, expr: (v: T) => RT, guard?: (v: T) => boolean): Plain<RT> {
-    let ret: Plain<RT> = {}
-    for (let key in obj) {
-        const each = obj[key]
-        if (!guard || guard && guard(each)) {
-            ret[key] = expr(each)
-        }
-    }
-    return ret;
-}
 
 
 export type UIName = "combo"  | "combonumber" | "score" | "pause" | "bar" | "name" | "level"
@@ -113,8 +84,8 @@ export class Chart {
     illustrator: string = "unknown";
     offset: number = 0;
     
-    templateEasingLib = new TemplateEasingLib;
-    sequenceMap = new Map<string, EventNodeSequence<any>>();
+    templateEasingLib = new TemplateEasingLib(EventNodeSequence.newSeq<EventType.easing>, ExpressionEvaluator);
+    sequenceMap = new Map<string, EventNodeSequence<EventValueESType>>();
 
     effectiveBeats: number;
     nnnList: NNNList;
@@ -209,19 +180,28 @@ export class Chart {
         chart.rpeChartingTime = data.rpeChartTime ?? 0;
         chart.updateCalculator()
         chart.nnnList = new NNNList(chart.getEffectiveBeats())
-        const envEasings = data.envEasings;
-        const len = envEasings.length
+        const isKPA2 = data.version >= 200
+        const templateEasings = isKPA2 ? (data as ChartDataKPA2).templateEasings : (data as ChartDataKPA).envEasings;
+        const len = templateEasings.length
         for (let i = 0; i < len; i++) {
-            const easingData = envEasings[i];
+            const easingData = templateEasings[i];
             chart.templateEasingLib.require(easingData.name);
         }
 
-        if (data.version >= 200) {
+        if (isKPA2) {
+            chart.templateEasingLib.readWrapperEasings((data as ChartDataKPA2).wrapperEasings);
             const sequences = (data as ChartDataKPA2).eventNodeSequences;
             const length = sequences.length;
             for (let i = 0; i < length; i++) {
                 const seqData = sequences[i];
-                const sequence = EventNodeSequence.fromRPEJSON<typeof seqData.type, ValueTypeOfEventType<typeof seqData.type>>(seqData.type, seqData.events, chart, seqData.endValue);
+                type VT = ValueTypeOfEventType<typeof seqData.type>
+                const sequence = EventNodeSequence.fromKPA2JSON<typeof seqData.type, VT>(
+                    seqData.type,
+                    seqData.events as EventDataKPA2<VT>[],
+                    chart,
+                    seqData.id,
+                    seqData.endValue as VT
+                );
                 sequence.id = seqData.id;
                 chart.sequenceMap.set(sequence.id, sequence);
             }
@@ -231,19 +211,31 @@ export class Chart {
             const length = sequences.length
             for (let i = 0; i < length; i++) {
                 const seqData = sequences[i];
-                const sequence = EventNodeSequence.fromRPEJSON<typeof seqData.type, ValueTypeOfEventType<typeof seqData.type>>(seqData.type, seqData.events, chart, seqData.endValue);
+                const sequence = EventNodeSequence.fromRPEJSON<typeof seqData.type, ValueTypeOfEventType<typeof seqData.type>>(
+                    seqData.type,
+                    seqData.events,
+                    chart,
+                    seqData.id,
+                    seqData.endValue);
                 sequence.id = seqData.id;
                 chart.sequenceMap.set(sequence.id, sequence);
             }
         }
 
         for (let i = 0; i < len; i++) {
-            const easingData = envEasings[i];
-            chart.templateEasingLib.implement(easingData.name, chart.sequenceMap.get(easingData.content));
+            const easingData = templateEasings[i];
+            const sequence = chart.sequenceMap.get(easingData.content);
+            if (sequence.type !== EventType.easing) {
+                throw err.CANNOT_IMPLEMENT_TEMEAS_WITH_NON_EASING_ENS(easingData.name);
+            }
+            if (typeof sequence.head.next.value !== "number") {
+                throw err.CANNOT_IMPLEMENT_TEMEAS_WITH_NON_NUMERIC_ENS(easingData.name);
+            }
+            chart.templateEasingLib.implement(easingData.name, sequence as EventNodeSequence<number>);
         }
         chart.templateEasingLib.check()
         const isOld = !data.version || data.version < 150
-        for (let lineData of data.orphanLines) {
+        for (const lineData of data.orphanLines) {
             const line: JudgeLine = JudgeLine.fromKPAJSON(isOld, chart, lineData.id, lineData, chart.templateEasingLib, chart.timeCalculator)
             chart.orphanLines.push(line)
         }
@@ -265,7 +257,7 @@ export class Chart {
     updateCalculator() {
         this.timeCalculator.bpmList = this.bpmList;
         this.timeCalculator.duration = this.duration;
-        this.timeCalculator.update()
+        this.timeCalculator.initSequence()
     }
     updateEffectiveBeats(duration: number) {
         const EB = this.timeCalculator.secondsToBeats(duration);
@@ -277,19 +269,20 @@ export class Chart {
     dumpKPA(): Required<ChartDataKPA2> {
         const eventNodeSequenceCollector = new Set<EventNodeSequence>();
         const orphanLines = [];
-        for (let line of this.orphanLines) {
+        for (const line of this.orphanLines) {
             orphanLines.push(line.dumpKPA(eventNodeSequenceCollector, this.judgeLineGroups));
         }
         const envEasings = this.templateEasingLib.dump(eventNodeSequenceCollector);
-        const eventNodeSequenceData: EventNodeSequenceDataKPA2<any>[] = [];
-        for (let sequence of eventNodeSequenceCollector) {
+        const eventNodeSequenceData: EventNodeSequenceDataKPA2<EventValueESType>[] = [];
+        for (const sequence of eventNodeSequenceCollector) {
             eventNodeSequenceData.push(sequence.dump());
         }
         return {
             version: VERSION,
             duration: this.duration,
             bpmList: this.timeCalculator.dump(),
-            envEasings: envEasings,
+            templateEasings: envEasings,
+            wrapperEasings: this.templateEasingLib.dumpWrapperEasings(),
             eventNodeSequences: eventNodeSequenceData,
             info: {
                 level: this.level,
@@ -317,9 +310,16 @@ export class Chart {
     createNNNode(time: TimeT) {
      return new NNNode(time)
     }
+    /**
+     * 
+     * @param type 
+     * @param name 
+     * @returns 
+     * @throws {KPAError<ERROR_IDS.SEQUENCE_NAME_OCCUPIED>}
+     */
     createEventNodeSequence<T extends EventType>(type: T, name: string) {
         if (this.sequenceMap.has(name)) {
-            throw new Error(`The name ${name} is occupied.`)
+            throw err.SEQUENCE_NAME_OCCUPIED(name);
         }
         const seq = EventNodeSequence.newSeq(type, this.getEffectiveBeats());
         seq.id = name;
@@ -345,10 +345,16 @@ export class Chart {
         }
         this.maxCombo = combo;
     }
+    /**
+     * 
+     * @param ui 
+     * @param judgeLine
+     * @throws {KPAError<ERROR_IDS.UI_OCCUPIED>}
+     */
     attachUIToLine(ui: UIName, judgeLine: JudgeLine) {
         const key = `${ui}Attach` satisfies keyof Chart;
         if (this[key]) {
-            throw new Error(`UI ${ui} is occupied`);
+            throw err.UI_OCCUPIED(ui);
         }
         this[key] = judgeLine;
         judgeLine.hasAttachUI = true;
@@ -398,12 +404,15 @@ export class Chart {
                 return new SegmentedEasing(this.createEasingFromData(data), data.left, data.right);
             case EasingType.template:
                 return this.templateEasingLib.get(data.identifier);
+            case EasingType.wrapper:
+                return this.templateEasingLib.getWrapper(data.identifier);
         }
     }
     createEvaluator<T extends EventValueESType>(data: EvaluatorDataKPA2<T>, type: EventValueTypeOfType<T>): Evaluator<T> {
         switch (data.type) {
             case EvaluatorType.eased:
-                return this.createEasedEvaluator(data, type);
+                // 我管你这的那的 —— 小奶椰
+                return this.createEasedEvaluator(data, type) as unknown as Evaluator<T>;
             case EvaluatorType.expressionbased:
                 return this.createExpressionEvaluator(data) as ExpressionEvaluator<T>;
         }
@@ -422,6 +431,24 @@ export class Chart {
                 return data.easing.type === EasingType.normal
                     ? TextEasedEvaluator.evaluatorsOfNoEzAndItpAs[data.easing.identifier][(data as TextEasedEvaluatorKPA2).interpretedAs] as EasedEvaluatorOfType<T>
                     : new TextEasedEvaluator(this.createEasingFromData(data.easing), (data as TextEasedEvaluatorKPA2).interpretedAs) as EasedEvaluatorOfType<T>
+        }
+    }
+    getEasedEvaluator<T extends string>(easing: Easing, type: EventValueType.text, interpreteAs: InterpreteAs): TextEasedEvaluator;
+    getEasedEvaluator<T extends EventValueESType>(easing: Easing, type: EventValueTypeOfType<T>, interpreteAs?: InterpreteAs): EasedEvaluatorOfType<T> {
+        const easingIsNormal = easing instanceof NormalEasing;
+        switch (type) {
+            case EventValueType.numeric:
+                return easingIsNormal
+                    ? NumericEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId] as EasedEvaluatorOfType<T>
+                    : new NumericEasedEvaluator(easing) as EasedEvaluatorOfType<T>;
+            case EventValueType.color:
+                return easingIsNormal
+                    ? ColorEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId] as EasedEvaluatorOfType<T>
+                    : new ColorEasedEvaluator(easing) as EasedEvaluatorOfType<T>;
+            case EventValueType.text:
+                return easingIsNormal
+                    ? TextEasedEvaluator.evaluatorsOfNoEzAndItpAs[easing.rpeId][interpreteAs] as EasedEvaluatorOfType<T>
+                    : new TextEasedEvaluator(easing, interpreteAs) as EasedEvaluatorOfType<T>
         }
     }
     createExpressionEvaluator<T extends EventValueESType>(data: ExpressionEvaluatorDataKPA2) {

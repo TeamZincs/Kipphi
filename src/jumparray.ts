@@ -1,9 +1,7 @@
 import { NodeType } from "./util";
+import Env from "./env";
 
 // type EndBeats = number;
-const MIN_LENGTH = 128
-const MAX_LENGTH = 1024
-const MINOR_PARTS = 16;
 /// #declaration:global
 
 type EndNextFn<T extends TwoDirectionNodeLike> = (node: T) => [endBeats: number, next: T];
@@ -23,6 +21,7 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
     averageBeats: number;
     effectiveBeats: number;
     goPrev: (node: T) => T;
+    readonly MINOR_SCALE_COUNT: number = Env.JUMPARRAY_MINOR_SCALE_COUNT;
 
     /**
      * 
@@ -46,7 +45,7 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         this.header = head;
         this.tailer = tail;
         // const originalListLength = this.listLength
-        const listLength: number = Math.max(MIN_LENGTH, Math.min(originalListLength * 4, MAX_LENGTH));
+        const listLength: number = Math.max(Env.JUMPARRAY_MIN_LENGTH, Math.min(originalListLength * 4, Env.JUMPARRAY_MAX_LENGTH));
         const averageBeats: number = Math.pow(2, Math.ceil(Math.log2(effectiveBeats / listLength)));
         const exactLength: number = Math.ceil(effectiveBeats / averageBeats);
         // console.log(exactLength, listLength, averageBeats, exactLength)
@@ -91,6 +90,7 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
     updateRange(firstNode: T, lastNode: T) {
         const {endNextFn, effectiveBeats, resolveLastNode} = this;
         lastNode = resolveLastNode(lastNode);
+        const MINOR_PARTS = this.MINOR_SCALE_COUNT;
         // console.log(firstNode, lastNode)
         /**
          * 
@@ -125,16 +125,13 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
                     if (Array.isArray(jumpArray[jumpIndex])) {
                         fillMinor(previousEndTime, endTime)
                     } else {
-                        try {
-                            // console.log(jumpIndex, currentNode)
                         jumpArray[jumpIndex] = currentNode;
-                        } catch (E) {console.log(jumpIndex, jumpArray);debugger}
                     }
                     jumpIndex++;
                 }
                 const currentJumpBeats: number = jumpIndex * averageBeats // 放错了
                 if (endTime > currentJumpBeats) {
-                    let minor = jumpArray[jumpIndex];
+                    const minor = jumpArray[jumpIndex];
                     if (!Array.isArray(minor)) {
                         jumpArray[jumpIndex] = new Array(MINOR_PARTS);
                     }
@@ -175,8 +172,9 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         const jumpAverageBeats = this.averageBeats;
         const jumpPos = Math.floor(beats / jumpAverageBeats);
         const rest = beats - jumpPos * jumpAverageBeats;
+        const MINOR_PARTS = this.MINOR_SCALE_COUNT;
         for (let i = jumpPos; i >= 0; i--) {
-            let canBeNodeOrArray: T | T[] = this.array[i];
+            const canBeNodeOrArray: T | T[] = this.array[i];
             if (Array.isArray(canBeNodeOrArray)) {
                 const minorIndex = Math.floor(rest / (jumpAverageBeats / MINOR_PARTS)) - 1;
                 for (let j = minorIndex; j >= 0; j--) {
@@ -202,11 +200,12 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         if (beats >= this.effectiveBeats) {
             return this.tailer;
         }
+        const MINOR_PARTS = this.MINOR_SCALE_COUNT;
         const jumpAverageBeats = this.averageBeats;
         const jumpPos = Math.floor(beats / jumpAverageBeats);
         const rest = beats - jumpPos * jumpAverageBeats;
         const nextFn = this.nextFn;
-        let canBeNodeOrArray: T | T[] = this.array[jumpPos]
+        const canBeNodeOrArray: T | T[] = this.array[jumpPos]
         let node: T = Array.isArray(canBeNodeOrArray)
             ? canBeNodeOrArray[Math.floor(rest / (jumpAverageBeats / MINOR_PARTS))]
             : canBeNodeOrArray;
@@ -216,10 +215,11 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         // console.log(this, node, jumpPos, beats)
         if (!node) {
             console.warn("No node:", node, beats)
-            debugger
+            throw new Error();
         }
         let next: T | false;
         // console.log(this)
+        // eslint-disable-next-line no-cond-assign
         while (next = nextFn(node, beats)) {
             node = next;
             if (node.type === NodeType.TAIL) {

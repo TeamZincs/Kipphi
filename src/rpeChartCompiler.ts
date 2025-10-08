@@ -1,11 +1,12 @@
+
 import type { Chart, UIName } from "./chart";
 import { type TimeT, type ChartDataRPE, type MetaData, type JudgeLineDataRPE, type EventLayerDataRPE, type EventDataRPELike, EventType, InterpreteAs, type NoteDataRPE, type EventValueESType, EventValueType } from "./chartTypes";
 import { SegmentedEasing, BezierEasing, NormalEasing, fixedEasing, TemplateEasing, Easing } from "./easing";
-import { EasedEvaluator, ExpressionEvaluator, NumericEasedEvaluator, type EasedEvaluatorConstructorOfType, type EasedEvaluatorOfType } from "./evaluator";
+import { EasedEvaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorConstructorOfType, type EasedEvaluatorOfType } from "./evaluator";
 import { EventEndNode, EventNode, EventNodeSequence, EventStartNode, type EventNodeLike } from "./event";
 import type { JudgeLine } from "./judgeline";
 import type { NNList, HNList, NNOrHead } from "./note";
-import { TC, TimeCalculator } from "./time";
+import TC from "./time";
 import { NodeType, numberToRatio } from "./util";
 
 /// #declaration:global
@@ -58,7 +59,9 @@ export class RPEChartCompiler {
                     eventLayers: [],
                     father: target.id,
                     isCover: lineData.isCover,
-                    numOfNotes: 0
+                    numOfNotes: 0,
+                    anchor: target.anchor,
+                    isGif: 0
                 } satisfies Partial<JudgeLineDataRPE> as JudgeLineDataRPE)
             } else {
                 lineData.attachUI = uiName;
@@ -121,7 +124,11 @@ export class RPEChartCompiler {
         const easing = evaluator.easing;
         const isSegmented = easing instanceof SegmentedEasing;
         const innerEasing = isSegmented ? easing.easing : easing;
-        
+        const start = getValue(snode);
+        const end = getValue(easing === fixedEasing ? snode : endNode)
+        if (isNaN(start) || isNaN(end)) {
+            console.log("????")
+        }
         return {
             bezier: innerEasing instanceof BezierEasing ? 1 : 0,
             bezierPoints: innerEasing instanceof BezierEasing ?
@@ -132,10 +139,10 @@ export class RPEChartCompiler {
             easingType: easing instanceof NormalEasing ?
                     easing.rpeId ?? 1 :
                     null,
-            end: getValue(easing === fixedEasing ? snode : endNode),
+            end,
             endTime: endNode.time,
             linkgroup: 0, // 假设默认值为 0
-            start: getValue(snode),
+            start,
             startTime: snode.time
         }
     }
@@ -144,14 +151,15 @@ export class RPEChartCompiler {
         const nodes: EventDataRPELike<VT>[] = [];
         const interpolationStep = this.interpolationStep;
         if (!(sequence.type === EventType.color || sequence.type === EventType.text)) {
-            // @ts-ignore 烦死了烦死了烦死了
+            // @ts-expect-error 烦死了烦死了烦死了
             sequence = this.substitute(sequence);
         }
-        let node = sequence.head.next;
+        let node = sequence.head.next!;
         // 唯一真史
         const getValue = (sequence.type === EventType.text
             ? (node: EventStartNode<string> | EventEndNode<string>) => {
-                const interpretedAs = node instanceof EventStartNode ? node.interpretedAs : node.previous.interpretedAs;
+                const evaluator = (node instanceof EventStartNode ? node.evaluator : node.previous.evaluator) as TextEasedEvaluator;
+                const interpretedAs = node instanceof EventStartNode ? node.evaluator.interpretedAs : node.previous.interpretedAs;
                 return interpretedAs === InterpreteAs.str ? node.value : "%P%" + node.value;
             }
             : (node: EventStartNode<number> | EventEndNode<number>) => node.value) as unknown as (node: EventStartNode<VT> | EventEndNode<VT>) => VT;
@@ -195,11 +203,18 @@ export class RPEChartCompiler {
                 })
                 
             } else {
-                nodes.push(this.compileEvent(node, getValue));
+                if (typeof node.value !== "number"){
+                    console.log("dbg")
+                }
+                nodes.push(this.compileEasedEvent(node, getValue));
             }
             node = end.next;
         }
-        nodes.push(node.dumpAsLast());
+        const newStart = node!.clone();
+        newStart.evaluator = NumericEasedEvaluator.evaluatorsOfNormalEasing[0];
+        const newEnd = new EventEndNode(TC.vadd(newStart.time, [1, 0, 1]), newStart.value);
+        EventNode.connect(newStart, newEnd);
+        nodes.push(this.compileEasedEvent(newStart, getValue));
 
         return nodes
     }
@@ -213,7 +228,7 @@ export class RPEChartCompiler {
             if (lists.length === 0) return;
             // 先按最早的时间排序
             lists.sort((a, b) => {
-                return TimeCalculator.gt(time(a), time(b)) ? 1 : -1;
+                return TC.gt(time(a), time(b)) ? 1 : -1;
             });
             // 每次从lists中第一个list pop一个data加入到结果，然后冒泡调整这个list的位置
             while (lists[0].length > 0) {
@@ -222,7 +237,7 @@ export class RPEChartCompiler {
                 const node = list.pop();
                 ret.push(node);
                 let i = 0;
-                while (i + 1 < lists.length && TimeCalculator.gt(time(lists[i]), time(lists[i + 1]))) {
+                while (i + 1 < lists.length && TC.gt(time(lists[i]), time(lists[i + 1]))) {
                     const temp = lists[i];
                     lists[i] = lists[i + 1];
                     lists[i + 1] = temp;
@@ -256,8 +271,8 @@ export class RPEChartCompiler {
      * 将当前序列中所有通过模板缓动引用了其他序列的事件直接展开为被引用的序列内容
      * transform all events that reference other sequences by template easing
      * into the content of the referenced sequence
-     * 有点类似于MediaWiki的{{subst:templateName}}
-     * @param map 由TemplateEasingLib提供
+     * 
+     * 有点类似于MediaWiki的`{{subst:templateName}}`
      * @returns 
      */
     substitute<VT extends EventValueESType>(seq: EventNodeSequence<VT>): EventNodeSequence<VT> {
@@ -296,7 +311,7 @@ export class RPEChartCompiler {
                 let srcStart: number, srcEnd: number, leftDividedNodeSrc: EventStartNode, rightDividedNode: EventStartNode,
                     srcStartTime: TimeT, srcTimeDelta: TimeT, toStopAt: EventStartNode;
                 if (isSegmented) {
-                    const totalDuration = TC.sub(srcSeq.tail.previous.time, srcSeq.head.next.time);
+                    const totalDuration = TC.sub(srcSeq.tail.previous!.time, srcSeq.head.next!.time);
                     srcStart = srcSeq.getValueAt(easing.left * srcSeq.effectiveBeats)
                     srcEnd = srcSeq.getValueAt(easing.right * srcSeq.effectiveBeats, true);
                     leftDividedNodeSrc = srcSeq.getNodeAt(easing.left * srcSeq.effectiveBeats);
@@ -389,6 +404,9 @@ export class RPEChartCompiler {
                     EventNode.connect(prev, newEnd)
                     EventNode.connect(newEnd, newStart);
                     prev = newStart;
+                    if (isNaN(newStart.value)) {
+                        debugger;
+                    }
                 }
                 // 处理最后一个节点的截段
                 if (isSegmented) {

@@ -6,11 +6,10 @@ import {
 } from "./easing";
 
 
-import { TimeCalculator as TC } from "./time" 
+import TC from "./time";
 
-import type { Chart } from "./chart";
-import type { EventEndNode, EventStartNode } from "./event";
-import { EvaluatorType, EventValueType, InterpreteAs, type ColorEasedEvaluatorKPA2, type EasedEvaluatorDataOfType, type EvaluatorDataKPA2, type EventValueESType, type EventValueTypeOfType, type ExpressionEvaluatorDataKPA2, type NumericEasedEvaluatorKPA2, type RGB, type TextEasedEvaluatorKPA2 } from "./chartTypes";
+import type { EventEndNode, EventStartNode, NonLastStartNode } from "./event";
+import { EvaluatorType, InterpreteAs, type ColorEasedEvaluatorKPA2, type EvaluatorDataKPA2, type EventValueESType, type ExpressionEvaluatorDataKPA2, type NumericEasedEvaluatorKPA2, type RGB, type TextEasedEvaluatorKPA2 } from "./chartTypes";
 
 
 /// #declaration:global
@@ -30,13 +29,13 @@ export abstract class Evaluator<T> {
 }
 
 
-export abstract class EasedEvaluator<T> extends Evaluator<T> {
+export abstract class EasedEvaluator<T extends EventValueESType> extends Evaluator<T> {
     readonly easing: Easing;
     constructor(easing: Easing) {
         super();
         this.easing = easing;
     }
-    override eval(startNode: EventStartNode<T> & { next: EventEndNode }, beats: number): T {
+    override eval(startNode: NonLastStartNode<T>, beats: number): T {
         const next = startNode.next;
         const timeDelta = TC.getDelta(next.time, startNode.time)
         const current = beats - TC.toBeats(startNode.time)
@@ -48,7 +47,13 @@ export abstract class EasedEvaluator<T> extends Evaluator<T> {
         // 其他类型，包括普通缓动和非钩定模板缓动
         return this.convert(value, nextValue, this.easing.getValue(current / timeDelta));
     }
-    abstract convert(start: T, end: T, t: number): T;
+    abstract convert(start: T, end: T, progress: number): T;
+    /**
+     * 派生一个类型相同但使用不同缓动的求值器
+     * @param easing 
+     * @returns 
+     */
+    abstract deriveWithEasing(easing: Easing): EasedEvaluator<T>;
 }
 
 export type EasedEvaluatorOfType<T extends EventValueESType> = T extends number ? NumericEasedEvaluator : T extends RGB ? ColorEasedEvaluator : TextEasedEvaluator;
@@ -70,6 +75,13 @@ export class NumericEasedEvaluator extends EasedEvaluator<number> {
     }
     static default = new NumericEasedEvaluator(linearEasing);
     static evaluatorsOfNormalEasing: NumericEasedEvaluator[] = rpeEasingArray.map(easing => new NumericEasedEvaluator(easing));
+    override deriveWithEasing(easing: Easing): NumericEasedEvaluator {
+        if (easing instanceof NormalEasing) {
+            return NumericEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId];
+        } else {
+            return new NumericEasedEvaluator(easing);
+        }
+    }
 }
 
 export class ColorEasedEvaluator extends EasedEvaluator<RGB> {
@@ -90,6 +102,13 @@ export class ColorEasedEvaluator extends EasedEvaluator<RGB> {
     }
     static default = new ColorEasedEvaluator(linearEasing);
     static evaluatorsOfNormalEasing: ColorEasedEvaluator[] = rpeEasingArray.map(easing => new ColorEasedEvaluator(easing));
+    override deriveWithEasing(easing: Easing): ColorEasedEvaluator {
+        if (easing instanceof NormalEasing) {
+            return ColorEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId];
+        } else {
+            return new ColorEasedEvaluator(easing);
+        }
+    }
 }
 
 
@@ -102,8 +121,7 @@ export class ColorEasedEvaluator extends EasedEvaluator<RGB> {
  */
 export class TextEasedEvaluator extends EasedEvaluator<string> {
     constructor(easing: Easing,
-        public readonly interpretedAs: InterpreteAs = InterpreteAs.str,
-        public readonly font: string = "cmdysj.ttf"
+        public readonly interpretedAs: InterpreteAs = InterpreteAs.str
     )
     {
         super(easing);
@@ -112,8 +130,7 @@ export class TextEasedEvaluator extends EasedEvaluator<string> {
         return {
             type: EvaluatorType.eased,
             easing: this.easing.dump(),
-            interpretedAs: this.interpretedAs,
-            font: this.font
+            interpretedAs: this.interpretedAs
         }
     }
     override convert(value: string, nextValue: string, progress: number): string {
@@ -148,6 +165,13 @@ export class TextEasedEvaluator extends EasedEvaluator<string> {
         new TextEasedEvaluator(easing, InterpreteAs.int),
         new TextEasedEvaluator(easing, InterpreteAs.float),
     ]);
+    override deriveWithEasing(easing: Easing): EasedEvaluator<string> {
+        if (easing instanceof NormalEasing) {
+            return TextEasedEvaluator.evaluatorsOfNoEzAndItpAs[easing.rpeId][this.interpretedAs];
+        } else {
+            return new TextEasedEvaluator(easing, this.interpretedAs);
+        }
+    }
 }
 
 export class ExpressionEvaluator<T> extends Evaluator<T> {

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ES2017"],
+    "lib": ["ES2021"],
     "target": "ES2016",
     "module": "es2020",
     "moduleDetection": "force",
@@ -16,7 +16,6 @@
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
 
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,

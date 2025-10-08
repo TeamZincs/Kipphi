@@ -93,7 +93,7 @@ function processContent(content: string): string {
     // 添加处理没有export的声明
     VariableDeclaration(path) {
       // 检查是否是export的变量声明
-      if (!path.parentPath.isExportDeclaration() && !path.parentPath.isProgram()) {
+      if (!path.parentPath.isExportDeclaration() && path.parentPath.isProgram()) {
         // 删除没有export前缀的变量声明
         const node = path.node;
         const start = node.start ?? 0;
@@ -103,7 +103,7 @@ function processContent(content: string): string {
     },
     FunctionDeclaration(path) {
       // 检查是否是export的函数声明
-      if (!path.parentPath.isExportDeclaration() && !path.parentPath.isProgram()) {
+      if (!path.parentPath.isExportDeclaration() && path.parentPath.isProgram()) {
         // 删除没有export前缀的函数声明
         const node = path.node;
         const start = node.start ?? 0;
@@ -113,7 +113,7 @@ function processContent(content: string): string {
     },
     ClassDeclaration(path) {
       // 检查是否是export的类声明
-      if (!path.parentPath.isExportDeclaration() && !path.parentPath.isProgram()) {
+      if (!path.parentPath.isExportDeclaration() && path.parentPath.isProgram()) {
         // 删除没有export前缀的类声明
         const node = path.node;
         const start = node.start ?? 0;
@@ -123,7 +123,7 @@ function processContent(content: string): string {
     },
     TSEnumDeclaration(path) {
       // 检查是否是export的枚举声明
-      if (!path.parentPath.isExportDeclaration() && !path.parentPath.isProgram()) {
+      if (!path.parentPath.isExportDeclaration() && path.parentPath.isProgram()) {
         // 删除没有export前缀的枚举声明
         const node = path.node;
         const start = node.start ?? 0;
@@ -182,7 +182,7 @@ async function main(inputFiles: string[], outputFile: string) {
 }
 
 const inputFiles = [
-    "src/chart.ts", "src/easing.ts", "src/util.ts", "src/time.ts", "src/chartTypes.ts", "src/jumparray.ts", "src/event.ts",
+    "src/chart.ts", "src/easing.ts", "src/util.ts", "src/time.ts", "src/bpm.ts", "src/chartTypes.ts", "src/jumparray.ts", "src/event.ts",
     "src/note.ts", "src/judgeline.ts", "src/evaluator.ts", "src/version.ts", "src/rpeChartCompiler.ts"
 ]
 
@@ -195,8 +195,8 @@ Bun.spawnSync(["tsc", "--declaration", "--emitDeclarationOnly", "dist/declaratio
 Bun.build({
   entrypoints: ["build/global.ts"],
   outdir: "dist/",
-  minify: true,
   naming: "forglobal.js",
+  format: "cjs"
 })
 
 

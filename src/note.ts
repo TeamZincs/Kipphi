@@ -5,29 +5,16 @@ import type { Chart } from "./chart";
 import { NoteType, type NNListDataKPA, type NoteDataKPA, type NoteDataRPE, type NoteNodeDataKPA, type TimeT } from "./chartTypes";
 import type { JudgeLine } from "./judgeline";
 import { JumpArray } from "./jumparray";
-import { TimeCalculator } from "./time";
+import { type TimeCalculator } from "./bpm";
+import TC from "./time";
 import { hex2rgb, NodeType, rgb2hex } from "./util";
 
 /// #declaration:global
 
-const TC = TimeCalculator;
 
 export type HEX = number;
 
 
-
-const node2string = (node: AnyNN) => {
-    if (!node) {
-        return "" + node
-    }
-    if (node.type === NodeType.HEAD || node.type === NodeType.TAIL) {
-        return node.type === NodeType.HEAD ? "H" : node.type === NodeType.TAIL ? "T" : "???"
-    }
-    if (!node.notes) {
-        return "EventNode"
-    }
-    return `NN(${node.notes.length}) at ${node.startTime}`
-}
 
 
 
@@ -98,18 +85,18 @@ export class Note {
     // posNext?: Note;
     // posPreviousSibling?: Note;
     // posNextSibling: Note;
-    constructor(data: NoteDataRPE) {
+    constructor(data: NoteDataRPE | NoteDataKPA) {
         this.above = data.above === 1;
         this.alpha = data.alpha ?? 255;
-        this.endTime = data.type === NoteType.hold ? TimeCalculator.validateIp(data.endTime) : TimeCalculator.validateIp([...data.startTime]);
+        this.endTime = data.type === NoteType.hold ? TC.validateIp(data.endTime) : TC.validateIp([...data.startTime]);
         this.isFake = Boolean(data.isFake);
         this.positionX = data.positionX;
         this.size = data.size ?? 1.0;
         this.speed = data.speed ?? 1.0;
-        this.startTime = TimeCalculator.validateIp(data.startTime);
+        this.startTime = TC.validateIp(data.startTime);
         this.type = data.type;
         this.visibleTime = data.visibleTime;
-        // @ts-expect-error
+        // @ts-expect-error 若data是RPE数据，则为undefined，无影响。
         this.yOffset = data.absoluteYOffset ?? data.yOffset * this.speed;
         // @ts-expect-error 若data是RPE数据，则为undefined，无影响。
         // 当然也有可能是KPA数据但是就是没有给
@@ -137,7 +124,7 @@ export class Note {
             this.visibleBeats = Infinity;
             return;
         }
-        const hitBeats = TimeCalculator.toBeats(this.startTime);
+        const hitBeats = TC.toBeats(this.startTime);
         const hitSeconds = timeCalculator.toSeconds(hitBeats);
         const visabilityChangeSeconds = hitSeconds - this.visibleTime;
         const visabilityChangeBeats = timeCalculator.secondsToBeats(visabilityChangeSeconds);
@@ -150,8 +137,8 @@ export class Note {
      */
     clone(offset: TimeT) {
         const data = this.dumpKPA();
-        data.startTime = TimeCalculator.add(data.startTime, offset);
-        data.endTime = TimeCalculator.add(data.endTime, offset); // 踩坑
+        data.startTime = TC.add(data.startTime, offset);
+        data.endTime = TC.add(data.endTime, offset); // 踩坑
         return new Note(data);
     }
     /*
@@ -167,7 +154,7 @@ export class Note {
     dumpRPE(timeCalculator: TimeCalculator): NoteDataRPE {
         let visibleTime: number;
         if (this.visibleBeats !== Infinity) {
-            const beats = TimeCalculator.toBeats(this.startTime);
+            const beats = TC.toBeats(this.startTime);
             this.visibleBeats = timeCalculator.segmentToSeconds(beats - this.visibleBeats, beats);
         } else {
             visibleTime = 99999.0
@@ -211,7 +198,6 @@ export class Note {
     }
 }
 
-type Connectee = NoteNode | NNNode
 
 
 
@@ -254,13 +240,13 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
     id: number;
     constructor(time: TimeT) {
         super(NodeType.MIDDLE);
-        this.startTime = TimeCalculator.validateIp([...time]);
+        this.startTime = TC.validateIp([...time]);
         this.notes = [];
         this.id = NoteNode.count++;
     }
     static fromKPAJSON(data: NoteNodeDataKPA, timeCalculator: TimeCalculator) {
         const node = new NoteNode(data.startTime);
-        for (let noteData of data.notes) {
+        for (const noteData of data.notes) {
             const note = Note.fromKPAJSON(noteData, timeCalculator);
             node.add(note);
         }
@@ -276,7 +262,7 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
         return (this.notes.length === 0 || this.notes[0].type !== NoteType.hold) ? this.startTime : this.notes[0].endTime
     }
     add(note: Note) {
-        if (!TimeCalculator.eq(note.startTime, this.startTime)) {
+        if (!TC.eq(note.startTime, this.startTime)) {
             console.warn("Wrong addition!")
         }
         this.notes.push(note);
@@ -303,7 +289,7 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
         const note = notes[index];
         for (let i = index; i > 0; i--) {
             const prev = notes[i - 1];
-            if (TimeCalculator.lt(prev.endTime, note.endTime)) {
+            if (TC.lt(prev.endTime, note.endTime)) {
                 // swap
                 notes[i] = prev;
                 notes[i - 1] = note;
@@ -313,7 +299,7 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
         }
         for (let i = index; i < notes.length - 1; i++) {
             const next = notes[i + 1];
-            if (TimeCalculator.gt(next.endTime, note.endTime)) {
+            if (TC.gt(next.endTime, note.endTime)) {
                 // swap
                 notes[i] = next;
                 notes[i + 1] = note;
@@ -410,7 +396,7 @@ export class NNList {
             if (prev.type === NodeType.HEAD) {
                 return;
             }
-            this.effectiveBeats = TimeCalculator.toBeats(prev.endTime)
+            this.effectiveBeats = TC.toBeats(prev.endTime)
         }
         const effectiveBeats: number = this.effectiveBeats;
         this.jump = new JumpArray<AnyNN>(
@@ -423,12 +409,11 @@ export class NNList {
                     return [null, null]
                 }
                 const nextNode = node.next;
-                const startTime = (node.type === NodeType.HEAD) ? 0 : TimeCalculator.toBeats(node.startTime)
+                const startTime = (node.type === NodeType.HEAD) ? 0 : TC.toBeats(node.startTime)
                 return [startTime, nextNode]
             },
-            // @ts-ignore
             (note: NoteNode, beats: number) => {
-                return TimeCalculator.toBeats(note.startTime) >= beats ? false : <NoteNode>note.next; // getNodeAt有guard
+                return TC.toBeats(note.startTime) >= beats ? false : <NoteNode>note.next; // getNodeAt有guard
             })
     }
     /**
@@ -447,12 +432,12 @@ export class NNList {
      * @returns 
      */
     getNodeOf(time: TimeT): NoteNode {
-        let node = this.getNodeAt(TimeCalculator.toBeats(time), false)
+        let node = this.getNodeAt(TC.toBeats(time), false)
                     .previous;
 
 
-        let isEqual = node.type !== NodeType.HEAD && TimeCalculator.eq((node as NoteNode).startTime, time)
-        if (node.next.type !== NodeType.TAIL && TimeCalculator.eq((node.next as NoteNode).startTime, time)) {
+        let isEqual = node.type !== NodeType.HEAD && TC.eq((node as NoteNode).startTime, time)
+        if (node.next.type !== NodeType.TAIL && TC.eq((node.next as NoteNode).startTime, time)) {
             isEqual = true;
             node = node.next;
         }
@@ -567,14 +552,12 @@ export class HNList extends NNList {
                 if (node.type === NodeType.TAIL) {
                     return [null, null]
                 }
-                if (!node) debugger
                 const nextNode = node.next;
-                const endTime = node.type === NodeType.HEAD ? 0 : TimeCalculator.toBeats(node.endTime)
+                const endTime = node.type === NodeType.HEAD ? 0 : TC.toBeats(node.endTime)
                 return [endTime, nextNode]
             },
-            // @ts-ignore
             (node: NoteNode, beats: number) => {
-                return TimeCalculator.toBeats(node.endTime) >= beats ? false : <NoteNode>node.next; // getNodeAt有guard
+                return TC.toBeats(node.endTime) >= beats ? false : <NoteNode>node.next; // getNodeAt有guard
             }
         )
     }
@@ -618,7 +601,7 @@ export class NNNode extends NNNodeLike<NodeType.MIDDLE> {
         super(NodeType.MIDDLE);
         this.noteNodes = []
         this.holdNodes = [];
-        this.startTime = TimeCalculator.validateIp([...time])
+        this.startTime = TC.validateIp([...time])
     }
     get endTime() {
         let latest: TimeT = this.startTime;
@@ -681,7 +664,7 @@ export class NNNList {
         const originalListLength = this.timesWithNotes || 512;
         /*
         if (!this.effectiveBeats) {
-            this.effectiveBeats = TimeCalculator.toBeats(this.tail.previous.endTime)
+            this.effectiveBeats = TC.toBeats(this.tail.previous.endTime)
         }
         */
         const effectiveBeats: number = this.effectiveBeats;
@@ -695,25 +678,19 @@ export class NNNList {
                     return [null, null]
                 }
                 const nextNode = node.next;
-                const startTime = node.type === NodeType.HEAD ? 0 : TimeCalculator.toBeats((node as NNNode).startTime)
+                const startTime = node.type === NodeType.HEAD ? 0 : TC.toBeats((node as NNNode).startTime)
                 return [startTime, nextNode]
             },
-            // @ts-ignore
             (note: NNNode, beats: number) => {
-                return TimeCalculator.toBeats(note.startTime) >= beats ? false : <NNNode>note.next; // getNodeAt有guard
-            }
-            /*,
-            (note: Note) => {
-                const prev = note.previous;
-                return prev.type === NodeType.HEAD ? note : prev
-            })*/)
+                return TC.toBeats(note.startTime) >= beats ? false : <NNNode>note.next; // getNodeAt有guard
+            })
     }
     getNodeAt(beats: number, beforeEnd=false): NNNode | NNNodeLike<NodeType.TAIL> {
         return this.jump.getNodeAt(beats) as NNNode | NNNodeLike<NodeType.TAIL>;
     }
     getNode(time: TimeT): NNNode {
-        const node = this.getNodeAt(TimeCalculator.toBeats(time), false).previous;
-        if (node.type === NodeType.HEAD || TimeCalculator.ne((node as NNNode).startTime, time)) {
+        const node = this.getNodeAt(TC.toBeats(time), false).previous;
+        if (node.type === NodeType.HEAD || TC.ne((node as NNNode).startTime, time)) {
             const newNode = new NNNode(time);
             const next = node.next
             NNNode.insert(node, newNode, next);

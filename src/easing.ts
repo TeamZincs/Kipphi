@@ -1,7 +1,8 @@
-import { type CustomEasingData, type EasingDataKPA2, EasingType, EventType, type SegmentedEasingData, type NormalEasingData, type BezierEasingData, type TemplateEasingData } from "./chartTypes";
-import { EventNodeSequence } from "./event";
+import { type TemplateEasingBodyData, type EasingDataKPA2, EasingType, EventType, type SegmentedEasingData, type NormalEasingData, type BezierEasingData, type TemplateEasingData, WrapperEasingData, WrapperEasingBodyData } from "./chartTypes";
+import { type EventNodeSequence } from "./event";
 import { type TupleCoord } from "./util";
 import Environment from "./env";
+import { type ExpressionEvaluator } from "./evaluator";
 
 
 /// #declaration:global
@@ -43,10 +44,6 @@ const easeOutBack = (x: number): number =>{
 }
 
 const linear = (x: number): number => x
-const linearLine: CurveDrawer = (context: CanvasRenderingContext2D, startX: number, startY: number, endX: number , endY: number) => 
-    drawLine(context, startX, startY, endX, endY);
-
-
 
 const easeOutSine = (x: number): number => Math.sin((x * Math.PI) / 2);
 
@@ -95,7 +92,12 @@ const easeInOutBack = toEaseInOut(easeInBack, easeOutBack);
 const easeInOutElastic = toEaseInOut(easeInElastic, easeOutElastic);
 const easeInOutBounce = toEaseInOut(easeInBounce, easeOutBounce);
 
-export const easingFnMap = {
+
+type FuncType = "linear" | "sine" | "quad" | "cubic" | "quart" | "quint" | "expo" | "circ" | "back" | "elastic" | "bounce"
+
+export const easingFnMap: {
+    [k in FuncType]: [(x: number) => number, (x: number) => number, (x: number) => number]
+} = {
     "linear": [linear, linear, linear],
     "sine": [easeInSine, easeOutSine, toEaseInOut(easeInSine, easeOutSine)],
     "quad": [easeInQuad, easeOutQuad, toEaseInOut(easeInQuad, easeOutQuad)],
@@ -134,24 +136,9 @@ export abstract class Easing {
         }
         return (t: number) => (this.getValue(easingLeft + timeDelta * t) - leftValue) / delta;
     }
-    drawCurve(context: CanvasRenderingContext2D, startX: number, startY: number, endX: number , endY: number): void {
-        const delta = endY - startY;
-        const timeDelta = endX - startX;
-        let last = startY;
-        context.beginPath()
-        context.moveTo(startX, last)
-        for (let t = 4; t <= timeDelta; t += 4) {
-            const ratio = t / timeDelta
-            const curPosY = this.getValue(ratio) * delta + startY;
-            context.lineTo(startX + t, curPosY);
-            last = curPosY;
-        }
-        context.stroke();
-    }
 }
 
 
-type CurveDrawer = (context: CanvasRenderingContext2D, startX: number, startY: number, endX: number , endY: number) => void
 
 
 /**
@@ -191,15 +178,11 @@ export class NormalEasing extends Easing {
     funcType: string;
     easeType: string;
     _getValue: (t: number) => number;
-    _drawCurve: CurveDrawer;
     constructor(fn: (t: number) => number);
-    constructor(fn: (t: number) => number, curveDrawer?: CurveDrawer);
-    constructor(fn: (t: number) => number, curveDrawer?: CurveDrawer) {
+    constructor(fn: (t: number) => number);
+    constructor(fn: (t: number) => number) {
         super()
         this._getValue = fn;
-        if (curveDrawer) {
-            this._drawCurve = curveDrawer;
-        }
     }
     getValue(t: number): number {
         if (t > 1 || t < 0) {
@@ -214,13 +197,6 @@ export class NormalEasing extends Easing {
         return this.dumpCache ??= {
             type: EasingType.normal,
             identifier: this.rpeId
-        }
-    }
-    drawCurve(context: CanvasRenderingContext2D, startX: number, startY: number, endX: number , endY: number) {
-        if (this._drawCurve) {
-            this._drawCurve(context, startX, startY, endX, endY)
-        } else {
-            super.drawCurve(context, startX, startY, endX, endY);
         }
     }
 }
@@ -296,19 +272,6 @@ export class BezierEasing extends Easing {
             bezier: [this.cp1[0], this.cp1[1], this.cp2[0], this.cp2[1]]
         }
     }
-    drawCurve(context: CanvasRenderingContext2D, startX: number, startY: number, endX: number , endY: number): void {
-        const [cp1x, cp1y] = this.cp1;
-        const [cp2x, cp2y] = this.cp2
-        const delta = endY - startY;
-        const timeDelta = endX - startX;
-        drawBezierCurve(
-            context,
-            startX, startY,
-            endX, endY,
-            startX + cp1x * timeDelta, startY + cp1y * delta,
-            startX + cp2x * timeDelta, startY + cp2y * delta,
-        )
-    }
 }
 
 /**
@@ -341,11 +304,29 @@ export class TemplateEasing extends Easing {
         }
     }
     get valueDelta(): number {
-        let seq = this.eventNodeSequence;
+        const seq = this.eventNodeSequence;
         return seq.tail.previous.value - seq.head.next.value;
     }
     get headValue(): number {
         return this.eventNodeSequence.head.next.value;
+    }
+}
+
+export class WrapperEasing extends Easing {
+    // 需要一对面对面节点
+    constructor(public evaluator: ExpressionEvaluator<number>, public start: number, public end: number, public name: string) {
+        super()
+    }
+    getValue(t: number): number {
+        const end = this.end;
+        const start = this.start;
+        return (this.evaluator.func(t) - start) / (end - start);
+    }
+    dump(): WrapperEasingData {
+        return {
+            type: EasingType.wrapper,
+            identifier: this.name
+        }
     }
 }
 
@@ -365,31 +346,42 @@ export class TemplateEasing extends Easing {
  * 
  */
 export class TemplateEasingLib {
-    easings: {
-        [name: string]: TemplateEasing
-    }
-    constructor() {
-        this.easings = {};
+    easings = new Map<string, TemplateEasing>();
+    wrapperEasings = new Map<string, WrapperEasing>();
+    // 被迫给一个静态方法进行依赖注入，恨死你了，ESM
+    constructor(public getNewSequence: (type: EventType, effectiveBeats: number) => EventNodeSequence<number>, public ExpressionEvaluatorCon: typeof ExpressionEvaluator) {
     }
     getOrNew(name: string): TemplateEasing {
         const DEFAULT_TEMPLATE_LENGTH = Environment.DEFAULT_TEMPLATE_LENGTH;
-        if (this.easings[name]) {
-            return this.easings[name];
+        if (this.easings.has(name)) {
+            return this.easings.get(name);
         } else {
-            const easing = new TemplateEasing(name, EventNodeSequence.newSeq(EventType.easing, DEFAULT_TEMPLATE_LENGTH));
+            const easing = new TemplateEasing(name, this.getNewSequence(EventType.easing, DEFAULT_TEMPLATE_LENGTH));
             easing.eventNodeSequence.id = "*" + name;
-            return this.easings[name] = easing;
+            this.easings.set(name, easing)
+            return easing;
         }
+    }
+    readWrapperEasings(data: WrapperEasingBodyData[]) {
+        const len = data.length;
+        for (let i = 0; i < len; i++) {
+            const datum = data[i];
+            // 属于是油饼
+            this.wrapperEasings.set(datum.id, new WrapperEasing(new this.ExpressionEvaluatorCon(datum.jsExpr), datum.start, datum.end, datum.id))
+        }
+    }
+    getWrapper(name: string): WrapperEasing {
+        return this.wrapperEasings.get(name);
     }
     /**
      * 注册一个模板缓动，但不会实现它
      * register a template easing when reading eventNodeSequences, but does not implement it immediately
      */
     require(name: string) {
-        this.easings[name] = new TemplateEasing(name, null);
+        this.easings.set(name, new TemplateEasing(name, null));
     }
     implement(name: string, sequence: EventNodeSequence) {
-        this.easings[name].eventNodeSequence = sequence;
+        this.easings.get(name).eventNodeSequence = sequence;
     }
     /**
      * 检查所有模板缓动是否实现
@@ -398,20 +390,19 @@ export class TemplateEasingLib {
      * should be invoked after all template easings are read
      */
     check() {
-        for (let key in this.easings) {
-            if (!this.easings[key].eventNodeSequence) {
-                console.warn(`未实现的缓动：${key}`);
+        for (const [name, easing] of this.easings) {
+            if (!easing.eventNodeSequence) {
+                console.warn(`未实现的缓动：${name}`);
             }
         }
     }
     get(key: string): TemplateEasing | undefined {
-        return this.easings[key];
+        return this.easings.get(key);
     }
     
-    dump(eventNodeSequences: Set<EventNodeSequence>): CustomEasingData[] {
-        const customEasingDataList: CustomEasingData[] = [];
-        for (let key in this.easings) {
-            const templateEasing = this.easings[key];
+    dump(eventNodeSequences: Set<EventNodeSequence>): TemplateEasingBodyData[] {
+        const customEasingDataList: TemplateEasingBodyData[] = [];
+        for (const [key, templateEasing] of this.easings) {
             const eventNodeSequence = templateEasing.eventNodeSequence;
             if (eventNodeSequences.has(eventNodeSequence)) {
                 continue;
@@ -419,16 +410,26 @@ export class TemplateEasingLib {
             eventNodeSequences.add(eventNodeSequence);
             customEasingDataList.push({
                 name: key,
-                content: eventNodeSequence.id, // 这里只存储编号，具体内容在保存时再编码
-                usedBy: [],
-                dependencies: []
+                content: eventNodeSequence.id // 这里只存储编号，具体内容在保存时再编码
             });
         }
         return customEasingDataList;
     }
+    dumpWrapperEasings(): WrapperEasingBodyData[] {
+        const wrapperEasingDataList: WrapperEasingBodyData[] = [];
+        for (const [key, wrapperEasing] of this.wrapperEasings) {
+            wrapperEasingDataList.push({
+                id: key,
+                jsExpr: wrapperEasing.evaluator.jsExpr,
+                start: wrapperEasing.start,
+                end: wrapperEasing.end
+            })
+        }
+        return wrapperEasingDataList;
+    }
 }
 
-export const linearEasing = new NormalEasing(linear, linearLine);
+export const linearEasing = new NormalEasing(linear);
 export const fixedEasing = new NormalEasing((x: number): number => (x === 1 ? 1 : 0));
 
 export const easingMap = {
@@ -446,8 +447,8 @@ export const easingMap = {
     "bounce": {in: new NormalEasing(easeInBounce), out: new NormalEasing(easeOutBounce), inout: new NormalEasing(easeInOutBounce)}
 }
 
-for (let funcType in easingMap) {
-    for (let easeType in easingMap[funcType]) {
+for (const funcType in easingMap) {
+    for (const easeType in easingMap[funcType]) {
         const easing = easingMap[funcType][easeType];
         easing.funcType = funcType;
         easing.easeType = easeType;
@@ -539,5 +540,8 @@ rpeEasingArray.forEach((easing, index) => {
     }
     easing.rpeId = index;
 })
+// 强行添加，避免存储不了这些缓动
+easingMap.expo.inout.rpeId = 101;
+easingMap.quint.inout.rpeId = 102;
 
 /// #enddeclaration

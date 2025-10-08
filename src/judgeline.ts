@@ -1,13 +1,13 @@
 import type { Chart, JudgeLineGroup } from "./chart";
-import { EventType, NoteType, type EventDataRPELike, type EventLayerDataKPA, type JudgeLineDataKPA, type JudgeLineDataRPE, type NNListDataKPA, type NoteDataRPE, type RGB, type TimeT, type ValueTypeOfEventType } from "./chartTypes";
+import { EventType, EventValueType, NoteType, type EventDataRPELike, type EventLayerDataKPA, type JudgeLineDataKPA, type JudgeLineDataRPE, type NNListDataKPA, type NoteDataRPE, type RGB, type TimeT, type ValueTypeOfEventType } from "./chartTypes";
 import type { TemplateEasingLib } from "./easing";
 import { EventEndNode, EventNodeLike, EventNodeSequence, EventStartNode } from "./event";
 import { HNList, NNList, Note, NoteNode, NNNList } from "./note";
-import { TimeCalculator } from "./time";
+import { type TimeCalculator } from "./bpm";
+import TC from "./time";
 import { NodeType } from "./util";
-import Environment from "./env";
+import Environment, { err } from "./env";
 /// #declaration:global
-const TC = TimeCalculator
 
 export interface EventLayer {
     moveX?: EventNodeSequence;
@@ -79,7 +79,7 @@ export class JudgeLine {
         // this.noteSpeeds = {};
     }
     static fromRPEJSON(chart: Chart, id: number, data: JudgeLineDataRPE, templates: TemplateEasingLib, timeCalculator: TimeCalculator) {
-        let line = new JudgeLine(chart)
+        const line = new JudgeLine(chart)
         line.id = id;
         line.name = data.Name;
         chart.judgeLineGroups[data.Group].add(line);
@@ -102,15 +102,15 @@ export class JudgeLine {
         if (data.notes) {
             const holdLists = line.hnLists;
             const noteLists = line.nnLists;
-            let notes = data.notes;
+            const notes = data.notes;
             notes.sort((n1: NoteDataRPE, n2: NoteDataRPE) => {
-                if (TimeCalculator.ne(n1.startTime, n2.startTime)) {
-                    return TimeCalculator.gt(n1.startTime, n2.startTime) ? 1 : -1
+                if (TC.ne(n1.startTime, n2.startTime)) {
+                    return TC.gt(n1.startTime, n2.startTime) ? 1 : -1
                 }
-                return TimeCalculator.gt(n1.endTime, n2.endTime) ? -1 : 1 // 这里曾经排反了（
+                return TC.gt(n1.endTime, n2.endTime) ? -1 : 1 // 这里曾经排反了（
             })
             const len = notes.length;
-            let lastTime: TimeT = [-1, 0, 1];
+            // let lastTime: TimeT = [-1, 0, 1];
             // let comboInfoEntity: ComboInfoEntity;
                     
             for (let i = 0; i < len; i++) {
@@ -119,7 +119,7 @@ export class JudgeLine {
                 const tree = line.getNNList(note.speed, note.yOffset, note.type === NoteType.hold, false)
                 const cur = tree.currentPoint
                 const lastHoldTime: TimeT = cur.type === NodeType.HEAD ? [-1, 0, 1] : cur.startTime
-                if (TimeCalculator.eq(lastHoldTime, note.startTime)) {
+                if (TC.eq(lastHoldTime, note.startTime)) {
                     (tree.currentPoint as NoteNode).add(note)
                 } else {
                     const node = new NoteNode(note.startTime)
@@ -130,8 +130,8 @@ export class JudgeLine {
                 }
                 tree.timesWithNotes++
             }
-            for (let trees of [holdLists, noteLists]) {
-                for (const [_, list] of trees) {
+            for (const lists of [holdLists, noteLists]) {
+                for (const [_, list] of lists) {
                     NoteNode.connect(list.currentPoint, list.tail)
                     list.initJump();
                     // tree.initPointers()
@@ -142,16 +142,18 @@ export class JudgeLine {
         const length = eventLayers.length;
         const createSequence = (type: EventType, events: EventDataRPELike[], index: number) =>  {
             if (events) {
-                const sequence = EventNodeSequence.fromRPEJSON(type, events, chart);
-                sequence.id = `#${id}.${index}.${EventType[type]}`;
+                const seqId = `#${id}.${index}.${EventType[type]}`;
+                const sequence = EventNodeSequence.fromRPEJSON(type, events, chart, seqId);
+                sequence.id = seqId
                 chart.sequenceMap.set(sequence.id, sequence);
                 return sequence;
             }
         }
         const createExtendedSequence = <T extends EventType>(type: T, events: EventDataRPELike<ValueTypeOfEventType<T>>[]) =>  {
             if (events) {
-                const sequence = EventNodeSequence.fromRPEJSON(type, events, chart);
-                sequence.id = `#${id}.ex.${EventType[type]}`;
+                const seqId = `#${id}.ex.${EventType[type]}`;
+                const sequence = EventNodeSequence.fromRPEJSON(type, events, chart, seqId);
+                sequence.id = seqId;
                 chart.sequenceMap.set(sequence.id, sequence);
                 return sequence;
             }
@@ -193,7 +195,7 @@ export class JudgeLine {
         return line;
     }
     static fromKPAJSON(isOld: boolean, chart: Chart, id: number, data: JudgeLineDataKPA, templates: TemplateEasingLib, timeCalculator: TimeCalculator) {
-        let line = new JudgeLine(chart)
+        const line = new JudgeLine(chart)
         line.id = id;
         line.name = data.Name;
         line.rotatesWithFather = data.rotatesWithFather;
@@ -205,11 +207,11 @@ export class JudgeLine {
 
         chart.judgeLineGroups[data.group].add(line);
         const nnnList = chart.nnnList;
-        for (let isHold of [false, true]) {
+        for (const isHold of [false, true]) {
             const key: "hnLists" | "nnLists" = `${isHold ? "hn" : "nn"}Lists`
-            const lists: Record<string, NNListDataKPA>= data[key];
-            for (let name in lists) {
-                const listData = lists[name];
+            const listsData: Record<string, NNListDataKPA>= data[key];
+            for (const name in listsData) {
+                const listData = listsData[name];
                 if (!isOld) {
                         
                     const list = NNList.fromKPAJSON(isHold, chart.effectiveBeats, listData, nnnList, timeCalculator);
@@ -221,29 +223,36 @@ export class JudgeLine {
                 }
             }
         }
-        for (let child of data.children) {
+        for (const child of data.children) {
             line.children.add(JudgeLine.fromKPAJSON(isOld, chart, child.id, child, templates, timeCalculator));
         }
-        for (let eventLayerData of data.eventLayers) {
-            let eventLayer: EventLayer = {} as EventLayer;
-            for (let key in eventLayerData) {
+        for (const eventLayerData of data.eventLayers) {
+            const eventLayer: EventLayer = {} as EventLayer;
+            for (const key in eventLayerData) {
                 // use "fromRPEJSON" for they have the same logic
                 eventLayer[key] = chart.sequenceMap.get(eventLayerData[key]);
             }
             line.eventLayers.push(eventLayer);
         }
+        const unwrap = <VT>(sequence: EventNodeSequence<unknown>, predicate: (value: unknown) => boolean, typeStr: keyof typeof EventValueType) => {
+            const value = sequence.head.next.value
+            if (!predicate(value)) {
+                throw err.EXPECTED_TYPED_ENS(typeStr, sequence.id, value);
+            }
+            return sequence as EventNodeSequence<VT>;
+        }
         line.extendedLayer.scaleX = data.extended?.scaleXEvents
-                                ? chart.sequenceMap.get(data.extended.scaleXEvents)
+                                ? unwrap(chart.sequenceMap.get(data.extended.scaleXEvents), v => typeof v === "number", "numeric")
                                 : chart.createEventNodeSequence(EventType.scaleX, `#${line.id}.ex.scaleX`);
         line.extendedLayer.scaleY = data.extended?.scaleYEvents
-                                ? chart.sequenceMap.get(data.extended.scaleYEvents)
+                                ? unwrap(chart.sequenceMap.get(data.extended.scaleYEvents), v => typeof v === "number", "numeric")
                                 : chart.createEventNodeSequence(EventType.scaleY, `#${line.id}.ex.scaleY`);
         if (data.extended) {
             if (data.extended.textEvents) {
-                line.extendedLayer.text = chart.sequenceMap.get(data.extended.textEvents);
+                line.extendedLayer.text = unwrap(chart.sequenceMap.get(data.extended.textEvents), v => typeof v === "string", "text");
             }
             if (data.extended.colorEvents) {
-                line.extendedLayer.color = chart.sequenceMap.get(data.extended.colorEvents);
+                line.extendedLayer.color = unwrap(chart.sequenceMap.get(data.extended.colorEvents), v => Array.isArray(v), "color");
             }
         }
         
@@ -303,7 +312,7 @@ export class JudgeLine {
         }
     }
     updateSpeedIntegralFrom(beats: number, timeCalculator: TimeCalculator) {
-        for (let eventLayer of this.eventLayers) {
+        for (const eventLayer of this.eventLayers) {
             eventLayer?.speed?.updateNodesIntegralFrom(beats, timeCalculator);
         }
     }
@@ -321,8 +330,8 @@ export class JudgeLine {
         //*
         // 提取所有有变化的时间点
         let times: number[] = [];
-        let result: [number, number][] = [];
-        for (let eventLayer of this.eventLayers) {
+        const result: [number, number][] = [];
+        for (const eventLayer of this.eventLayers) {
             const sequence = eventLayer?.speed;
             if (!sequence) {
                 continue;
@@ -330,7 +339,7 @@ export class JudgeLine {
             let node: EventStartNode = sequence.getNodeAt(beats);
             let endNode: EventEndNode | EventNodeLike<NodeType.TAIL>
             while (true) {
-                times.push(TimeCalculator.toBeats(node.time))
+                times.push(TC.toBeats(node.time))
                 if ((endNode = node.next).type === NodeType.TAIL) {
                     break;
                 }
@@ -454,10 +463,6 @@ export class JudgeLine {
             this.getStackedValue("alpha", beats, usePrev),
         ]
     }
-    getMatrix(beats: number, usePrev = false) {
-        const base = this.father.getMatrix(beats, usePrev);
-        const x = this
-    }
     getStackedValue(type: keyof EventLayer, beats: number, usePrev: boolean = false) {
         const length = this.eventLayers.length;
         let current = 0;
@@ -518,15 +523,15 @@ export class JudgeLine {
      */
     dumpKPA(eventNodeSequences: Set<EventNodeSequence<any>>, judgeLineGroups: JudgeLineGroup[]): JudgeLineDataKPA {
         const children: JudgeLineDataKPA[] = [];
-        for (let line of this.children) {
+        for (const line of this.children) {
             children.push(line.dumpKPA(eventNodeSequences, judgeLineGroups))
         }
         const eventLayers: EventLayerDataKPA[] = [];
         for (let i = 0; i < this.eventLayers.length; i++) {
             const layer = this.eventLayers[i];
             if (!layer) continue;
-            let layerData = {}
-            for (let type in layer) {
+            const layerData = {}
+            for (const type in layer) {
                 const sequence = layer[type as keyof EventLayer];
                 if (!sequence) continue;
                 eventNodeSequences.add(sequence);
@@ -536,10 +541,10 @@ export class JudgeLine {
         }
         const hnListsData = {};
         const nnListsData = {};
-        for (let [id, list] of this.hnLists) {
+        for (const [id, list] of this.hnLists) {
             hnListsData[id] = list.dumpKPA();
         }
-        for (let [id, list] of this.nnLists) {
+        for (const [id, list] of this.nnLists) {
             nnListsData[id] = list.dumpKPA();
         }
         const extended = {
@@ -579,22 +584,22 @@ export class JudgeLine {
     updateEffectiveBeats(EB: number) {
         for (let i = 0; i < this.eventLayers.length; i++) {
             const layer = this.eventLayers[i];
-            for (let type in layer) {
+            for (const type in layer) {
                 const sequence = layer[type as keyof EventLayer];
                 sequence.effectiveBeats = EB;
             }
         }
-        for (let lists of [this.nnLists, this.hnLists]) {
-            for (let [_, list] of lists) {
+        for (const lists of [this.nnLists, this.hnLists]) {
+            for (const [_, list] of lists) {
                 list.effectiveBeats = EB;
             }
         }
     }
     static checkinterdependency(judgeLine: JudgeLine, toBeFather: JudgeLine) { 
-        let descendantsAndSelf = new Set<JudgeLine>();
+        const descendantsAndSelf = new Set<JudgeLine>();
         const add = (line: JudgeLine) => {
             descendantsAndSelf.add(line);
-            for (let child of line.children) {
+            for (const child of line.children) {
                 add(child);
             }
         }
