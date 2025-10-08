@@ -39,3 +39,5 @@ packages/*/*
 !packages/*/package.json
 
 ast*
+
+ignore
