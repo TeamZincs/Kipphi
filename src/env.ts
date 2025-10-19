@@ -13,7 +13,8 @@
 
 
 // 就挺神奇的！明明typeof后面跟值，这里却可以写成类型导入
-import { type EventValueType } from "./chartTypes";
+import { type TimeT, type EventValueType } from "./chartTypes";
+import { toTimeString } from "./util";
 
 // occupied 1
 // invalid data 2
@@ -35,9 +36,9 @@ const
     INTERNAL = 0xF00,
 
     OCCPIED = 0x10,
-    INVALID_DATA = 0x20,
-    INVALID_USAGE = 0x30,
-    INVALID_TYPE = 0x40 // 这里的type指ECMAScript数据类型
+    INVALID_DATA = 0x20, // 一般是指读取谱面时的无效事件类型、缓动号等等
+    INVALID_USAGE = 0x30, // 不知道归入哪里就放这吧（（（
+    INVALID_TYPE = 0x40 // 这里的type指ECMAScript数据类型，事件类型错误可以归入此类
     ;
 
 
@@ -46,9 +47,14 @@ export enum ERROR_IDS {
     UI_OCCUPIED =                                   CHART      | OCCPIED,
 
 
-    SEQUENCE_NAME_OCCUPIED =                        ENS        | OCCPIED,
+    SEQUENCE_NAME_OCCUPIED =                        ENS        | OCCPIED       | 0,
+    SEQUENCE_NODE_TIME_OCCUPIED =                   ENS        | OCCPIED       | 1,
     INVALID_EVENT_NODE_SEQUENCE_TYPE =              ENS        | INVALID_DATA  | 0,
     EVENT_NODE_TIME_NOT_INCREMENTAL =               ENS        | INVALID_DATA  | 1,
+    PARENT_SEQUENCE_NOT_FOUND =                     ENS        | INVALID_USAGE | 1,
+    NEEDS_AT_LEAST_ONE_ENS =                        ENS        | INVALID_USAGE | 2,
+    SEQUENCE_TYPE_NOT_CONSISTENT =                  ENS        | INVALID_USAGE | 3,
+    
     EXPECTED_TYPED_ENS =                            ENS        | INVALID_TYPE  | 0,
 
     CANNOT_SUBSTITUTE_EXPRESSION_EVALUATOR =        EVENT_NODE | INVALID_USAGE | 0,
@@ -59,10 +65,14 @@ export enum ERROR_IDS {
     INVALID_EASING_ID =                             EASING     | INVALID_DATA  | 0,
     CANNOT_IMPLEMENT_TEMEAS_WITH_NON_EASING_ENS =   EASING     | INVALID_DATA  | 1,
     CANNOT_IMPLEMENT_TEMEAS_WITH_NON_NUMERIC_ENS =  EASING     | INVALID_DATA  | 2,
+    UNIMPLEMENTED_TEMPLATE_EASING =                 EASING     | INVALID_DATA  | 3,
     MUST_INTERPOLATE_TEMPLATE_EASING =              EASING     | INVALID_USAGE | 0,
     NODES_NOT_CONTINUOUS =                          EASING     | INVALID_USAGE | 1,
     NODES_NOT_BELONG_TO_SAME_SEQUENCE =             EASING     | INVALID_USAGE | 2,
     NODES_HAS_ZERO_DELTA =                          EASING     | INVALID_USAGE | 3,
+
+    CANNOT_DIVIDE_EXPRESSION_EVALUATOR =            EVALUATOR  | INVALID_USAGE | 0,
+    
     
 
     INVALID_NOTE_PROP_TYPE =                        NOTE       | INVALID_TYPE  | 0,
@@ -78,13 +88,21 @@ export const ERRORS = {
     
     SEQUENCE_NAME_OCCUPIED: (name: string) =>
         `Sequence name '${name}' is occupied`,
+    SEQUENCE_NODE_TIME_OCCUPIED: (time: TimeT, id: string) => 
+        `Time ${toTimeString(time)} already has a node (in sequence ${id})`,
     INVALID_EVENT_NODE_SEQUENCE_TYPE: (type: any) =>
         `Invalid event node sequence type: '${type}'`,
     EXPECTED_TYPED_ENS: (typeStr: keyof typeof EventValueType, id: string, value: unknown) =>
         `Expected EventNodeSequence for ${typeStr} but seen value ${value} (Processing ${id})`,
     EVENT_NODE_TIME_NOT_INCREMENTAL: (pos: string) =>
         `EventNode time is not incremental (at ${pos})`,
-
+    PARENT_SEQUENCE_NOT_FOUND: (nodeTime: TimeT) =>
+        `Parent EventNodeSequence not found for an EventNode at time ${toTimeString(nodeTime)} (Did you forget to add it to a sequence?)`,
+    NEEDS_AT_LEAST_ONE_ENS: () =>
+        `Needs at least one EventNodeSequence`,
+    SEQUENCE_TYPE_NOT_CONSISTENT: (typeStr: string, but: string) =>
+        `EventNodeSequence type is not consistent (expected ${typeStr} but seen value ${but})`,
+    
     
     CANNOT_SUBSTITUTE_EXPRESSION_EVALUATOR: () =>
         `Cannot substitute ExpressionEvaluator`,
@@ -115,7 +133,18 @@ export const ERRORS = {
         `Invalid type for ${prop}. Got *${value}*, expected ${type}`,
 
     INVALID_TIME_TUPLE: (tuple: any) =>
-        `Invalid time tuple: '${typeof tuple === "undefined" ? 'undefined' : tuple.valueOf()}'`
+        `Invalid time tuple: '${typeof tuple === "undefined" ? 'undefined' : tuple.valueOf()}'`,
+
+
+
+
+    CANNOT_DIVIDE_EXPRESSION_EVALUATOR: (id: string) =>
+        `Cannot divide ExpressionEvaluator (Compiling ${id})`,
+
+
+    UNIMPLEMENTED_TEMPLATE_EASING: (temEasName: string) =>
+        `Unimplemented template easing: '${temEasName}'`,
+
 } satisfies Record<keyof typeof ERROR_IDS, (...args: any[]) => string>
 
 export class KPAError<ET extends ERROR_IDS> extends Error {
@@ -131,7 +160,7 @@ export class KPAError<ET extends ERROR_IDS> extends Error {
         console.warn(this.stack);
         KPAError.buffer.push(this);
     }
-    static buffer: KPAError<ERROR_IDS>[];
+    static buffer: KPAError<ERROR_IDS>[] = [];
     static flush() {
         KPAError.buffer = [];
     }

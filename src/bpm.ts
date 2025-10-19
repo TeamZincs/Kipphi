@@ -13,7 +13,7 @@ import TC from "./time";
 export class BPMStartNode extends EventStartNode {
     spb: number;
     cachedStartIntegral?: number;
-    override cachedIntegral?: number;
+    cachedIntegral?: number;
     override next: BPMEndNode | BPMNodeLike<NodeType.TAIL>;
     override previous: BPMEndNode | BPMNodeLike<NodeType.HEAD>;
     constructor(startTime: TimeT, bpm: number) {
@@ -57,7 +57,7 @@ export class BPMSequence extends EventNodeSequence {
     declare head: BPMNodeLike<NodeType.HEAD>;
     declare tail: BPMNodeLike<NodeType.TAIL>;
     /** 从拍数访问节点 */
-    override jump: JumpArray<AnyEN>;
+    declare jump: JumpArray<AnyBN>;
     /** 以秒计时的跳数组，处理从秒访问节点 */
     secondJump: JumpArray<AnyBN>;
     constructor(bpmList: BPMSegmentData[], public duration: number) {
@@ -80,7 +80,6 @@ export class BPMSequence extends EventNodeSequence {
         this.initJump();
     }
     override initJump(): void {
-        console.log(this)
         this.effectiveBeats = TC.toBeats(this.tail.previous.time)
         if (this.effectiveBeats !== 0) {
             super.initJump(); // 为0可以跳过jumpArray，用不到
@@ -114,7 +113,7 @@ export class BPMSequence extends EventNodeSequence {
             this.tail,
             originalListLength,
             this.duration,
-            (node: BPMStartNode) => {
+            (node: AnyBN) => {
                 if (node.type === NodeType.TAIL) {
                     return [null, null];
                 }

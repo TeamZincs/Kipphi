@@ -219,7 +219,6 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         }
         let next: T | false;
         // console.log(this)
-        // eslint-disable-next-line no-cond-assign
         while (next = nextFn(node, beats)) {
             node = next;
             if (node.type === NodeType.TAIL) {

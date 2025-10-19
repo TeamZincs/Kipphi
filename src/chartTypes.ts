@@ -314,12 +314,12 @@ export interface JudgeLineDataRPE {
     eventLayers: (EventLayerDataRPE | null)[];
     /** 扩展事件 */
     extended?: {
-        colorEvents: EventDataRPELike<RGB>[];
-        inclineEvents: EventDataRPELike[];
-        scaleXEvents: EventDataRPELike[];
-        scaleYEvents: EventDataRPELike[];
-        textEvents: EventDataRPELike<string>[];
-        gifEvents: EventDataRPELike<number>[];
+        colorEvents?: EventDataRPELike<RGB>[];
+        inclineEvents?: EventDataRPELike[];
+        scaleXEvents?: EventDataRPELike[];
+        scaleYEvents?: EventDataRPELike[];
+        textEvents?: EventDataRPELike<string>[];
+        gifEvents?: EventDataRPELike<number>[];
     };
     /** 父线线号，没有父线则为-1 */
     father: number;
@@ -360,10 +360,7 @@ export interface JudgeLineDataRPE {
     zIndex?: number;
 }
 
-export interface JudgeLineDataRPEExtended extends JudgeLineDataRPE {
-    _id?: number;
-    children: number[]
-}
+
 
 export interface TemplateEasingBodyData {
     content: string;
@@ -382,6 +379,14 @@ export interface EventLayerDataKPA {
     rotate: string;
     alpha: string;
     speed: string;
+}
+
+export interface EventLayerDataKPA2 {
+    moveX: string;
+    moveY: string;
+    rotate: string;
+    alpha: string;
+    // 移除了速度事件可以有多层的性质
 }
 
 
@@ -418,6 +423,28 @@ export interface JudgeLineDataKPA {
     zOrder: number;
 }
 
+export interface JudgeLineDataKPA2 {
+    cover: boolean;
+    id: number;
+    group: number;
+    nnLists: {[k: string]: NNListDataKPA};
+    hnLists: {[k: string]: NNListDataKPA};
+    name: string;
+    texture: string;
+    eventLayers: EventLayerDataKPA2[];
+    speedEventNodeSeq: string;
+    children: JudgeLineDataKPA2[];
+    rotatesWithFather: boolean;
+
+    anchor: [number, number];
+    extended?: {
+        scaleXEvents: string;
+        scaleYEvents: string;
+        textEvents?: string;
+        colorEvents?: string;
+    }
+    zOrder: number;
+}
 
 
 export interface EventNodeSequenceDataKPA<VT> {
@@ -493,7 +520,7 @@ export interface ChartDataKPA2 {
     templateEasings: TemplateEasingBodyData[];
     wrapperEasings: WrapperEasingBodyData[]
     eventNodeSequences: EventNodeSequenceDataKPA2<unknown>[];
-    orphanLines: JudgeLineDataKPA[];
+    orphanLines: JudgeLineDataKPA2[];
     bpmList: BPMSegmentData[];
     judgeLineGroups: string[];
     chartTime?: number;

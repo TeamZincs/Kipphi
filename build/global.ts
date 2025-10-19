@@ -1,3 +1,3 @@
 import * as Kipphi from "..";
 
-Object.assign(Window, Kipphi);
+Object.assign(window, Kipphi);

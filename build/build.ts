@@ -183,7 +183,7 @@ async function main(inputFiles: string[], outputFile: string) {
 
 const inputFiles = [
     "src/chart.ts", "src/easing.ts", "src/util.ts", "src/time.ts", "src/bpm.ts", "src/chartTypes.ts", "src/jumparray.ts", "src/event.ts",
-    "src/note.ts", "src/judgeline.ts", "src/evaluator.ts", "src/version.ts", "src/rpeChartCompiler.ts"
+    "src/note.ts", "src/judgeline.ts", "src/evaluator.ts", "src/version.ts", "src/rpeChartCompiler.ts", "src/env.ts"
 ]
 
 await main(inputFiles, "dist/declaration.g.ts")
@@ -219,8 +219,8 @@ for await (const file of glob.scan(".")) {
   }
 }
 
+await Bun.write("packages/package-kipphi/index.ts", (await Bun.file("index.ts").text()).replaceAll("src/", ""))
 
-await cp("index.ts", "packages/package-kipphi/index.ts");
 await cp("README.md", "packages/package-kipphi/README.md")
 await cp("LICENSE", "packages/package-kipphi/LICENSE")
 // 其他复制操作保持不变

@@ -8,7 +8,8 @@ import TC from "./time";
 import { type TimeCalculator } from "./bpm";
 import { NodeType } from "./util";
 
-import { err } from "./env";
+import { err, ERROR_IDS, KPAError } from "./env";
+import { JudgeLine } from "./judgeline";
 
 /// #declaration:global
 export class EventNodeLike<T extends NodeType, VT = number> {
@@ -49,7 +50,7 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
     constructor(time: TimeT, value: VT) {
         super(NodeType.MIDDLE);
         this.time = TC.validateIp([...time]);
-        // @ts-ignore 不清楚什么时候会是undefined，但是留着准没错
+        // @ts-expect-error 不清楚什么时候会是undefined，但是留着准没错((
         this.value = value ?? 0;
         if (typeof value === "number") {
             this.evaluator = NumericEasedEvaluator.default as unknown as Evaluator<VT>;
@@ -107,8 +108,7 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
             if (typeof data.start === "number") {
                 return new NumericEasedEvaluator(easing) as EasedEvaluator<VT>;
             } else if (typeof data.start === "string") {
-                // @ts-expect-error
-                return new TextEasedEvaluator(easing, interpreteAs);
+                return new TextEasedEvaluator(easing, interpreteAs) as unknown as EasedEvaluator<VT>;
             } else {
                 return new ColorEasedEvaluator(easing) as EasedEvaluator<VT>;
             }
@@ -305,9 +305,9 @@ export class EventStartNode<VT = number> extends EventNode<VT> {
     override next: EventEndNode<VT> | EventNodeLike<NodeType.TAIL, VT>;
     override previous: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT>;
     /** 
-     * 对于速度事件，从计算时的时刻到此节点的总积分
+     * 对于速度事件，从0时刻到此节点的总积分
      */
-    cachedIntegral?: number;
+    floorPosition: number = 0;
     constructor(time: TimeT, value: VT) {
         super(time, value);
     }
@@ -347,10 +347,10 @@ export class EventStartNode<VT = number> extends EventNode<VT> {
     /**
      * 积分获取位移
      */
-    getFloorPos(this: EventStartNode<number>, beats: number, timeCalculator: TimeCalculator) {
+    getLocalFloorPos(this: EventStartNode<number>, beats: number, timeCalculator: TimeCalculator) {
         return timeCalculator.segmentToSeconds(TC.toBeats(this.time), beats) * (this.value + this.getSpeedValueAt(beats)) / 2 * 120 // 每单位120px
     }
-    getFullFloorPos(this: EventStartNode<number>, timeCalculator: TimeCalculator) {
+    getFullLocalFloorPos(this: EventStartNode<number>, timeCalculator: TimeCalculator) {
         if (this.next.type === NodeType.TAIL) {
             console.log(this)
             throw err.CANNOT_GET_FULL_INTEGRAL_OF_FINAL_START_NODE();
@@ -366,6 +366,9 @@ export class EventStartNode<VT = number> extends EventNode<VT> {
     }
     isLastStart() {
         return this.next && this.next.type === NodeType.TAIL
+    }
+    isSpeed() {
+        return this.parentSeq.type === EventType.speed;
     }
     override clone(offset?: TimeT): EventStartNode<VT> {
         return super.clone(offset) as EventStartNode<VT>;
@@ -383,6 +386,8 @@ export type NonLastStartNode<VT extends EventValueESType> = EventStartNode<VT> &
 export class EventEndNode<VT = number> extends EventNode<VT> {
     override next!: EventStartNode<VT>;
     override previous!: EventStartNode<VT>;
+
+    // @ts-expect-error 这里没有类型安全问题
     override get parentSeq(): EventNodeSequence<VT> {return this.previous?.parentSeq || null}
     override set parentSeq(_parent: EventNodeSequence<VT>) {}
     constructor(time: TimeT, value: VT) {
@@ -396,6 +401,12 @@ export class EventEndNode<VT = number> extends EventNode<VT> {
     }
 }
 
+
+export enum Monotonicity {
+    increasing,
+    decreasing,
+    swinging
+}
 
 /**
  * 为一个链表结构。会有一个数组进行快跳。
@@ -424,31 +435,51 @@ export class EventEndNode<VT = number> extends EventNode<VT> {
  * Remember to update the jump array when inserting or deleting nodes.
  */
 export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
+    /**
+     * @deprecated 谱面属性未实装，以后有必要的时候会添加为其赋值的逻辑
+     */
     chart: Chart;
-    /** id follows the format `#${lineid}.${layerid}.${typename}` by default */
+    /** 标识名默认遵循`#${lineid}.${layerid}.${typename}`格式
+     * id follows the format `#${lineid}.${layerid}.${typename}` by default
+     */
     id: string;
-    /** has no time or value */
     head: EventNodeLike<NodeType.HEAD, VT>;
-    /** has no time or value */
     tail: EventNodeLike<NodeType.TAIL, VT>;
     jump?: JumpArray<AnyEN<VT>>;
     listLength: number;
     /** 一定是二的幂，避免浮点误差 */
     jumpAverageBeats: number;
-    // nodes: EventNode[];
-    // startNodes: EventStartNode[];
-    // endNodes: EventEndNode[];
-    // eventTime: Float64Array;
+
+    /**
+     * 用于速度事件优化
+     */
+    monotonicity: Monotonicity = Monotonicity.swinging;
+
+    /**
+     * 使用了该序列的判定线，当前仅用于速度事件对fp的更新
+     */
+    consumerLines = new Set<JudgeLine>;
+
     constructor(public type: EventType, public effectiveBeats: number) {
         this.head = new EventNodeLike(NodeType.HEAD);
         this.tail = new EventNodeLike(NodeType.TAIL);
         this.head.parentSeq = this.tail.parentSeq = this;
         this.listLength = 1;
-        // this.head = this.tail = new EventStartNode([0, 0, 0], 0)
-        // this.nodes = [];
-        // this.startNodes = [];
-        // this.endNodes = [];
     }
+    /**
+     * 获取指定事件类型的事件默认值。
+     * Get the default value of the specified event type.
+     * 
+     * 对于文字事件，默认值为空字符串。
+     * 
+     * 对于缩放事件，默认值为1.0。
+     * 
+     * 对于颜色事件，默认值为黑色（[0, 0, 0]）。
+     * 
+     * 对于速度事件，默认值为10（1200像素/秒）。
+     * 
+     * 对于一般数值事件，默认值为0。
+     */
     static getDefaultValueFromEventType(type: EventType) {
         
         return type === EventType.speed                               ? 10  :
@@ -457,6 +488,17 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
                type === EventType.color                               ? [0, 0, 0] :
                0
     }
+    /**
+     * 从RPEJSON数据创建一个事件序列。
+     * 
+     * KPAJSON 1.x也会使用此接口
+     * @param type 事件类型（不是数值类型，也不是数值ECMAScript类型）
+     * @param data 事件数据的数组
+     * @param chart 
+     * @param pos 当前事件序列应当具有什么ID（用于报错和警告）
+     * @param endValue 结束值（RPEJSON没有）
+     * @returns 
+     */
     static fromRPEJSON<T extends EventType, VT = number>(type: T, data: EventDataRPELike<VT>[], chart: Chart, pos: string, endValue?: number) {
         const {templateEasingLib: templates} = chart
         const length = data.length;
@@ -465,7 +507,7 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
         const seq = new EventNodeSequence<VT>(type, type === EventType.easing ? TC.toBeats(data[length - 1].endTime) : chart.effectiveBeats);
         let listLength = length;
         let lastEnd: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT> = seq.head;
-        // 如果第一个事件不从0时间开始，那么添加一对面对面节点来垫背
+        // 如果第一个事件不从0时间开始，那么添加一对面对面节点来垫底
         if (data[0] && TC.ne(data[0].startTime, [0, 0, 1])) {
             const value = data[0].start
             const start = new EventStartNode<VT>([0, 0, 1], value as VT);
@@ -475,7 +517,10 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
             lastEnd = end;
         }
 
+        // 当前仅用于检查时间递增
         let lastEndTime: TimeT = [0, 0, 1];
+
+        // 读取事件列表
         for (let index = 0; index < length; index++) {
             const event = data[index];
             if (TC.lt(event.startTime, lastEndTime)) { // event.startTime < lastEndTime
@@ -485,13 +530,18 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
                 err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}]`).warn()
             }
             lastEndTime = event.endTime;
-            const [start, end] = (type === EventType.text ? EventNode.fromTextEvent(event as EventDataRPELike<string>, templates) : EventNode.fromEvent(event as EventDataRPELike<number | RGB>, chart)) as unknown as [EventStartNode<VT>, EventEndNode<VT>];
+            const [start, end] = (type === EventType.text
+                                ? EventNode.fromTextEvent(event as EventDataRPELike<string>, templates)
+                                : EventNode.fromEvent(event as EventDataRPELike<number | RGB>, chart)) as unknown as [EventStartNode<VT>, EventEndNode<VT>];
+            // 刚开始时，上个节点是头
             if (lastEnd.type === NodeType.HEAD) {
                 EventNode.connect(lastEnd, start)
             // 如果上一个是钩定事件，那么一块捋平
             } else if (lastEnd.value === lastEnd.previous.value && lastEnd.previous.evaluator instanceof EasedEvaluator) {
                 lastEnd.time = start.time
                 EventNode.connect(lastEnd, start)
+            
+            // 如果上一个事件的结束时间和下一个事件的开始时间不一样，那么中间插入一对面对面节点
             } else if (TC.toBeats(lastEnd.time) !== TC.toBeats(start.time)) {
                 const val = lastEnd.value;
                 const midStart = new EventStartNode(lastEnd.time, val);
@@ -500,23 +550,19 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
                 EventNode.connect(lastEnd, midStart);
                 EventNode.connect(midStart, midEnd);
                 EventNode.connect(midEnd, start)
-                // seq.startNodes.push(midStart);
-                // seq.endNodes.push(midEnd);
                 listLength++;
+            // 最后应该就是上一个事件和这个事件首尾相接的情况
             } else {
                 
                 EventNode.connect(lastEnd, start)
             }
             
-            // seq.startNodes.push(start);
-            // seq.endNodes.push(end);
             lastEnd = end;
-            // seq.nodes.push(start, end);
         }
         const last = lastEnd;
         const tail = new EventStartNode(
             last.type === NodeType.HEAD ? [0, 0, 1] : last.time,
-            endValue ?? last.value
+            endValue ?? (last as EventEndNode<VT>).value
         );
         EventNode.connect(last, tail);
         // last can be a header, in which case easing is undefined.
@@ -525,14 +571,36 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
         EventNode.connect(tail, seq.tail)
         seq.listLength = listLength;
         seq.initJump();
+        if (type === EventType.speed) {
+            (seq as SpeedENS).updateFloorPositionAfter((seq as SpeedENS).head.next, chart.timeCalculator)
+        }
         return seq;
     }
-    static fromKPA2JSON<T extends EventType, VT extends EventValueESType = number>(type: T, data: EventDataKPA2<VT>[], chart: Chart, pos: string, endValue?: VT) {
-        const {templateEasingLib: templates} = chart
+    /**
+     * 从KPAJSON 2.x数据创建一个事件序列。
+     * @param type 事件类型（不是数值类型，也不是数值ECMAScript类型）
+     * @param data 事件数据的数组
+     * @param chart 
+     * @param pos 当前事件序列应当具有什么ID（用于报错和警告）
+     * @param endValue 结束值（RPEJSON没有）
+     * @returns 
+     */
+    static fromKPA2JSON<T extends EventType, VT extends EventValueESType = number>(
+        type: T,
+        data: EventDataKPA2<VT>[],
+        chart: Chart,
+        pos: string,
+        endValue?: VT
+    )
+    {
         const length = data.length;
         // const isSpeed = type === EventType.Speed;
         // console.log(isSpeed)
-        const seq = new EventNodeSequence<VT>(type, type === EventType.easing ? TC.toBeats(data[length - 1].endTime) : chart.effectiveBeats);
+        const seq = new EventNodeSequence<VT>(
+            type,
+            type === EventType.easing
+                ? TC.toBeats(data[length - 1].endTime)
+                : chart.effectiveBeats);
         let listLength = length;
         let lastEnd: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT> = seq.head;
         // 如果第一个事件不从0时间开始，那么添加一对面对面节点来垫背
@@ -555,7 +623,8 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
         for (let index = 0; index < length; index++) {
             const event = data[index];
             const [start, end] = chart.createEventFromData<VT>(event, valueType);
-            // 复用性减一
+            // 从前面复制了，复用性减一
+            // KPA2没有更改RPE的按事件存储的机制。
             if (TC.lt(event.startTime, lastEndTime)) { // event.startTime < lastEndTime
                 err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}] and the previous`).warn()
             }
@@ -566,10 +635,13 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
             if (lastEnd.type === NodeType.HEAD) {
                 EventNode.connect(lastEnd, start)
             // 如果上一个是钩定事件，那么一块捋平
-            } else if (lastEnd.value === lastEnd.previous.value && lastEnd.previous.evaluator instanceof EasedEvaluator) {
+            } else if (
+                   lastEnd.value === lastEnd.previous.value
+                && lastEnd.previous.evaluator instanceof EasedEvaluator
+            ) {
                 lastEnd.time = start.time
                 EventNode.connect(lastEnd, start)
-            } else if (TC.toBeats(lastEnd.time) !== TC.toBeats(start.time)) {
+            } else if (TC.eq(lastEnd.time, start.time)) {
                 const val = lastEnd.value;
                 const midStart = new EventStartNode(lastEnd.time, val);
                 const midEnd = new EventEndNode(start.time, val);
@@ -597,6 +669,9 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
         EventNode.connect(tail, seq.tail)
         seq.listLength = listLength;
         seq.initJump();
+        if (type === EventType.speed) {
+            (seq as SpeedENS).updateFloorPositionAfter((seq as SpeedENS).head.next, chart.timeCalculator)
+        }
         return seq;
     }
     /**
@@ -606,11 +681,16 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
      * @param effectiveBeats 
      * @returns 
      */
-    static newSeq<T extends EventType>(type: T, effectiveBeats: number): EventNodeSequence<ValueTypeOfEventType<T>> {
+    static newSeq<T extends EventType>(
+        type: T,
+        effectiveBeats: number
+    ): EventNodeSequence<ValueTypeOfEventType<T>>
+    {
         type V = ValueTypeOfEventType<T>
         const sequence = new EventNodeSequence<V>(type, effectiveBeats);
         const node = new EventStartNode<V>(
-            [0, 0, 1], EventNodeSequence.getDefaultValueFromEventType(type) as V
+            [0, 0, 1],
+            EventNodeSequence.getDefaultValueFromEventType(type) as V
         );
         EventNode.connect(sequence.head, node)
         EventNode.connect(node, sequence.tail)
@@ -651,7 +731,7 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
             (node: EventStartNode<VT>, beats: number) => {
                 return TC.toBeats((node.next as EventEndNode<VT>).time) > beats ? false : EventNode.nextStartInJumpArray(node)
             },
-            (node: EventStartNode) => {
+            (node: AnyEN<VT>) => {
                 return node.next && node.next.type === NodeType.TAIL ? node.next : node;
             }
             /*(node: EventStartNode) => {
@@ -667,11 +747,9 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
         }
         this.jump.updateRange(from, to);
     }
-    insert() {
-
-    }
     getNodeAt(beats: number, usePrev: boolean = false): EventStartNode<VT> {
-        let node = this.jump?.getNodeAt(beats) as (EventStartNode<VT> | EventNodeLike<NodeType.TAIL, VT>)
+        let node 
+            = this.jump?.getNodeAt(beats) as (EventStartNode<VT> | EventNodeLike<NodeType.TAIL, VT>)
                 || this.head.next as (EventStartNode<VT> | EventNodeLike<NodeType.TAIL, VT>);
         if (node.type === NodeType.TAIL) {
             if (usePrev) {
@@ -694,20 +772,40 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
     getValueAt(beats: number, usePrev: boolean = false): VT {
         return this.getNodeAt(beats, usePrev).getValueAt(beats);
     }
-    getIntegral(this: EventNodeSequence<number>, beats: number, timeCalculator: TimeCalculator) {
+    getFloorPositionAt(this: EventNodeSequence<number>, beats: number, timeCalculator: TimeCalculator) {
         const node: EventStartNode<number> = this.getNodeAt(beats);
-        return node.getFloorPos(beats, timeCalculator) + node.cachedIntegral
+        const value = node.getLocalFloorPos(beats, timeCalculator) + node.floorPosition;
+        if (isNaN(value)) {
+            debugger;
+        }
+        return value
     }
-    updateNodesIntegralFrom(this: EventNodeSequence<number>, beats: number, timeCalculator: TimeCalculator) {
-        let previousStartNode = this.getNodeAt(beats);
-        previousStartNode.cachedIntegral = -previousStartNode.getFloorPos(beats, timeCalculator);
-        let totalIntegral: number = previousStartNode.cachedIntegral
-        let endNode: EventEndNode | EventNodeLike<NodeType.TAIL>;
-        while ((endNode = previousStartNode.next).type !== NodeType.TAIL) {
-            const currentStartNode = endNode.next
-            totalIntegral += previousStartNode.getFullFloorPos(timeCalculator);
-            currentStartNode.cachedIntegral = totalIntegral;
-            previousStartNode = currentStartNode;
+    /**
+     * 更新某个速度节点之后的FP
+     * 
+     * 注意，修改节点并不会影响它的FP，而是它后面的所有节点的FP，节点存的是它所在位置的FP，节点在事件头部
+     * @param this 
+     * @param node 
+     * @param tc 
+     */
+    updateFloorPositionAfter(this: SpeedENS, node: EventStartNode, tc: TimeCalculator): void {
+        let currentFP: number;
+        if (node.floorPosition) {
+            currentFP = node.floorPosition;
+        } else if (node.previous.type !== NodeType.HEAD) {
+            const prevStart = node.previous.previous;
+            currentFP = prevStart.floorPosition + prevStart.getFullLocalFloorPos(tc);
+        } else {
+            currentFP = 0;
+        }
+        while (true) {
+            const canBeEnd = node.next;
+            if (canBeEnd.type === NodeType.TAIL) {
+                break;
+            }
+            currentFP += node.getFullLocalFloorPos(tc);
+            node = canBeEnd.next;
+            node.floorPosition = currentFP
         }
     }
     dump(): EventNodeSequenceDataKPA2<VT> {
@@ -728,8 +826,8 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
         };
     }
 
-    getNodesFromOneAndRangeRight(node: EventStartNode<VT>, rangeRight: TimeT) {
-        const arr = []
+    getNodesFromOneAndRangeRight(node: EventStartNode<VT>, rangeRight: TimeT): EventStartNode<VT>[] {
+        const arr: EventStartNode<VT>[] = []
         for (; !TC.gt(node.time, rangeRight); ) {
             const next = node.next;
             arr.push(node);
@@ -740,8 +838,8 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
         }
         return arr;
     }
-    getNodesAfterOne(node: EventStartNode<VT>) {
-        const arr = []
+    getNodesAfterOne(node: EventStartNode<VT>): EventStartNode<VT>[] {
+        const arr: EventStartNode<VT>[] = []
         while (true) {
             const next = node.next;
             if (next.type === NodeType.TAIL) {
@@ -752,6 +850,72 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
         }
         return arr;
     }
+//    connectLine(consumer: JudgeLine) {
+//        this.consumerLines.add(consumer);
+//    }
+//    disconnectLine(consumer: JudgeLine) {
+//        this.consumerLines.delete(consumer);
+//    }
+    /**
+     * 将多个事件层上的数值性事件节点序列合为一个
+     * 
+     * 目前仅用于速度序列，因为就他是线性的（
+     * 
+     * 会创建新序列
+     * @param sequences 
+     * @throws {KPAError<ERROR_IDS.NEEDS_AT_LEAST_ONE_ENS>}
+     */
+    static mergeSequences(sequences: EventNodeSequence[]) {
+        if (sequences.length < 1) {
+            throw err.NEEDS_AT_LEAST_ONE_ENS();
+        }
+        const dest = EventNodeSequence.newSeq(EventType.speed, sequences[0].effectiveBeats);
+        dest.head.next.value = 0;
+        dest.id = sequences[0].id + "_merged";
+        for (const seq of sequences) {
+            if (seq.type !== EventType.speed) {
+                throw err.SEQUENCE_TYPE_NOT_CONSISTENT("speed", EventType[seq.type]);
+            }
+            const nodesToChange: [EventStartNode | EventEndNode, number][] = [];
+            const inserts: [toInsert: EventStartNode, targetBeats: number][] = [];
+            let endNode = seq.head.next.next;
+            // 这里是背靠背遍历，不是面对面遍历
+            // 我把节点关系都写这里了，通义灵码还不会看，乱给补全，罚他看114514遍
+            while (endNode.type !== NodeType.TAIL) {
+                const startNode = endNode.next;
+                const endTime = endNode.time;
+                const endBeats = TC.toBeats(endTime);
+                const targetStart = dest.getNodeAt(endBeats)
+                if (TC.eq(targetStart.time, endTime)) {
+                    const targetEnd = targetStart.previous as EventEndNode;
+                    nodesToChange.push([targetStart, startNode.value]);
+                    nodesToChange.push([targetEnd, endNode.value]);
+                } else {
+                    const newEnd = new EventEndNode(endTime, endNode.value + targetStart.getValueAt(endBeats));
+                    const newStart = new EventStartNode(endTime, startNode.value + targetStart.getValueAt(endBeats));
+                    EventNode.connect(newEnd, newStart);
+                    inserts.push([newStart, endBeats]);
+                }
+                endNode = startNode.next;
+            }
+            dest.head.next.value += seq.head.next.value;
+            const len1 = nodesToChange.length;
+            for (let i = 0; i < len1; i++) {
+                const tup = nodesToChange[i];
+                tup[0].value += tup[1];
+            }
+            const len2 = inserts.length;
+            for (let i = 0; i < len2; i++) {
+                const tup = inserts[i];
+                // 这都updateJump
+                dest.updateJump(...EventNode.insert(tup[0], dest.getNodeAt(tup[1])));
+            }
+        }
+        dest.initJump();
+        return dest;
+    }
 }
+
+export type SpeedENS = EventNodeSequence<number> & { type: EventType.speed };
 
 /// #enddeclaration

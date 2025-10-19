@@ -579,7 +579,7 @@ export type NNNOrHead = NNNode | NNNodeLike<NodeType.HEAD>;
 export type NNNOrTail = NNNode | NNNodeLike<NodeType.TAIL>;
 type AnyNNN = NNNode | NNNodeLike<NodeType.HEAD> | NNNodeLike<NodeType.TAIL>;
 
-class NNNodeLike<T extends NodeType> {
+export class NNNodeLike<T extends NodeType> {
     previous: NNNOrHead;
     next: NNNOrTail;
     startTime: TimeT;

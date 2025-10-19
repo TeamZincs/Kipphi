@@ -1,4 +1,4 @@
-import type { RGB } from "./chartTypes";
+import type { RGB, TimeT } from "./chartTypes";
 
 /// #declaration:global
 
@@ -38,5 +38,9 @@ export const hex2rgb = (hex: number): RGB => {
 export const numberToRatio = (num: number): [number, number] => {
     return [Math.round(num * 10000), 10000]
 }
+
+
+export const toTimeString = (beaT: TimeT): string =>
+    `${beaT[0]}:${beaT[1]}/${beaT[2]}`;
 
 /// #enddeclaration

@@ -61,6 +61,7 @@ export default class TC {
         } else {
             return [Math.floor(b0nume / denominator), beaT[1] * numerator + remainder * beaT[2], beaT[2] * denominator]
         }
+        
     }
     /**
      * 原地规范化时间元组，但仍然返回这个元组，方便使用

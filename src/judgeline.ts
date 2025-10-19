@@ -1,7 +1,7 @@
 import type { Chart, JudgeLineGroup } from "./chart";
-import { EventType, EventValueType, NoteType, type EventDataRPELike, type EventLayerDataKPA, type JudgeLineDataKPA, type JudgeLineDataRPE, type NNListDataKPA, type NoteDataRPE, type RGB, type TimeT, type ValueTypeOfEventType } from "./chartTypes";
+import { EventType, EventValueType, JudgeLineDataKPA2, NoteType, type EventDataRPELike, type EventLayerDataKPA, type JudgeLineDataKPA, type JudgeLineDataRPE, type NNListDataKPA, type NoteDataRPE, type RGB, type TimeT, type ValueTypeOfEventType } from "./chartTypes";
 import type { TemplateEasingLib } from "./easing";
-import { EventEndNode, EventNodeLike, EventNodeSequence, EventStartNode } from "./event";
+import { EventEndNode, EventNode, EventNodeLike, EventNodeSequence, EventStartNode, Monotonicity, SpeedENS } from "./event";
 import { HNList, NNList, Note, NoteNode, NNNList } from "./note";
 import { type TimeCalculator } from "./bpm";
 import TC from "./time";
@@ -14,7 +14,6 @@ export interface EventLayer {
     moveY?: EventNodeSequence;
     rotate?: EventNodeSequence;
     alpha?: EventNodeSequence;
-    speed?: EventNodeSequence;
 }
 
 export interface ExtendedLayer {
@@ -34,6 +33,9 @@ const getRangeMedian = (yOffset: number) => {
     const NNLIST_Y_OFFSET_HALF_SPAN = Environment.NNLIST_Y_OFFSET_HALF_SPAN
     return (Math.floor((Math.abs(yOffset) - NNLIST_Y_OFFSET_HALF_SPAN) / NNLIST_Y_OFFSET_HALF_SPAN / 2) * (NNLIST_Y_OFFSET_HALF_SPAN * 2) + NNLIST_Y_OFFSET_HALF_SPAN * 2) * Math.sign(yOffset);
 }
+
+
+
 export class JudgeLine {
     texture: string;
     group: JudgeLineGroup;
@@ -41,19 +43,14 @@ export class JudgeLine {
     hnLists = new Map<string, HNList>();
     nnLists = new Map<string, NNList>();
     eventLayers: EventLayer[] = [];
+    speedSequence: SpeedENS;
     extendedLayer: ExtendedLayer = {};
     // notePosition: Float64Array;
     // noteSpeeds: NoteSpeeds;
     father: JudgeLine;
     children: Set<JudgeLine> = new Set();
 
-    moveX: number;
-    moveY: number;
-    rotate: number;
-    alpha: number;
-    transformedX: number;
-    transformedY: number;
-    optimized: boolean = false;
+
 
     zOrder: number = 0;
 
@@ -63,8 +60,11 @@ export class JudgeLine {
 
     /**
      * 每帧渲染时所用的变换矩阵，缓存下来用于之后的UI绑定渲染
+     * 
+     * 已移除，谱面NPM包不需要这个，播放器侧如要使用，可以用同名接口扩展此类
+     * @removed since 2.0.1
      */
-    renderMatrix: Matrix;
+    // renderMatrix: Matrix;
 
     rotatesWithFather: boolean = false;
 
@@ -158,6 +158,7 @@ export class JudgeLine {
                 return sequence;
             }
         }
+        const speedSequences: SpeedENS[] = [];
         for (let index = 0; index < length; index++) {
             const layerData = eventLayers[index];
             if (!layerData) {
@@ -167,10 +168,19 @@ export class JudgeLine {
                 moveX: createSequence(EventType.moveX, layerData.moveXEvents, index),
                 moveY: createSequence(EventType.moveY, layerData.moveYEvents, index),
                 rotate: createSequence(EventType.rotate, layerData.rotateEvents, index),
-                alpha: createSequence(EventType.alpha, layerData.alphaEvents, index),
-                speed: createSequence(EventType.speed, layerData.speedEvents, index)
+                alpha: createSequence(EventType.alpha, layerData.alphaEvents, index)
             };
+            if (layerData.speedEvents) {
+                const seq = createSequence(EventType.speed, layerData.speedEvents, index);
+                speedSequences.push(seq as SpeedENS);
+            }
             line.eventLayers[index] = layer;
+        }
+        if (speedSequences.length > 1) {
+            line.speedSequence = EventNodeSequence.mergeSequences(speedSequences) as SpeedENS;
+            line.speedSequence.updateFloorPositionAfter(line.speedSequence.head.next, timeCalculator);
+        } else {
+            line.speedSequence = chart.createEventNodeSequence(EventType.speed, `#${id}.speed`) as SpeedENS;
         }
         if (data.extended) {
             if (data.extended.scaleXEvents) {
@@ -194,15 +204,28 @@ export class JudgeLine {
         // line.computeNotePositionY(timeCalculator);
         return line;
     }
-    static fromKPAJSON(isOld: boolean, chart: Chart, id: number, data: JudgeLineDataKPA, templates: TemplateEasingLib, timeCalculator: TimeCalculator) {
+    static fromKPAJSON(
+        version: number,
+        chart: Chart,
+        id: number,
+        data: JudgeLineDataKPA | JudgeLineDataKPA2,
+        templates: TemplateEasingLib, 
+        timeCalculator: TimeCalculator
+    )
+    {
+        const withNewEventStructure = version >= 150;
+        const independentSpeedENS = version >= 201;
+        const lowerCaseNameAndTexture = version >= 201;
+
         const line = new JudgeLine(chart)
         line.id = id;
-        line.name = data.Name;
+        line.name = lowerCaseNameAndTexture ? (data as JudgeLineDataKPA2).name : (data as JudgeLineDataKPA).Name;
         line.rotatesWithFather = data.rotatesWithFather;
         line.anchor = data.anchor ?? [0.5, 0.5];
-        line.texture = data.Texture || "line.png";
+        line.texture = (lowerCaseNameAndTexture ? (data as JudgeLineDataKPA2).texture : (data as JudgeLineDataKPA).Texture)  ?? "line.png";
         line.cover = data.cover ?? true;
         line.zOrder = data.zOrder ?? 0;
+
 
 
         chart.judgeLineGroups[data.group].add(line);
@@ -212,11 +235,13 @@ export class JudgeLine {
             const listsData: Record<string, NNListDataKPA>= data[key];
             for (const name in listsData) {
                 const listData = listsData[name];
-                if (!isOld) {
+                if (withNewEventStructure) {
                         
                     const list = NNList.fromKPAJSON(isHold, chart.effectiveBeats, listData, nnnList, timeCalculator);
                     list.parentLine = line;
-                    list.id = name
+                    list.id = name;
+                    // isHold为真则lists为Map<string, HNList>，且list为HNList，能够匹配
+                    // @ts-expect-error 这里我也不知道怎么让它知道这里是匹配的
                     line[key].set(name, list);
                 } else {
                     line.getNNListFromOldKPAJSON(line[key], name, isHold, chart.effectiveBeats, listData, nnnList, timeCalculator);
@@ -224,15 +249,7 @@ export class JudgeLine {
             }
         }
         for (const child of data.children) {
-            line.children.add(JudgeLine.fromKPAJSON(isOld, chart, child.id, child, templates, timeCalculator));
-        }
-        for (const eventLayerData of data.eventLayers) {
-            const eventLayer: EventLayer = {} as EventLayer;
-            for (const key in eventLayerData) {
-                // use "fromRPEJSON" for they have the same logic
-                eventLayer[key] = chart.sequenceMap.get(eventLayerData[key]);
-            }
-            line.eventLayers.push(eventLayer);
+            line.children.add(JudgeLine.fromKPAJSON(version, chart, child.id, child, templates, timeCalculator));
         }
         const unwrap = <VT>(sequence: EventNodeSequence<unknown>, predicate: (value: unknown) => boolean, typeStr: keyof typeof EventValueType) => {
             const value = sequence.head.next.value
@@ -241,11 +258,57 @@ export class JudgeLine {
             }
             return sequence as EventNodeSequence<VT>;
         }
+        for (const eventLayerData of data.eventLayers) {
+            const eventLayer: EventLayer = {} as EventLayer;
+            for (const key in eventLayerData) {
+                // use "fromRPEJSON" for they have the same logic
+                eventLayer[key] = unwrap(chart.sequenceMap.get(eventLayerData[key]), v => typeof v === "number", "numeric");
+            }
+            line.eventLayers.push(eventLayer);
+        }
+        if (independentSpeedENS) {
+            const seq = unwrap(
+                chart.sequenceMap.get((data as JudgeLineDataKPA2).speedEventNodeSeq),
+                v => typeof v === "number",
+                "numeric"
+            );
+            line.speedSequence = seq as SpeedENS;
+        } else {
+            // 合并多个层级上的速度序列，合并完以后置空
+            const oldSequences: SpeedENS[] = [];
+            for (const layer of line.eventLayers) {
+                const ly = layer as {speed: SpeedENS};
+                if (ly.speed) {
+                    oldSequences.push(ly.speed);
+                    ly.speed = null;
+                }
+            }
+            let seq: EventNodeSequence<number>;
+            if (oldSequences.length > 0) {
+                
+                seq = EventNodeSequence.mergeSequences(
+                    oldSequences
+                );
+                (seq as SpeedENS).updateFloorPositionAfter((seq as SpeedENS).head.next, timeCalculator);
+            } else {
+                seq = chart.createEventNodeSequence(EventType.speed, `#${line.id}.speed`);
+
+            }
+            line.speedSequence = seq as SpeedENS;
+        }
         line.extendedLayer.scaleX = data.extended?.scaleXEvents
-                                ? unwrap(chart.sequenceMap.get(data.extended.scaleXEvents), v => typeof v === "number", "numeric")
+                                ? unwrap(chart.sequenceMap.get(
+                                    data.extended.scaleXEvents),
+                                    v => typeof v === "number",
+                                    "numeric"
+                                )
                                 : chart.createEventNodeSequence(EventType.scaleX, `#${line.id}.ex.scaleX`);
         line.extendedLayer.scaleY = data.extended?.scaleYEvents
-                                ? unwrap(chart.sequenceMap.get(data.extended.scaleYEvents), v => typeof v === "number", "numeric")
+                                ? unwrap(chart.sequenceMap.get(
+                                    data.extended.scaleYEvents),
+                                    v => typeof v === "number",
+                                    "numeric"
+                                )
                                 : chart.createEventNodeSequence(EventType.scaleY, `#${line.id}.ex.scaleY`);
         if (data.extended) {
             if (data.extended.textEvents) {
@@ -311,21 +374,42 @@ export class JudgeLine {
             return this.eventLayers[index];
         }
     }
+    /*
+    应该是古老代码，现在不用了，暂时不移除
     updateSpeedIntegralFrom(beats: number, timeCalculator: TimeCalculator) {
         for (const eventLayer of this.eventLayers) {
             eventLayer?.speed?.updateNodesIntegralFrom(beats, timeCalculator);
         }
     }
+    //*/
     /**
+     * 判定线当前所在的FloorPosition
+     * 
+     * 可以理解为：有一个假想的充满音符的瀑布流，判定线在其中或前进或后退
+     */
+    currentFloorPosition: number;
+    cachedFloorPositions: Float64Array;
+    computeCurrentFloorPosition(beats: number, timeCalculator: TimeCalculator) {
+        this.currentFloorPosition = this.speedSequence.getFloorPositionAt(beats, timeCalculator);
+    }
+    getRelativeFloorPositionAt(beats: number, timeCalculator: TimeCalculator) {
+        return this.speedSequence.getFloorPositionAt(beats, timeCalculator) - this.currentFloorPosition;
+    }
+    /**
+     * 通过速度序列的FloorPosition反解出一个时间范围。
+     * 
+     * KPA内核代码中最大的一坨史山，没有之一。
+     * 
+     * 谱面渲染时最耗时的函数
+     * 
      * startY and endY must not be negative
      * @param beats 
      * @param timeCalculator 
      * @param startY 
      * @param endY 
      * @returns 
-     */
+     * /
     computeTimeRange(beats: number, timeCalculator: TimeCalculator , startY: number, endY: number): [number, number][] {
-        console.log("invoked")
         //return [[0, Infinity]]
         //*
         // 提取所有有变化的时间点
@@ -350,7 +434,7 @@ export class JudgeLine {
         times = [...new Set(times)].sort((a, b) => a - b)
         const len = times.length;
         let nextTime = times[0]
-        let nextPosY = this.getStackedIntegral(nextTime, timeCalculator)
+        let nextPosY = this.getStackedFloorPosition(nextTime, timeCalculator)
         let nextSpeed = this.getStackedValue("speed", nextTime, true)
         let range: [number, number] = [undefined, undefined];
         // console.log(times)
@@ -363,14 +447,14 @@ export class JudgeLine {
                 thisSpeed = 0; // 不这样做可能导致下面异号判断为真从而死循环
             }
             nextTime = times[i + 1]
-            nextPosY = this.getStackedIntegral(nextTime, timeCalculator);
+            nextPosY = this.getStackedFloorPosition(nextTime, timeCalculator);
             nextSpeed = this.getStackedValue("speed", nextTime, true)
             // console.log(thisSpeed, nextSpeed, thisSpeed * nextSpeed < 0, i, [...result])
             if (thisSpeed * nextSpeed < 0) { // 有变号零点，再次切断，保证处理的每个区间单调性
                 //debugger;
                 nextTime = (nextTime - thisTime) * (0 - thisSpeed) / (nextSpeed - thisSpeed) + thisTime;
                 nextSpeed = 0
-                nextPosY = this.getStackedIntegral(nextTime, timeCalculator)
+                nextPosY = this.getStackedFloorPosition(nextTime, timeCalculator)
                 //debugger
             } else {
                 // console.log("i++")
@@ -386,7 +470,7 @@ export class JudgeLine {
                 或a > e >= b
                 全部在区间内
                 s <= a <= b
-                */
+                * /
                 if (thisPosY < startY && startY <= nextPosY
                 || thisPosY > endY && endY >= nextPosY) {
                     range[0] = thisSpeed !== nextSpeed ? thisTime : computeTime(
@@ -402,12 +486,6 @@ export class JudgeLine {
                     range[1] = thisSpeed !== nextSpeed ? nextTime : computeTime(
                         thisSpeed,
                         (thisPosY > nextPosY ? startY : endY) - thisPosY, thisTime)
-                    if (range[0] > range[1]){
-                        console.error("range start should be smaller than range end.")
-                        console.log("\nRange is:", range, "thisTime:", thisTime, "thisSpeed:", thisSpeed, "thisPosY:", thisPosY,
-                                "\nstartY:", startY, "endY:", endY, "nextTime:", nextTime, "nextPosY:", nextPosY, "nextSpeed:", nextSpeed,
-                                "\njudgeLine:", this)
-                    }
                     result.push(range)
                     range = [undefined, undefined];
                 }
@@ -442,15 +520,202 @@ export class JudgeLine {
             }
         }
         return result;
+        //* /
+    }*/
+   /**
+     * 通过速度序列的FloorPosition反解出一个时间范围。
+     * 
+     * KPA内核代码中最大的一坨史山，没有之一。
+     * 
+     * 谜面渲染时最耗时的函数
+     * 
+     * 调用此方法前需要先更新判定线当前的FP。
+     * 
+     * startY and endY must not be negative
+     * @param beats 
+     * @param timeCalculator 
+     * @param startY 
+     * @param endY 
+     * @returns 
+     */
+    computeTimeRange(beats: number, timeCalculator: TimeCalculator, startY: number, endY: number): [number, number][] {
+        //return [[0, Infinity]]
+        //*
+        const result: [number, number][] = [];
+        
+        // 直接使用speedSequence，不再遍历所有事件层
+        if (!this.speedSequence) {
+            return result;
+        }
+        const speedSequence = this.speedSequence;
+        const lineMonotonicity = speedSequence.monotonicity ?? Monotonicity.swinging;
+
+        const currentJudgeLineFloorPos = this.currentFloorPosition;
+        
+        // 获取起始节点
+        let startNode: EventStartNode<number> = this.speedSequence.getNodeAt(beats);
+        let range: [number, number] = [undefined, undefined];
+        // 启用遮罩时，两个Y边界都是正数，直接返回空数组
+        if (lineMonotonicity === Monotonicity.decreasing && startY >= 0 && endY > 0) {
+
+            return result;
+        }
+
+        
+        const computeTime = (speed: number, currentPos: number, fore: number) => 
+            timeCalculator.secondsToBeats(currentPos / (speed * 120) + timeCalculator.toSeconds(fore));
+        
+        // 遍历所有事件节点直到结尾
+        while (true) {
+            const thisTime = TC.toBeats(startNode.time);
+            const endNode = startNode.next;
+            const nextStart = endNode.next;
+            if (endNode.type === NodeType.TAIL) {
+                // 处理最后一个节点到无穷大的情况
+                const thisPosY = startNode.floorPosition - currentJudgeLineFloorPos;
+                const thisSpeed = startNode.value;
+                
+                const inf = thisSpeed > 0 ? Infinity : (thisSpeed < 0 ? -Infinity : thisPosY);
+                
+                if (range[0] === undefined) {
+                    if (thisPosY < startY && startY <= inf || thisPosY >= endY && endY > inf) {
+                        range[0] = computeTime(
+                            thisSpeed,
+                            (thisPosY < inf ? startY : endY) - thisPosY,
+                            thisTime)
+                    } else if (thisSpeed === 0) {
+                        range[0] = 0;
+                    }
+                }
+                
+                if (range[0] !== undefined) {
+                    if (thisPosY < endY && endY <= inf || thisPosY >= startY && startY > inf) {
+                        range[1] = computeTime(
+                            thisSpeed,
+                            (thisPosY > inf ? startY : endY) - thisPosY,
+                            thisTime)
+                        result.push(range)
+                    } else if (thisSpeed === 0) {
+                        range[1] = Infinity;
+                        result.push(range)
+                    }
+                }
+                break;
+            }
+        
+            
+            const nextTime = TC.toBeats(nextStart.time);
+            
+            const thisPosY = startNode.floorPosition - currentJudgeLineFloorPos;
+            const nextPosY = nextStart.floorPosition - currentJudgeLineFloorPos;
+            
+            let thisSpeed = startNode.value;
+            let nextSpeed = nextStart.value;
+            
+            if (Math.abs(thisSpeed) < 1e-8) {
+                thisSpeed = 0;
+            }
+            
+            if (Math.abs(nextSpeed) < 1e-8) {
+                nextSpeed = 0;
+            }
+            
+            // 处理速度变号的情况
+            if (thisSpeed * nextSpeed < 0) {
+                // 计算速度为0的时间点
+                const zeroTime = (nextTime - thisTime) * (0 - thisSpeed) / (nextSpeed - thisSpeed) + thisTime;
+                const zeroPosY = speedSequence.getFloorPositionAt(zeroTime, timeCalculator) - currentJudgeLineFloorPos;
+                const zeroSpeed = 0;
+                
+                // 处理第一段(开始到零点)
+                if (range[0] === undefined) {
+                    if (thisPosY < startY && startY <= zeroPosY || thisPosY > endY && endY >= zeroPosY) {
+                        range[0] = thisSpeed !== zeroSpeed ? thisTime : computeTime(
+                            thisSpeed,
+                            (thisPosY < zeroPosY ? startY : endY) - thisPosY, thisTime
+                        );
+                    } else if (startY <= thisPosY && thisPosY <= endY) {
+                        range[0] = thisTime;
+                    }
+                }
+                
+                if (range[0] !== undefined) {
+                    if (thisPosY < endY && endY <= zeroPosY || thisPosY > startY && startY >= zeroPosY) {
+                        range[1] = thisSpeed !== zeroSpeed ? zeroTime : computeTime(
+                            thisSpeed,
+                            (thisPosY > zeroPosY ? startY : endY) - thisPosY, thisTime)
+                        result.push(range);
+                        if (lineMonotonicity !== Monotonicity.swinging) {
+                            // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
+                            return result;
+                        }
+                        range = [undefined, undefined];
+                    }
+                }
+                
+                // 处理第二段(零点到结束)
+                if (range[0] === undefined) {
+                    if (zeroPosY < startY && startY <= nextPosY || zeroPosY > endY && endY >= nextPosY) {
+                        range[0] = zeroSpeed !== nextSpeed ? zeroTime : computeTime(
+                            nextSpeed,
+                            (zeroPosY < nextPosY ? startY : endY) - zeroPosY, zeroTime)
+                    } else if (startY <= zeroPosY && zeroPosY <= endY) {
+                        range[0] = zeroTime;
+                    }
+                }
+                
+                if (range[0] !== undefined) {
+                    if (zeroPosY < endY && endY <= nextPosY || zeroPosY > startY && startY >= nextPosY) {
+                        range[1] = zeroSpeed !== nextSpeed ? nextTime : computeTime(
+                            nextSpeed,
+                            (zeroPosY > nextPosY ? startY : endY) - zeroPosY, zeroTime)
+                        result.push(range)
+                        if (lineMonotonicity !== Monotonicity.swinging) {
+                            // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
+                            return result;
+                        }
+                        range = [undefined, undefined];
+                    }
+                }
+            } else {
+                // 正常情况处理
+                if (range[0] === undefined) {
+                    if (thisPosY < startY && startY <= nextPosY || thisPosY > endY && endY >= nextPosY) {
+                        range[0] = thisSpeed !== nextSpeed ? thisTime : computeTime(
+                            thisSpeed,
+                            (thisPosY < nextPosY ? startY : endY) - thisPosY, thisTime)
+                    } else if (startY <= thisPosY && thisPosY <= endY) {
+                        range[0] = thisTime;
+                    }
+                }
+                
+                if (range[0] !== undefined) {
+                    if (thisPosY < endY && endY <= nextPosY || thisPosY > startY && startY >= nextPosY) {
+                        range[1] = thisSpeed !== nextSpeed ? nextTime : computeTime(
+                            thisSpeed,
+                            (thisPosY > nextPosY ? startY : endY) - thisPosY, thisTime)
+                        result.push(range);
+                        if (lineMonotonicity !== Monotonicity.swinging) {
+                            // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
+                            return result;
+                        }
+                        range = [undefined, undefined];
+                    }
+                }
+                // 我挺希望能够显式内联上面的……复用性也太低了
+            }
+            
+            // 移动到下一个节点
+            startNode = nextStart;
+        }
+        
+        return result;
         //*/
     }
-    /*
-    computeLinePositionY(beats: number, timeCalculator: TimeCalculator)  {
-        return this.getStackedIntegral(beats, timeCalculator)
-    }
-    */
+
     /**
      * 
+     * @deprecated 1.7.0
      * @param beats 
      * @param usePrev 如果取到节点，将使用EndNode的值。默认为FALSE
      * @returns 
@@ -475,7 +740,17 @@ export class JudgeLine {
         }
         return current
     }
-    getStackedIntegral(beats: number, timeCalculator: TimeCalculator) {
+    /**
+     * 获取指定时间点的FloorPosition。
+     * 
+     * <del>为了向后兼容，保留了多层速度事件的机制。</del>
+     * 
+     * 已经删除了多层速度事件
+     * @param beats 
+     * @param timeCalculator 
+     * @returns 
+     * /
+    getStackedFloorPosition(beats: number, timeCalculator: TimeCalculator) {
         
         const length = this.eventLayers.length;
         let current = 0;
@@ -484,11 +759,11 @@ export class JudgeLine {
             if (!layer || !layer.speed) {
                 break;
             }
-            current += layer.speed.getIntegral(beats, timeCalculator);
+            current += layer.speed.getFloorPositionAt(beats, timeCalculator);
         }
         // console.log("integral", current)
         return current;
-    }
+    }//*/
     /**
      * 获取对应速度和类型的Note树,没有则创建
      */
@@ -521,8 +796,8 @@ export class JudgeLine {
      * @param eventNodeSequences To Collect the sequences used in this line
      * @returns 
      */
-    dumpKPA(eventNodeSequences: Set<EventNodeSequence<any>>, judgeLineGroups: JudgeLineGroup[]): JudgeLineDataKPA {
-        const children: JudgeLineDataKPA[] = [];
+    dumpKPA(eventNodeSequences: Set<EventNodeSequence<any>>, judgeLineGroups: JudgeLineGroup[]): JudgeLineDataKPA2 {
+        const children: JudgeLineDataKPA2[] = [];
         for (const line of this.children) {
             children.push(line.dumpKPA(eventNodeSequences, judgeLineGroups))
         }
@@ -565,12 +840,13 @@ export class JudgeLine {
         return {
             group: judgeLineGroups.indexOf(this.group),
             id: this.id,
-            Name: this.name,
-            Texture: this.texture,
+            name: this.name,
+            texture: this.texture,
             anchor: this.anchor,
             rotatesWithFather: this.rotatesWithFather,
             children: children,
             eventLayers: eventLayers,
+            speedEventNodeSeq: this.speedSequence?.id,
             hnLists: hnListsData,
             nnLists: nnListsData,
             cover: this.cover,
@@ -580,6 +856,16 @@ export class JudgeLine {
         }
     }
 
+    /*
+    暂时不用此方法
+    updateNNListFloorPositions() {
+        for (const lists of [this.nnLists, this.hnLists]) {
+            for (const list of lists) {
+
+            }
+        }
+    }
+        */
     
     updateEffectiveBeats(EB: number) {
         for (let i = 0; i < this.eventLayers.length; i++) {

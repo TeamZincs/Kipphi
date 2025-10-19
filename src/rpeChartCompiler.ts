@@ -2,7 +2,8 @@
 import type { Chart, UIName } from "./chart";
 import { type TimeT, type ChartDataRPE, type MetaData, type JudgeLineDataRPE, type EventLayerDataRPE, type EventDataRPELike, EventType, InterpreteAs, type NoteDataRPE, type EventValueESType, EventValueType } from "./chartTypes";
 import { SegmentedEasing, BezierEasing, NormalEasing, fixedEasing, TemplateEasing, Easing } from "./easing";
-import { EasedEvaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorConstructorOfType, type EasedEvaluatorOfType } from "./evaluator";
+import { err } from "./env";
+import { EasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorConstructorOfType, type EasedEvaluatorOfType } from "./evaluator";
 import { EventEndNode, EventNode, EventNodeSequence, EventStartNode, type EventNodeLike } from "./event";
 import type { JudgeLine } from "./judgeline";
 import type { NNList, HNList, NNOrHead } from "./note";
@@ -12,6 +13,8 @@ import { NodeType, numberToRatio } from "./util";
 /// #declaration:global
 
 const getInnerEasing = (easing: Easing) => easing instanceof SegmentedEasing ? easing.easing : easing;
+
+type EasedStartNode<VT extends EventValueESType> = EventStartNode<VT> & { evaluator: EasedEvaluatorOfType<VT>};
 
 /**
  * 全生命周期只会编译一次，想多次就再构造一个
@@ -92,18 +95,18 @@ export class RPEChartCompiler {
             Name: judgeLine.name,
             Texture: judgeLine.texture,
             bpmfactor: 1.0,
-            eventLayers: judgeLine.eventLayers.map((layer): EventLayerDataRPE => ({
-                moveXEvents: layer.moveX ? this.dumpEventNodeSequence(layer.moveX) : null,
-                moveYEvents: layer.moveY ? this.dumpEventNodeSequence(layer.moveY) : null,
-                rotateEvents: layer.rotate ? this.dumpEventNodeSequence(layer.rotate) : null,
-                alphaEvents: layer.alpha ? this.dumpEventNodeSequence(layer.alpha) : null,
-                speedEvents: layer.speed ? this.dumpEventNodeSequence(layer.speed) : null
+            eventLayers: judgeLine.eventLayers.map((layer, index): EventLayerDataRPE => ({
+                moveXEvents: layer.moveX ? this.dumpEventNodeSequence(layer.moveX) : undefined,
+                moveYEvents: layer.moveY ? this.dumpEventNodeSequence(layer.moveY) : undefined,
+                rotateEvents: layer.rotate ? this.dumpEventNodeSequence(layer.rotate) : undefined,
+                alphaEvents: layer.alpha ? this.dumpEventNodeSequence(layer.alpha) : undefined,
+                speedEvents: index === 0 ? this.dumpEventNodeSequence(judgeLine.speedSequence) : undefined
             })),
             extended: {
-                scaleXEvents: judgeLine.extendedLayer.scaleX ? this.dumpEventNodeSequence(judgeLine.extendedLayer.scaleX) : null,
-                scaleYEvents: judgeLine.extendedLayer.scaleY ? this.dumpEventNodeSequence(judgeLine.extendedLayer.scaleY) : null,
-                textEvents: judgeLine.extendedLayer.text ? this.dumpEventNodeSequence(judgeLine.extendedLayer.text) : null,
-                colorEvents: judgeLine.extendedLayer.color ? this.dumpEventNodeSequence(judgeLine.extendedLayer.color) : null
+                scaleXEvents: judgeLine.extendedLayer.scaleX ? this.dumpEventNodeSequence(judgeLine.extendedLayer.scaleX) : undefined,
+                scaleYEvents: judgeLine.extendedLayer.scaleY ? this.dumpEventNodeSequence(judgeLine.extendedLayer.scaleY) : undefined,
+                textEvents: judgeLine.extendedLayer.text ? this.dumpEventNodeSequence(judgeLine.extendedLayer.text) : undefined,
+                colorEvents: judgeLine.extendedLayer.color ? this.dumpEventNodeSequence(judgeLine.extendedLayer.color) : undefined
             },
             father: judgeLine.father?.id ?? -1,
             isCover: judgeLine.cover ? 1 : 0,
@@ -126,9 +129,9 @@ export class RPEChartCompiler {
         const innerEasing = isSegmented ? easing.easing : easing;
         const start = getValue(snode);
         const end = getValue(easing === fixedEasing ? snode : endNode)
-        if (isNaN(start) || isNaN(end)) {
-            console.log("????")
-        }
+        // if (isNaN(start) || isNaN(end)) {
+        //     console.log("????")
+        // }
         return {
             bezier: innerEasing instanceof BezierEasing ? 1 : 0,
             bezierPoints: innerEasing instanceof BezierEasing ?
@@ -136,6 +139,7 @@ export class RPEChartCompiler {
                 [0, 0, 0, 0],
             easingLeft: isSegmented ? easing.left : 0.0,
             easingRight: isSegmented ? easing.right : 1.0,
+            // @ts-expect-error 缓动为贝塞尔型时可以为null
             easingType: easing instanceof NormalEasing ?
                     easing.rpeId ?? 1 :
                     null,
@@ -147,19 +151,17 @@ export class RPEChartCompiler {
         }
     }
 
-    dumpEventNodeSequence<VT>(sequence: EventNodeSequence<VT>): EventDataRPELike<VT>[] {
+    dumpEventNodeSequence<VT extends EventValueESType>(sequence: EventNodeSequence<VT>): EventDataRPELike<VT>[] {
         const nodes: EventDataRPELike<VT>[] = [];
         const interpolationStep = this.interpolationStep;
-        if (!(sequence.type === EventType.color || sequence.type === EventType.text)) {
-            // @ts-expect-error 烦死了烦死了烦死了
-            sequence = this.substitute(sequence);
-        }
+        sequence = this.substitute(sequence);
+        
         let node = sequence.head.next!;
         // 唯一真史
         const getValue = (sequence.type === EventType.text
             ? (node: EventStartNode<string> | EventEndNode<string>) => {
                 const evaluator = (node instanceof EventStartNode ? node.evaluator : node.previous.evaluator) as TextEasedEvaluator;
-                const interpretedAs = node instanceof EventStartNode ? node.evaluator.interpretedAs : node.previous.interpretedAs;
+                const interpretedAs = evaluator.interpretedAs;
                 return interpretedAs === InterpreteAs.str ? node.value : "%P%" + node.value;
             }
             : (node: EventStartNode<number> | EventEndNode<number>) => node.value) as unknown as (node: EventStartNode<VT> | EventEndNode<VT>) => VT;
@@ -167,6 +169,7 @@ export class RPEChartCompiler {
             const end = node.next;
             if (end.type === NodeType.TAIL) break;
             if (node.evaluator instanceof ExpressionEvaluator) {
+                // 插值
                 let cur = node.time;
                 const endTime = end.time;
                 let value = getValue(node);
@@ -203,18 +206,17 @@ export class RPEChartCompiler {
                 })
                 
             } else {
-                if (typeof node.value !== "number"){
-                    console.log("dbg")
-                }
-                nodes.push(this.compileEasedEvent(node, getValue));
+                nodes.push(this.compileEasedEvent(node as EasedStartNode<VT>, getValue));
             }
             node = end.next;
         }
+        // 刻意造一个事件，并给它加一个结束节点，距离一拍长（用于处理endValue）
         const newStart = node!.clone();
-        newStart.evaluator = NumericEasedEvaluator.evaluatorsOfNormalEasing[0];
+        // 只是占位而已，并不重要，我们这里期望最后一个事件的缓动为1号，特别注意不要写成0了
+        newStart.evaluator = NumericEasedEvaluator.evaluatorsOfNormalEasing[1] as unknown as EasedEvaluator<VT>;
         const newEnd = new EventEndNode(TC.vadd(newStart.time, [1, 0, 1]), newStart.value);
         EventNode.connect(newStart, newEnd);
-        nodes.push(this.compileEasedEvent(newStart, getValue));
+        nodes.push(this.compileEasedEvent(newStart as EasedStartNode<VT>, getValue));
 
         return nodes
     }
@@ -235,7 +237,8 @@ export class RPEChartCompiler {
                 const list = lists[0];
                 // 只需要pop就可以了，pop复杂度O(1)，这是倒序的原因
                 const node = list.pop();
-                ret.push(node);
+                // !:  上面保证了list一定还有至少一个元素，否则的话不满足循环条件
+                ret.push(node!);
                 let i = 0;
                 while (i + 1 < lists.length && TC.gt(time(lists[i]), time(lists[i + 1]))) {
                     const temp = lists[i];
@@ -257,12 +260,15 @@ export class RPEChartCompiler {
      */
     nnListToArray(nnList: NNList) {
         const notes: NoteDataRPE[] = [];
-        let node: NNOrHead = nnList.tail.previous;
+        // 这个地方正常来讲不会为null或undefined
+        let node: NNOrHead = nnList.tail.previous!;
+        // 从最尾往前遍历
         while (node.type !== NodeType.HEAD) {
-            for (let each of node.notes) {
+            for (const each of node.notes) {
                 notes.push(each.dumpRPE(this.chart.timeCalculator));
             }
-            node = node.previous;
+            // 同上，正常来讲不会为null或undefined
+            node = node.previous!;
         }
         return notes;
     }
@@ -278,20 +284,25 @@ export class RPEChartCompiler {
     substitute<VT extends EventValueESType>(seq: EventNodeSequence<VT>): EventNodeSequence<VT> {
         const map = this.sequenceMap;
         if (map.has(seq)) {
-            return map.get(seq);
+            // 都has了还担心啥undefined，TSC也是个人机
+            return map.get(seq)!;
         }
-        let currentNode: EventStartNode<VT> = seq.head.next;
+        // 一般不会为null
+        let currentNode: EventStartNode<VT> = seq.head.next!;
         const newSeq = new EventNodeSequence<VT>(seq.type, seq.effectiveBeats);
         const valueType = seq.type === EventType.color 
             ? EventValueType.color : seq.type === EventType.text
             ? EventValueType.text : EventValueType.numeric;
+        // 加入哈希表缓存，避免重复计算
         map.set(seq, newSeq);
         let currentPos: EventNodeLike<NodeType.HEAD, VT> | EventEndNode<VT> = newSeq.head;
         while (true) {
             if (!currentNode || (currentNode.next.type === NodeType.TAIL)) {
                 break;
             }
+            /** 原序列当前结束节点 */
             const endNode = currentNode.next;
+            /** 原序列当前节点的求值器 */
             const evaluator = currentNode.evaluator;
             let innerEasing: Easing;
             if (   evaluator
@@ -308,15 +319,15 @@ export class RPEChartCompiler {
                 const timeDelta = TC.sub(currentNode.next.time, startTime);
 
 
-                let srcStart: number, srcEnd: number, leftDividedNodeSrc: EventStartNode, rightDividedNode: EventStartNode,
+                let srcStart: number, srcEnd: number, leftDividedNodeSrc: EventStartNode, rightDividedNodeSrc: EventStartNode,
                     srcStartTime: TimeT, srcTimeDelta: TimeT, toStopAt: EventStartNode;
                 if (isSegmented) {
                     const totalDuration = TC.sub(srcSeq.tail.previous!.time, srcSeq.head.next!.time);
                     srcStart = srcSeq.getValueAt(easing.left * srcSeq.effectiveBeats)
                     srcEnd = srcSeq.getValueAt(easing.right * srcSeq.effectiveBeats, true);
                     leftDividedNodeSrc = srcSeq.getNodeAt(easing.left * srcSeq.effectiveBeats);
-                    rightDividedNode = srcSeq.getNodeAt(easing.right * srcSeq.effectiveBeats, true);
-                    toStopAt = rightDividedNode.next.next;
+                    rightDividedNodeSrc = srcSeq.getNodeAt(easing.right * srcSeq.effectiveBeats, true);
+                    toStopAt = rightDividedNodeSrc.next.next!;
                     srcStartTime = TC.mul(totalDuration, numberToRatio(easing.left));
                     const srcEndTime = TC.mul(totalDuration, numberToRatio(easing.right));
                     TC.validateIp(srcStartTime);
@@ -324,13 +335,13 @@ export class RPEChartCompiler {
                     srcTimeDelta = TC.sub(srcEndTime, srcStartTime);
                     TC.validateIp(srcTimeDelta);
                 } else {
-                    srcStart = srcSeq.head.next.value;
-                    srcEnd = srcSeq.tail.previous.value;
-                    leftDividedNodeSrc = srcSeq.head.next;
-                    rightDividedNode = srcSeq.tail.previous;
-                    toStopAt = rightDividedNode;
-                    srcStartTime = srcSeq.head.next.time;
-                    srcTimeDelta = TC.sub(srcSeq.tail.previous.time, srcStartTime);
+                    srcStart = srcSeq.head.next!.value;
+                    srcEnd = srcSeq.tail.previous!.value;
+                    leftDividedNodeSrc = srcSeq.head.next!;
+                    rightDividedNodeSrc = srcSeq.tail.previous!;
+                    toStopAt = rightDividedNodeSrc;
+                    srcStartTime = srcSeq.head.next!.time;
+                    srcTimeDelta = TC.sub(srcSeq.tail.previous!.time, srcStartTime);
                 }
                 
                 const srcDelta = srcEnd - srcStart;
@@ -342,87 +353,93 @@ export class RPEChartCompiler {
                 const convertTime: (t: TimeT) => TimeT
                     = (time: TimeT) => TC.validateIp(TC.add(startTime, TC.mul(TC.sub(time, srcStartTime), ratio)));
 
+                /** 目标序列中某次参与替换操作的第一个节点 */
                 const first = currentNode.clone();
                 EventNode.connect(currentPos, first)
                 // 处理第一个节点的截段
-                if (isSegmented) {
-                    const left = easing.left * srcSeq.effectiveBeats
-                    if (left - TC.toBeats(leftDividedNodeSrc.time) > 1e-6) {
-                        // 断言：这里left不会大于有效拍数
-                        const newLeft = left / (TC.toBeats((leftDividedNodeSrc.next as EventEndNode).time) - TC.toBeats(leftDividedNodeSrc.time))
-                        // 如果切到的这个位置是表达式求值器，这是没办法保留缓动的，只能运用表达式求值器
-                        if (leftDividedNodeSrc.evaluator instanceof ExpressionEvaluator) {
-                            const exprEvaluator = leftDividedNodeSrc.evaluator as ExpressionEvaluator<number>;
-                            first.evaluator = new ExpressionEvaluator("t");
-                            // 强行修改
-                            // @ts-ignore
-                            first.evaluator.func = (t: number) => {
-                                const value = exprEvaluator.func(
-                                    t * (TC.getDelta((first.next as EventEndNode).time, first.time) * (1 - left)) / srcSeq.effectiveBeats
-                                ); // 脑细胞杀器
-                                return convert(value);
-                            }
-                        } else {
-                            // 否则就是带缓动求值器
-                            first.evaluator = new EvaluatorConstructor(
-                                new SegmentedEasing((leftDividedNodeSrc.evaluator as NumericEasedEvaluator).easing, newLeft, 1.0)
-                            );
-
-                        }
+                if (
+                    isSegmented
+                    && (
+                        easing.left * srcSeq.effectiveBeats - TC.toBeats(leftDividedNodeSrc.time) > 1e-6
+                    )
+                ) {
+                    const left = easing.left * srcSeq.effectiveBeats;
+                    // 断言：这里left不会大于有效拍数
+                    const newLeft = left / (TC.toBeats((leftDividedNodeSrc.next as EventEndNode).time) - TC.toBeats(leftDividedNodeSrc.time))
+                    // 如果切到的这个位置是表达式求值器，这是没办法保留缓动的，只能运用表达式求值器
+                    if (leftDividedNodeSrc.evaluator instanceof ExpressionEvaluator) {
+                        throw err.CANNOT_DIVIDE_EXPRESSION_EVALUATOR(seq.id);
                     } else {
-                        if (leftDividedNodeSrc.evaluator instanceof ExpressionEvaluator) {
-                            first.evaluator = new ExpressionEvaluator("t");
-                            // 也不知道对不对
-                            // @ts-ignore
-                            first.evaluator.func = (t: number) => {
-                                return convert(leftDividedNodeSrc.evaluator.eval(leftDividedNodeSrc, t))
-                            }
-                        } else {
-                            first.evaluator = new EvaluatorConstructor((leftDividedNodeSrc.evaluator as NumericEasedEvaluator).easing, evaluator.interpretedAs);
-                        }
+                        // 否则就是带缓动求值器
+                        first.evaluator = evaluator.deriveWithEasing(
+                            new SegmentedEasing((leftDividedNodeSrc.evaluator as NumericEasedEvaluator).easing, newLeft, 1.0)
+                        ) as unknown as Evaluator<VT>;
+                        // TypeScript Compiler我*你娘啊
+
                     }
                 } else {
                     if (leftDividedNodeSrc.evaluator instanceof ExpressionEvaluator) {
-                        first.evaluator = new ExpressionEvaluator("t");
-                        // 也不知道对不对
-                        // @ts-ignore
-                        first.evaluator.func = (t: number) => {
-                            return convert(leftDividedNodeSrc.evaluator.eval(leftDividedNodeSrc, t))
-                        }
+                        throw err.CANNOT_DIVIDE_EXPRESSION_EVALUATOR(seq.id);
                     } else {
-                        first.evaluator = new EvaluatorConstructor((leftDividedNodeSrc.evaluator as NumericEasedEvaluator).easing, evaluator.interpretedAs);
+                        first.evaluator = evaluator.deriveWithEasing(
+                            (leftDividedNodeSrc.evaluator as NumericEasedEvaluator).easing
+                        ) as unknown as Evaluator<VT>;
                     }
                 }
                 let prev = first
                 // 这里在到toStopAt之前一直都是非尾的
-                for (let n: EventEndNode<number> = leftDividedNodeSrc.next as EventEndNode<number>; n.next !== toStopAt; n = n.next.next) {
+                for (let n: EventEndNode<number> = leftDividedNodeSrc.next as EventEndNode<number>; n.next !== toStopAt; ) {
                     const endNode = n;
                     const startNode = n.next;
+                    // 断言：TSC不理解序列结构，这里截止得可能还早些，一定不是尾结点
+                    n = startNode.next as EventEndNode<number>;
                     const newEnd = new EventEndNode(convertTime(endNode.time), convert(endNode.value));
                     const newStart = new EventStartNode(convertTime(startNode.time), convert(startNode.value));
-                    newStart.evaluator = new EvaluatorConstructor(startNode.evaluator.easing);
+                    if (startNode.evaluator instanceof ExpressionEvaluator) {
+                        throw err.CANNOT_DIVIDE_EXPRESSION_EVALUATOR(seq.id);
+                    } else {
+                        newStart.evaluator = evaluator.deriveWithEasing(
+                            (startNode.evaluator as NumericEasedEvaluator).easing,
+                        ) as unknown as Evaluator<VT>;
+                    }
                     EventNode.connect(prev, newEnd)
                     EventNode.connect(newEnd, newStart);
                     prev = newStart;
-                    if (isNaN(newStart.value)) {
-                        debugger;
-                    }
                 }
                 // 处理最后一个节点的截段
-                if (isSegmented) {
+                if (
+                      isSegmented
+                    && (
+                        TC.toBeats((rightDividedNodeSrc.next as EventEndNode).time) - easing.right * srcSeq.effectiveBeats > 1e-6
+                    )
+                ) {
                     const right = easing.right * srcSeq.effectiveBeats
-                    if (TC.toBeats((rightDividedNode.next as EventEndNode).time) - right > 1e-6) {
-                        // 断言：这里right不会大于有效拍数
-                        const newRight = right / (TC.toBeats((rightDividedNode.next as EventEndNode).time) - TC.toBeats(rightDividedNode.time))
-                        // 这时候prev是最后一个subst的node
-                        prev.easing = new SegmentedEasing(rightDividedNode.easing, 0.0, newRight)
-                    }
+                    // 断言：这里left不会大于有效拍数
+                    const newRight = right / (TC.toBeats((rightDividedNodeSrc.next as EventEndNode).time) - TC.toBeats(rightDividedNodeSrc.time))
+                    // 如果切到的这个位置是表达式求值器，这是没办法保留缓动的，只能运用表达式求值器
+                    if (rightDividedNodeSrc.evaluator instanceof ExpressionEvaluator) {
+                        throw err.CANNOT_DIVIDE_EXPRESSION_EVALUATOR(seq.id);
+                    } else {
+                        // 否则就是带缓动求值器
+                        first.evaluator = evaluator.deriveWithEasing(
+                            new SegmentedEasing((rightDividedNodeSrc.evaluator as NumericEasedEvaluator).easing, 0.0, newRight)
+                        ) as unknown as Evaluator<VT>;
+                        // TypeScript Compiler我*你娘啊
 
+                    }
+                } else {
+                    if (rightDividedNodeSrc.evaluator instanceof ExpressionEvaluator) {
+                        throw err.CANNOT_DIVIDE_EXPRESSION_EVALUATOR(seq.id);
+                    } else {
+                        first.evaluator = evaluator.deriveWithEasing(
+                            (rightDividedNodeSrc.evaluator as NumericEasedEvaluator).easing
+                        ) as unknown as Evaluator<VT>;
+                    }
                 }
                 const endNode = currentNode.next.clone();
                 EventNode.connect(prev, endNode);
                 currentPos = endNode;
-                endNode.value =  isSegmented ? endNode.value : convert((srcSeq.tail.previous.previous as EventEndNode).value);
+                endNode.value =  isSegmented ? endNode.value : convert((srcSeq.tail.previous!.previous as EventEndNode).value);
             } else {
                 const newStartNode = currentNode.clone();
                 const newEndNode = endNode.clone();
@@ -438,6 +455,6 @@ export class RPEChartCompiler {
         return newSeq;
     }
 }
-
+// 现在是2025年10月18日，杨哲思已经改掉了此项目最史山的代码之一，但是还是一坨
 
 /// #enddeclaration

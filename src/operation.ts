@@ -1,9 +1,9 @@
 
 import TC from "./time";
-import { EventValueESType, ExtendedEventTypeName, NoteType, RGB, TimeT } from "./chartTypes";
+import { EventType, EventValueESType, ExtendedEventTypeName, NoteType, RGB, TimeT } from "./chartTypes";
 import { Chart, JudgeLineGroup, BasicEventName, UIName } from "./chart";
 import { TemplateEasing, TemplateEasingLib } from "./easing";
-import { EventEndNode, EventStartNode, EventNodeSequence, EventNode, EventNodeLike, NonLastStartNode } from "./event";
+import { EventEndNode, EventStartNode, EventNodeSequence, EventNode, EventNodeLike, NonLastStartNode, SpeedENS } from "./event";
 import { JudgeLine, ExtendedLayer } from "./judgeline";
 import { Note, notePropTypes, NoteNode, HNList, NNList } from "./note";
 import { checkType, NodeType } from "./util";
@@ -182,6 +182,32 @@ class LazyOperation<C extends new (...args: any[]) => any> extends Operation {
         this.operation.do(chart);
     }
     undo(chart: Chart) {
+        this.operation.undo(chart);
+    }
+}
+
+
+/**
+ * C语言借来的概念
+ * 
+ * 一个不确定类型的子操作
+ * 
+ * 注意这个操作不懒，会在构造时就实例化子操作
+ */
+class UnionOperation<T extends Operation> extends Operation {
+    operation: T;
+    constructor(matcher: () => T) {
+        super();
+        this.operation = matcher();
+        if (!this.operation) {
+            this.ineffective = true;
+        }
+    }
+    // 这样子写不够严密，如果要继承这个类，并且子操作需要谱面，就要重写这个方法的签名
+    do(chart?: Chart) {
+        this.operation.do(chart);
+    }
+    undo(chart?: Chart) {
         this.operation.undo(chart);
     }
 }
@@ -382,25 +408,23 @@ export class MultiNoteAddOperation extends ComplexOperation<NoteAddOperation[]> 
     }
 }
 
-export class NoteTimeChangeOperation extends ComplexOperation<
-[NoteRemoveOperation, NotePropChangeOperation<"startTime">, NoteAddOperation]
-| [NoteRemoveOperation, NotePropChangeOperation<"startTime">, NoteAddOperation, NotePropChangeOperation<"endTime">]> {
+export class NoteTimeChangeOperation extends ComplexOperation<[
+    NoteRemoveOperation,
+    NotePropChangeOperation<"startTime">,
+    NoteAddOperation,
+    UnionOperation<NotePropChangeOperation<"endTime"> | null>]> {
     note: Note
     constructor(note: Note, noteNode: NoteNode) {
-        if (note.type === NoteType.hold) {
-            super(
-                new NoteRemoveOperation(note),
-                new NotePropChangeOperation(note, "startTime", noteNode.startTime),
-                new NoteAddOperation(note, noteNode)
-            );
-        } else {
-            super(
-                new NoteRemoveOperation(note),
-                new NotePropChangeOperation(note, "startTime", noteNode.startTime),
-                new NoteAddOperation(note, noteNode),
-                new NotePropChangeOperation(note, "endTime", noteNode.startTime)
-            )
-        }
+        super(
+            new NoteRemoveOperation(note),
+            new NotePropChangeOperation(note, "startTime", noteNode.startTime),
+            new NoteAddOperation(note, noteNode),
+            new UnionOperation(() => {
+                if (note.type !== NoteType.hold) { // 非hold，endTime跟随startTime
+                    return new NotePropChangeOperation(note, "endTime", noteNode.startTime)
+                }
+            })
+        );
         this.updatesEditor = true
         this.needsComboRecount = false;
         if (note.type === NoteType.hold && !TC.gt(note.endTime, noteNode.startTime)) {
@@ -422,15 +446,12 @@ export class NoteTimeChangeOperation extends ComplexOperation<
             this.subOperations[1].do()
             this.subOperations[2].noteNode = operation.subOperations[2].noteNode
             this.subOperations[2].do()
-            if (operation.subOperations.length === 4) {
-                if (this.subOperations[3]) {
-                    this.subOperations[3].value = operation.subOperations[3].value;
-                    this.subOperations[3].do();
-                } else {
-                    // @ts-expect-error TS2322
-                    this.subOperations[4] = operation.subOperations[3];
-                    this.subOperations[3].do();
-                }
+            if (this.subOperations[3].operation) {
+                this.subOperations[3].operation.value = operation.subOperations[3].operation.value;
+                this.subOperations[3].operation.do();
+            } else {
+                this.subOperations[3] = operation.subOperations[3];
+                this.subOperations[3].do();
             }
             return true;
         }
@@ -511,7 +532,7 @@ extends ComplexOperation<[NotePropChangeOperation<"yOffset">, NoteRemoveOperatio
 
 
 export class NoteTypeChangeOperation 
-extends ComplexOperation</*[NoteValueChangeOperation<"type">, NoteInsertOperation]*/ any> {
+extends ComplexOperation<[NotePropChangeOperation<"type">, NoteRemoveOperation, NoteAddOperation] | [NotePropChangeOperation<"type">]> {
     constructor(note: Note, value: number) {
         const isHold = note.type === NoteType.hold
         const valueChange = new NotePropChangeOperation(note, "type", value);
@@ -532,13 +553,17 @@ class NoteTreeChangeOperation extends NoteAddOperation {
 
 }
 
+/**
+ * 移除一对节点（背靠背）
+ */
 export class EventNodePairRemoveOperation extends Operation {
     updatesEditor = true;
     endNode: EventEndNode<any>;
     startNode: EventStartNode<any>;
     sequence: EventNodeSequence<any>;
     originalPrev: EventStartNode<any>;
-    constructor(node: EventStartNode<any>) {
+    updatesFP = false;
+    constructor(node: EventStartNode<any>, updatesFP = true) {
         super();
         if (node.previous === null) {
             this.ineffective = true;
@@ -548,65 +573,80 @@ export class EventNodePairRemoveOperation extends Operation {
             this.ineffective = true;
             return;
         }
+        if (node.isSpeed()) {
+            updatesFP = updatesFP;
+        }
         [this.endNode, this.startNode] = EventNode.getEndStart(node)
         this.sequence = this.startNode.parentSeq
         this.originalPrev = (<EventEndNode>node.previous).previous
     }
-    do() {
+    do(chart: Chart) {
         this.sequence.updateJump(...EventNode.removeNodePair(this.endNode, this.startNode))
+        if (this.updatesFP) {
+            // updatesFP的校验确保了序列为速度序列
+            (this.sequence as SpeedENS).updateFloorPositionAfter(this.originalPrev, chart.timeCalculator) 
+        }
     }
-    undo() {
+    undo(chart: Chart) {
         this.sequence.updateJump(...EventNode.insert(this.startNode, this.originalPrev))
+        if (this.updatesFP) {
+            (this.sequence as SpeedENS).updateFloorPositionAfter(this.originalPrev, chart.timeCalculator) 
+        }
     }
 }
 
 /**
  * 将一对孤立的节点对插入到一个开始节点之后的操作。
  * 
- * 如果这个节点对的时刻与节点对的时刻相同，那么该节点对将不会被插入。
- * 
- * 而是把原来开始节点的值修改。
+ * 如果这个节点对的时刻与节点对的时刻相同，那么抛出错误。
  */
 export class EventNodePairInsertOperation<VT> extends Operation {
     updatesEditor = true
     node: EventStartNode<VT>;
     tarPrev: EventStartNode<VT>;
-    originalSequence: EventNodeSequence<VT>;
-    overlapped: boolean;
+    sequence: EventNodeSequence<VT>;
     originalValue: VT;
-    value: VT
+    value: VT;
+    updatesFP = false;
     /**
      * 
-     * @param node the node to insert
-     * @param targetPrevious The node to insert before, accessed through EventNodeSequence.getNodeAt(TC.toBeats(node))
-     * If the targetPrevious's time is the same as node's time, the node will not be inserted,
-     * and the targetPrevious' value will be replaced with the node's value.
+     * @param node 要插入的节点 the node to insert 
+     * @param targetPrevious 要插在谁后面 The node to insert after, accessed through `EventNodeSequence.getNodeAt(TC.toBeats(node))`
      */
-    constructor(node: EventStartNode<VT>, targetPrevious: EventStartNode<VT>) {
+    constructor(node: EventStartNode<VT>, targetPrevious: EventStartNode<VT>, updatesFP = true) {
         super()
         this.node = node;
         this.tarPrev = targetPrevious
-        this.originalSequence = targetPrevious.parentSeq
+        this.sequence = targetPrevious.parentSeq
         if (TC.eq(node.time, targetPrevious.time)) {
-            this.overlapped = true;
-            this.value = node.value;
-            this.originalValue = targetPrevious.value;
+            throw err.SEQUENCE_NODE_TIME_OCCUPIED(node.time, this.sequence.id);
         }
+        if (!this.sequence) {
+            throw err.PARENT_SEQUENCE_NOT_FOUND(targetPrevious?.time);
+        }
+        this.updatesFP = updatesFP && node.isSpeed();
     }
     do() {
-        if (this.overlapped) {
-            this.tarPrev.value = this.value;
-            return;
-        }
         const [endNode, startNode] = EventNode.insert(this.node, this.tarPrev);
         this.node.parentSeq.updateJump(endNode, startNode)
     }
     undo() {
-        if (this.overlapped) {
-            this.tarPrev.value = this.originalValue;
-            return;
-        }
-        this.originalSequence?.updateJump(...EventNode.removeNodePair(...EventNode.getEndStart(this.node)))
+        this.sequence.updateJump(...EventNode.removeNodePair(...EventNode.getEndStart(this.node)))
+    }
+}
+
+export class EventNodePairInsertOrOverwriteOperation<VT>
+extends UnionOperation<EventNodePairInsertOperation<VT> | EventNodeValueChangeOperation<VT>> {
+    overlapping: boolean = false;
+    constructor(node: EventStartNode<VT>, targetPrevious: EventStartNode<VT>, updatesFP = true) {
+        super(() => {
+            if (TC.eq(node.time, targetPrevious.time)) {
+                this.overlapping = true;
+                return new EventNodeValueChangeOperation(targetPrevious, node.value);
+            } else {
+                return new EventNodePairInsertOperation(node, targetPrevious, updatesFP);
+            }
+        })
     }
 }
 
@@ -617,17 +657,29 @@ export class EventNodePairInsertOperation<VT> extends Operation {
  * 节点对需要有序的，且不能有重叠
 
  */
-export class MultiNodeAddOperation<VT> extends ComplexOperation<EventNodePairInsertOperation<VT>[]> {
+export class MultiNodeAddOperation<VT> extends ComplexOperation<EventNodePairInsertOrOverwriteOperation<VT>[]> {
     updatesEditor = true
-    nodes: EventStartNode<VT>[];
-    constructor(nodes: EventStartNode<VT>[], seq: EventNodeSequence<VT>) {
+    updatesFP = false;
+    constructor(public nodes: EventStartNode<VT>[], public seq: EventNodeSequence<VT>) {
         let prev = seq.getNodeAt(TC.toBeats(nodes[0].time));
         super(...nodes.map(node => {
-            const op = new EventNodePairInsertOperation(node, prev);
-            if (!op.overlapped) prev = node; // 有种reduce的感觉
+            const op = new EventNodePairInsertOrOverwriteOperation(node, prev,false);
+            if (!op.overlapping) prev = node; // 有种reduce的感觉
             return op
         }));
-        this.nodes = nodes
+        this.updatesFP = seq.type === EventType.speed
+    }
+    do(chart: Chart) {
+        super.do();
+        if (this.updatesFP) {
+            (this.seq as SpeedENS).updateFloorPositionAfter(this.nodes[0] as EventStartNode<number>, chart.timeCalculator)
+        }
+    }
+    undo(chart: Chart) {
+        super.undo();
+        if (this.updatesFP) {
+            (this.seq as SpeedENS).updateFloorPositionAfter(this.nodes[0] as EventStartNode<number>, chart.timeCalculator)
+        }
     }
 }
 
@@ -856,6 +908,7 @@ export class EncapsuleOperation extends ComplexOperation<[MultiNodeDeleteOperati
         const sequence = easing.eventNodeSequence;
         sequence.effectiveBeats = TC.toBeats(nodeArray[nodeArray.length - 1].time);
         // 直接do，这个不需要做成可撤销的
+        // @ts-expect-error 这里序列类型确定，为easing，不需要传入谱面
         new MultiNodeAddOperation(nodeArray, sequence).do();
 
         return new EncapsuleOperation(oldArray, easing); 
@@ -1069,7 +1122,7 @@ export class EventNodeSequenceRenameOperation extends Operation {
     }
 }
 
-export class AttachUIOperation extends Operation {
+export class UIAttachOperation extends Operation {
     updatesEditor = true;
     constructor(public chart: Chart, public judgeLine: JudgeLine, public ui: UIName) {
         super();
@@ -1082,7 +1135,7 @@ export class AttachUIOperation extends Operation {
     }
 }
 
-export class DetachUIOperation extends Operation {
+export class UIDetachOperation extends Operation {
     updatesEditor = true;
     judgeLine: JudgeLine;
     constructor(public chart: Chart, public ui: UIName) {
@@ -1101,7 +1154,7 @@ export class DetachUIOperation extends Operation {
     }
 }
 
-export class DetachJudgeLineOperation extends Operation {
+export class JudgeLineDetachAllUIOperation extends Operation {
     updatesEditor = true;
     uinames: UIName[];
     constructor(public chart: Chart, public judgeLine: JudgeLine) {
@@ -1235,7 +1288,10 @@ export class ENSAddBlankOperation extends MultiNodeOffsetOperation {
 
 // 按照规矩，音符节点的时间不可变，所以不会对音符节点动手。
 // 依旧不用组合的NoteTimeChangeOperation的方式，因为那需要多次更新跳数组。
-// @ts-expect-error
+/**
+ * @author Zes Minkey Young
+ */
+// @ts-expect-error 我需要明确禁用掉lazy静态方法，这不会破坏类型安全。
 export class MultiNoteOffsetOperation extends Operation {
     constructor(public nnList: NNList, public notes: readonly Note[], public offset: TimeT) {
         super();

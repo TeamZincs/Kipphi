@@ -1,7 +1,7 @@
 import { type TemplateEasingBodyData, type EasingDataKPA2, EasingType, EventType, type SegmentedEasingData, type NormalEasingData, type BezierEasingData, type TemplateEasingData, WrapperEasingData, WrapperEasingBodyData } from "./chartTypes";
 import { type EventNodeSequence } from "./event";
 import { type TupleCoord } from "./util";
-import Environment from "./env";
+import Environment, { err } from "./env";
 import { type ExpressionEvaluator } from "./evaluator";
 
 
@@ -185,11 +185,6 @@ export class NormalEasing extends Easing {
         this._getValue = fn;
     }
     getValue(t: number): number {
-        if (t > 1 || t < 0) {
-            console.warn("缓动超出定义域！")
-            // debugger;
-        }
-        // console.log("t:", t, "rat", this._getValue(t))
         return this._getValue(t)
     }
     private dumpCache: NormalEasingData;
@@ -210,18 +205,18 @@ export class NormalEasing extends Easing {
  * uses the Bezier curve formula to describe an easing.
  */
 export class BezierEasing extends Easing {
-    readonly xs: readonly number[];
-    readonly ys: readonly number[];
-    readonly jumper: readonly number[];
+    readonly xs: Float64Array;
+    readonly ys: Float64Array;
+    readonly jumper: Uint8Array;
     constructor(public readonly cp1: TupleCoord, public readonly cp2: TupleCoord) {
         super()
         const BEZIER_INTERPOLATION_DENSITY = Environment.BEZIER_INTERPOLATION_DENSITY;
         const BEZIER_INTERPOLATION_STEP = 1 / BEZIER_INTERPOLATION_DENSITY;
         // 插值，把贝塞尔曲线近似成256段折线
-        const xs: number[] = new Array(BEZIER_INTERPOLATION_DENSITY - 1);
-        const ys: number[] = new Array(BEZIER_INTERPOLATION_DENSITY - 1);
+        const xs = new Float64Array(BEZIER_INTERPOLATION_DENSITY - 1);
+        const ys = new Float64Array(BEZIER_INTERPOLATION_DENSITY - 1);
         /** 一把尺子，刻度均匀，从`插值步长*下标`映射到xs里面的下标 */
-        const jumper: number[] = new Array(BEZIER_INTERPOLATION_DENSITY);
+        const jumper = new Uint8Array(BEZIER_INTERPOLATION_DENSITY);
         let nextToFill = 0;
         for (let i = 1; i < BEZIER_INTERPOLATION_DENSITY; i++) {
             // 这个t是贝塞尔曲线生成参数
@@ -237,9 +232,9 @@ export class BezierEasing extends Easing {
         for (; 1 > nextToFill * BEZIER_INTERPOLATION_STEP; nextToFill++) {
             jumper[nextToFill] = BEZIER_INTERPOLATION_DENSITY - 1;
         }
-        this.xs = Object.freeze(xs);
-        this.ys = Object.freeze(ys);
-        this.jumper = Object.freeze(jumper);
+        this.xs = xs;
+        this.ys = ys;
+        this.jumper = jumper;
     }
     /**
      * 从横坐标获得纵坐标
@@ -337,8 +332,10 @@ export class WrapperEasing extends Easing {
  * 缓动库
  * 用于管理模板缓动
  * for template easing management
+ * 
  * 谱面的一个属性
  * a property of chart
+ * 
  * 加载谱面时，先加载事件序列，所需的模板缓动会被加入到缓动库，但并不立即实现，在读取模板缓动时，才实现缓动。
  * To load a chart, the eventNodeSquences will be first loaded, during which process
  * the easings will be added to the easing library but not implemented immediately.
@@ -392,7 +389,7 @@ export class TemplateEasingLib {
     check() {
         for (const [name, easing] of this.easings) {
             if (!easing.eventNodeSequence) {
-                console.warn(`未实现的缓动：${name}`);
+                err.UNIMPLEMENTED_TEMPLATE_EASING(name).warn();
             }
         }
     }

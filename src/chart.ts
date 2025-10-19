@@ -18,6 +18,7 @@ import {
     EventStartNode,
     EventEndNode,
     EventNode,
+    SpeedENS,
 } from "./event";
 
 import {
@@ -73,7 +74,6 @@ export type UIName = "combo"  | "combonumber" | "score" | "pause" | "bar" | "nam
 
 export class Chart {
     judgeLines: JudgeLine[] = [];
-    bpmList: BPMSegmentData[] = [];
     timeCalculator = new TimeCalculator();
     orphanLines: JudgeLine[] = [];
     // comboMapping: ComboMapping;
@@ -113,14 +113,12 @@ export class Chart {
     constructor() {}
     getEffectiveBeats() {
         const effectiveBeats = this.timeCalculator.secondsToBeats(this.duration)
-        console.log(effectiveBeats)
         this.effectiveBeats = effectiveBeats
         return this.effectiveBeats
     }
     static fromRPEJSON(data: ChartDataRPE, duration: number) {
         const chart = new Chart();
         chart.judgeLineGroups = data.judgeLineGroup.map(group => new JudgeLineGroup(group));
-        chart.bpmList = data.BPMList;
         chart.name = data.META.name;
         chart.level = data.META.level;
         chart.offset = data.META.offset;
@@ -131,18 +129,11 @@ export class Chart {
         chart.chartingTime = data.kpaChartTime
         chart.rpeChartingTime = data.chartTime ? Math.round(data.chartTime / 60) : 0;
         chart.chartingTime = 0;
-        chart.updateCalculator()
-        console.log(chart, chart.getEffectiveBeats())
+        chart.initCalculator(data.BPMList)
         chart.nnnList = new NNNList(chart.getEffectiveBeats())
         
-        /*
-        if (data.envEasings) {
-            chart.templateEasingLib.add(...data.envEasings)
-
-        }
-        */
         
-        // let line = data.judgeLineList[0];
+        
         const judgeLineDataList: JudgeLineDataRPE[] = <JudgeLineDataRPE[]>data.judgeLineList;
         const judgeLineList: JudgeLine[] = judgeLineDataList.map(
             (lineData, id) =>
@@ -167,7 +158,6 @@ export class Chart {
     static fromKPAJSON(data: ChartDataKPA | ChartDataKPA2) {
         const chart = new Chart();
         
-        chart.bpmList = data.bpmList;
         chart.duration = data.duration;
         chart.name = data.info.name;
         chart.level = data.info.level;
@@ -178,9 +168,14 @@ export class Chart {
         chart.judgeLineGroups = data.judgeLineGroups.map(group => new JudgeLineGroup(group));
         chart.chartingTime = data.chartTime ?? 0;
         chart.rpeChartingTime = data.rpeChartTime ?? 0;
-        chart.updateCalculator()
-        chart.nnnList = new NNNList(chart.getEffectiveBeats())
-        const isKPA2 = data.version >= 200
+
+
+        chart.initCalculator(data.bpmList);
+        chart.nnnList = new NNNList(chart.getEffectiveBeats());
+        /**
+         * 影响事件的格式、是否存在“求值器”这一中间层以及判定线的属性名
+         */
+        const isKPA2 = data.version >= 200;
         const templateEasings = isKPA2 ? (data as ChartDataKPA2).templateEasings : (data as ChartDataKPA).envEasings;
         const len = templateEasings.length
         for (let i = 0; i < len; i++) {
@@ -234,9 +229,8 @@ export class Chart {
             chart.templateEasingLib.implement(easingData.name, sequence as EventNodeSequence<number>);
         }
         chart.templateEasingLib.check()
-        const isOld = !data.version || data.version < 150
         for (const lineData of data.orphanLines) {
-            const line: JudgeLine = JudgeLine.fromKPAJSON(isOld, chart, lineData.id, lineData, chart.templateEasingLib, chart.timeCalculator)
+            const line: JudgeLine = JudgeLine.fromKPAJSON(data.version, chart, lineData.id, lineData, chart.templateEasingLib, chart.timeCalculator)
             chart.orphanLines.push(line)
         }
         chart.judgeLines.sort((a, b) => a.id - b.id);
@@ -254,8 +248,8 @@ export class Chart {
         }
         return chart;
     }
-    updateCalculator() {
-        this.timeCalculator.bpmList = this.bpmList;
+    initCalculator(bpmList: BPMSegmentData[]) {
+        this.timeCalculator.bpmList = bpmList;
         this.timeCalculator.duration = this.duration;
         this.timeCalculator.initSequence()
     }
@@ -308,7 +302,7 @@ export class Chart {
         };
     }
     createNNNode(time: TimeT) {
-     return new NNNode(time)
+        return new NNNode(time)
     }
     /**
      * 
@@ -326,7 +320,12 @@ export class Chart {
         this.sequenceMap.set(name, seq);
         return seq;
     }
-    countMaxCombo() {
+    /**
+     * 对谱面物量进行重新计数。
+     * 
+     * 不会返回值，谱面物量存储在 `this.maxCombo` 中。
+     */
+    countMaxCombo(): void {
         let combo = 0;
         const nnnlist = this.nnnList;
         for (let node: NNNOrTail = nnnlist.head.next; node.type !== NodeType.TAIL; node = node.next) {
@@ -346,9 +345,9 @@ export class Chart {
         this.maxCombo = combo;
     }
     /**
-     * 
-     * @param ui 
-     * @param judgeLine
+     * 将UI绑定到某判定线
+     * @param ui UI名称，与RPEJSON中的代号相同
+     * @param judgeLine 所要绑定的目标判定线
      * @throws {KPAError<ERROR_IDS.UI_OCCUPIED>}
      */
     attachUIToLine(ui: UIName, judgeLine: JudgeLine) {
@@ -359,6 +358,11 @@ export class Chart {
         this[key] = judgeLine;
         judgeLine.hasAttachUI = true;
     }
+    /**
+     * 移除谱面中某个UI的绑定，使UI进入未绑定状态
+     * @param ui UI名称，与RPEJSON中的相同
+     * @returns 
+     */
     detachUI(ui: UIName) {
         const key = `${ui}Attach` satisfies keyof Chart;
         const judgeLine = this[key];
@@ -387,6 +391,12 @@ export class Chart {
         }
         return arr;
     }
+    /**
+     * 扫描所有用到的判定线贴图（纹理）并返回
+     * 
+     * 给谱面播放器的接口，谱面播放器需要在初加载时提供贴图
+     * @returns 
+     */
     scanAllTextures() {
         const textures: Set<string> = new Set;
         for (const line of this.judgeLines) {
@@ -394,6 +404,13 @@ export class Chart {
         }
         return textures
     }
+    /**
+     * 使用KPA2数据创建一个缓动对象。
+     * 
+     * 只有对贝塞尔缓动和截段缓动才会创建新对象，其他几种缓动从缓动库等中的对象池获取
+     * @param data 
+     * @returns 
+     */
     createEasingFromData(data: EasingDataKPA2) {
         switch (data.type) {
             case EasingType.bezier:
@@ -408,6 +425,14 @@ export class Chart {
                 return this.templateEasingLib.getWrapper(data.identifier);
         }
     }
+    /**
+     * 使用KPA2数据创建一个求值器对象。
+     * 
+     * 求值器只有缓动型和表达式型两类。
+     * @param data 
+     * @param type 
+     * @returns 
+     */
     createEvaluator<T extends EventValueESType>(data: EvaluatorDataKPA2<T>, type: EventValueTypeOfType<T>): Evaluator<T> {
         switch (data.type) {
             case EvaluatorType.eased:
@@ -417,6 +442,14 @@ export class Chart {
                 return this.createExpressionEvaluator(data) as ExpressionEvaluator<T>;
         }
     }
+    /**
+     * 使用KPA2数据创建一个缓动求值器。
+     * 
+     * 对于普通缓动，这些求值器是从对应类构造器的静态对象池属性中获取的。
+     * @param data 
+     * @param type 
+     * @returns 
+     */
     createEasedEvaluator<T extends EventValueESType>(data: EasedEvaluatorDataOfType<T>, type: EventValueTypeOfType<T>): EasedEvaluatorOfType<T> {
         switch (type) {
             case EventValueType.numeric:
@@ -433,6 +466,12 @@ export class Chart {
                     : new TextEasedEvaluator(this.createEasingFromData(data.easing), (data as TextEasedEvaluatorKPA2).interpretedAs) as EasedEvaluatorOfType<T>
         }
     }
+    /**
+     * 用一个缓动和事件类型获取一个缓动求值器
+     * @param easing 
+     * @param type 
+     * @param interpreteAs 
+     */
     getEasedEvaluator<T extends string>(easing: Easing, type: EventValueType.text, interpreteAs: InterpreteAs): TextEasedEvaluator;
     getEasedEvaluator<T extends EventValueESType>(easing: Easing, type: EventValueTypeOfType<T>, interpreteAs?: InterpreteAs): EasedEvaluatorOfType<T> {
         const easingIsNormal = easing instanceof NormalEasing;
@@ -467,38 +506,62 @@ export class Chart {
         EventNode.connect(start, end);
         return [start, end];
     }
+    /* 暂时不用此方法，因为谱面播放器里面还是用反解法弄的
+    updateNNListsFromENS(speedENS: SpeedENS) {
+        
+    }
+    */
 }
 
 export class JudgeLineGroup {
-    judgeLines: JudgeLine[];
+    /**
+     * 该只读标记只是为了防止外部修改，内部可以修改
+     */
+    judgeLines: readonly JudgeLine[];
     constructor(public name: string) {
         this.judgeLines = []
     }
+    /**
+     * 向判定线组添加一条判定线，并且保证其内部的判定线ID是升序排列的。
+     * @param judgeLine 要添加的判定线
+     * @returns 
+     */
     add(judgeLine: JudgeLine) {
         // 加入之前已经按照ID升序排列
         // 加入时将新判定线插入到正确位置
+        const judgeLines = this.judgeLines as JudgeLine[];
         if (judgeLine.group) {
             judgeLine.group.remove(judgeLine);
         }
         judgeLine.group = this;
         
         // 找到正确的位置插入，保持按ID升序排列
-        for (let i = 0; i < this.judgeLines.length; i++) {
-            if (this.judgeLines[i].id > judgeLine.id) {
-                this.judgeLines.splice(i, 0, judgeLine);
+        for (let i = 0; i < judgeLines.length; i++) {
+            if (judgeLines[i].id > judgeLine.id) {
+                judgeLines.splice(i, 0, judgeLine);
                 return;
             }
         }
         // 如果没有找到比它大的ID，则插入到末尾
-        this.judgeLines.push(judgeLine);
+        judgeLines.push(judgeLine);
         
     }
+    /**
+     * 从判定线组移除一条判定线
+     * @param judgeLine 
+     */
     remove(judgeLine: JudgeLine) {
-        const index = this.judgeLines.indexOf(judgeLine);
+        // 只读仅对外部作限制
+        const judgeLines = this.judgeLines as JudgeLine[];
+        const index = judgeLines.indexOf(judgeLine);
         if (index !== -1) {
-            this.judgeLines.splice(index, 1);
+            judgeLines.splice(index, 1);
         }
     }
+    /**
+     * 
+     * @returns 该判定线组是否为默认判定线组，默认的判断标准是：名称为 "Default"（大小写不敏感）
+     */
     isDefault() {
         return this.name.toLowerCase() === "default";
     }
