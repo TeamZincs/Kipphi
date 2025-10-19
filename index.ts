@@ -1,3 +1,5 @@
+export * from "./src/time";
+export {default as TC} from "./src/time";
 export * from "./src/chartTypes";
 export * from "./src/easing";
 export * from "./src/evaluator";

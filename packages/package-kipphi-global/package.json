@@ -1,6 +1,6 @@
 {
   "name": "kipphi-global",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Parse your Phigros chart into an editor-friendly format",
   "main": "index.js",
   "scripts": {
