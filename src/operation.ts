@@ -20,24 +20,73 @@ enum JudgeLinesEditorLayoutType {
     grouped = 0b100
 }
 
+export type OpEventType = "do" | "undo" | "redo" | "error" | "needsupdate" | "maxcombochanged" | "noundo" | "noredo" | "firstmodified" | "needsreflow";
 
-class NeedsReflowEvent extends Event {
+// 最讲类型安全的一集（
+// 当然要有，不然的话编辑器那边检测的时候逆变会出问题
+
+interface DirectlyInstaciableEventMap {
+    "noundo": OpEvent;
+    "noredo": OpEvent;
+    "firstmodified": OpEvent;
+    "needsupdate": OpEvent;
+}
+
+// 创建一个类型来检测意外的 override
+// AI太好用了你知道吗
+type CheckFinalOverrides<T> = {
+    [K in keyof T]: K extends keyof OpEventMap ? 
+        T[K] extends OpEventMap[K] ? T[K] : never : 
+        T[K]
+};
+
+interface OpEventMap extends CheckFinalOverrides<DirectlyInstaciableEventMap> {
+    "error": OperationErrorEvent;
+    "maxcombochanged": MaxComboChangeEvent;
+    "undo": OperationEvent;
+    "redo": OperationEvent;
+    "do": OperationEvent;
+    "needsreflow": NeedsReflowEvent;
+}
+
+
+class OpEvent extends Event {
+    protected constructor(type: OpEventType) {
+        super(type);
+    }
+    /**
+     * 如果这个类型没有对应子类应该用这个
+     */
+    static create(type: keyof DirectlyInstaciableEventMap) {
+        return new OpEvent(type);
+    }
+}
+
+export class NeedsReflowEvent extends OpEvent {
     constructor(public condition: number) {
         super("needsreflow");
     }
 }
 
-class OperationEvent extends Event {
-    constructor(t: string, public operation: Operation) {
+export class OperationEvent extends OpEvent {
+    constructor(t: "do" | "undo" | "redo" | "error", public operation: Operation) {
         super(t);
     }
 }
 
-class OperationErrorEvent extends OperationEvent {
+export class OperationErrorEvent extends OperationEvent {
     constructor(operation: Operation, public error: Error) {
         super("error", operation);
     }
 }
+
+export class MaxComboChangeEvent extends OpEvent {
+    constructor(public comboDelta: number) {
+        super("maxcombochanged");
+    }
+}
+
+
 
 export class OperationList extends EventTarget {
     operations: Operation[];
@@ -52,7 +101,7 @@ export class OperationList extends EventTarget {
         if (op) {
             if (!this.chart.modified){
                 this.chart.modified = true;
-                this.dispatchEvent(new Event("firstmodified"))
+                this.dispatchEvent(OpEvent.create("firstmodified"))
             }
             
             try {
@@ -65,7 +114,7 @@ export class OperationList extends EventTarget {
             this.dispatchEvent(new OperationEvent("undo", op))
             this.processFlags(op);
         } else {
-            this.dispatchEvent(new Event("noundo"))
+            this.dispatchEvent(OpEvent.create("noundo"))
         }
     }
     redo() {
@@ -73,7 +122,7 @@ export class OperationList extends EventTarget {
         if (op) {
             if (!this.chart.modified){
                 this.chart.modified = true;
-                this.dispatchEvent(new Event("firstmodified"))
+                this.dispatchEvent(OpEvent.create("firstmodified"))
             }
             
             try {
@@ -86,7 +135,7 @@ export class OperationList extends EventTarget {
             this.dispatchEvent(new OperationEvent("redo", op))
             this.processFlags(op);
         } else {
-            this.dispatchEvent(new Event("noredo"))
+            this.dispatchEvent(OpEvent.create("noredo"))
         }
     }
     do(operation: Operation) {
@@ -95,9 +144,9 @@ export class OperationList extends EventTarget {
         }
         if (!this.chart.modified){
             this.chart.modified = true;
-            this.dispatchEvent(new Event("firstmodified"))
+            this.dispatchEvent(OpEvent.create("firstmodified"))
         }
-        // 如果上一个操作是同一个构造器的，那么修改上一个操作而不是推入新的操作
+        // 如果上一个操作是同一个构造器的，那么试图修改上一个操作而不是立即推入新的操作
         if (this.operations.length !== 0) {
                 
             const lastOp = this.operations[this.operations.length - 1]
@@ -122,10 +171,10 @@ export class OperationList extends EventTarget {
     processFlags(operation: Operation) {
 
         if (operation.updatesEditor) {
-            this.dispatchEvent(new Event("needsupdate"));
+            this.dispatchEvent(OpEvent.create("needsupdate"));
         }
-        if (operation.needsComboRecount) {
-            this.dispatchEvent(new Event("maxcombochanged"));
+        if (operation.comboDelta) {
+            this.dispatchEvent(new MaxComboChangeEvent(operation.comboDelta));
         }
         if (operation.reflows) {
             this.dispatchEvent(new NeedsReflowEvent(operation.reflows))
@@ -134,8 +183,10 @@ export class OperationList extends EventTarget {
     clear() {
         this.operations = [];
     }
+    addEventListener<T extends OpEventType>(type: T, listener: (event: OpEventMap[T]) => void, options?: boolean | AddEventListenerOptions): void {
+        super.addEventListener(type, listener, options);
+    }
 }
-
 
 
 export abstract class Operation {
@@ -143,7 +194,12 @@ export abstract class Operation {
     updatesEditor: boolean;
     // 用于判定线编辑区的重排，若操作完成时的布局为这个值就会重排
     reflows: number;
-    needsComboRecount: boolean;
+    /** 
+     * 此操作对谱面总物量产生了多少影响，正增负减。
+     * 
+     * 如果操作自身无法评估，应返回NaN，导致全谱重新数清物量
+     */
+    comboDelta: number;
     constructor() {
 
     }
@@ -222,7 +278,7 @@ export class ComplexOperation<T extends Operation[]> extends Operation {
         this.length = sub.length
         this.reflows = sub.reduce((prev, op) => prev | op.reflows, 0);
         this.updatesEditor = sub.some((op) => op.updatesEditor);
-        this.needsComboRecount = sub.some((op) => op.needsComboRecount);
+        this.comboDelta = sub.reduce((prev, op) => prev + op.comboDelta, 0);
     }
     // 这样子写不够严密，如果要继承这个类，并且子操作需要谱面，就要重写这个方法的签名
     do(chart?: Chart) {
@@ -264,11 +320,10 @@ export class NotePropChangeOperation<T extends NotePropName> extends Operation {
             throw err.INVALID_NOTE_PROP_TYPE(field, value, notePropTypes[field]);
         }
         this.previousValue = note[field]
-        if (field === "isFake") {
-            this.needsComboRecount = true;
-        }
         if (value === note[field]) {
             this.ineffective = true
+        } else if (field === "isFake") {
+            this.comboDelta = value ? -1 : 1;
         }
     }
     do() {
@@ -290,7 +345,6 @@ export class NoteRemoveOperation extends Operation {
     noteNode: NoteNode;
     note: Note;
     isHold: boolean;
-    override needsComboRecount = true;
     constructor(note: Note) {
         super()
         this.note = note // In memory of forgettting to add this(
@@ -300,6 +354,9 @@ export class NoteRemoveOperation extends Operation {
         } else {
             this.noteNode = note.parentNode
         }
+        // 移除假Note不改变物量
+        // 这里，一般没有人会在修改一个isFake值之后删除它，因此一般不用懒操作
+        this.comboDelta = note.isFake ? 0 : 1;
     }
     do() {
         const {note, noteNode} = this;
@@ -356,13 +413,14 @@ export class NoteAddOperation extends Operation {
     noteNode: NoteNode
     note: Note;
     isHold: boolean;
-    updatesEditor = true
-    needsComboRecount = true;
+    updatesEditor = true;
     constructor(note: Note, node: NoteNode) {
         super()
         this.note = note;
         this.isHold = note.type === NoteType.hold;
-        this.noteNode = node
+        this.noteNode = node;
+        // 一般来说，操作是对于在谱里面的NoteNode，谱外面的不需要操作
+        this.comboDelta = note.isFake ? 0 : +1;
     }
     do() {
         const {note, noteNode} = this;
@@ -392,8 +450,7 @@ export class NoteAddOperation extends Operation {
 }
 
 export class MultiNoteAddOperation extends ComplexOperation<NoteAddOperation[]> {
-    updatesEditor = true
-    needsComboRecount = true;
+    updatesEditor = true;
     constructor(notes: Set<Note> | Note[], judgeLine: JudgeLine) {
         if (notes instanceof Set) {
             notes = [...notes];
@@ -401,7 +458,8 @@ export class MultiNoteAddOperation extends ComplexOperation<NoteAddOperation[]> 
         super(...notes.map(note => {
             const node = judgeLine.getNode(note, true)
             return new NoteAddOperation(note, node);
-        }))
+        }));
+        // 以上，一般能数清楚加了多少物量
         if (notes.length === 0) {
             this.ineffective = true
         }
@@ -412,8 +470,11 @@ export class NoteTimeChangeOperation extends ComplexOperation<[
     NoteRemoveOperation,
     NotePropChangeOperation<"startTime">,
     NoteAddOperation,
-    UnionOperation<NotePropChangeOperation<"endTime"> | null>]> {
-    note: Note
+    UnionOperation<NotePropChangeOperation<"endTime"> | null>
+]>
+{
+    note: Note;
+    comboDelta = 0;
     constructor(note: Note, noteNode: NoteNode) {
         super(
             new NoteRemoveOperation(note),
@@ -425,8 +486,7 @@ export class NoteTimeChangeOperation extends ComplexOperation<[
                 }
             })
         );
-        this.updatesEditor = true
-        this.needsComboRecount = false;
+        this.updatesEditor = true;
         if (note.type === NoteType.hold && !TC.gt(note.endTime, noteNode.startTime)) {
             this.ineffective = true
         }
@@ -460,8 +520,6 @@ export class NoteTimeChangeOperation extends ComplexOperation<[
 }
 
 export class HoldEndTimeChangeOperation extends NotePropChangeOperation<"endTime"> {
-    
-    needsComboRecount = false;
     constructor(note: Note, value: TimeT) {
         super(note, "endTime", value)
         if (!TC.gt(value, note.startTime)) {
@@ -600,7 +658,7 @@ export class EventNodePairRemoveOperation extends Operation {
  * 
  * 如果这个节点对的时刻与节点对的时刻相同，那么抛出错误。
  */
-export class EventNodePairInsertOperation<VT> extends Operation {
+export class EventNodePairInsertOperation <VT extends EventValueESType> extends Operation {
     updatesEditor = true
     node: EventStartNode<VT>;
     tarPrev: EventStartNode<VT>;
@@ -635,7 +693,7 @@ export class EventNodePairInsertOperation<VT> extends Operation {
     }
 }
 
-export class EventNodePairInsertOrOverwriteOperation<VT>
+export class EventNodePairInsertOrOverwriteOperation <VT extends EventValueESType>
 extends UnionOperation<EventNodePairInsertOperation<VT> | EventNodeValueChangeOperation<VT>> {
     overlapping: boolean = false;
     constructor(node: EventStartNode<VT>, targetPrevious: EventStartNode<VT>, updatesFP = true) {
@@ -657,7 +715,7 @@ extends UnionOperation<EventNodePairInsertOperation<VT> | EventNodeValueChangeOp
  * 节点对需要有序的，且不能有重叠
 
  */
-export class MultiNodeAddOperation<VT> extends ComplexOperation<EventNodePairInsertOrOverwriteOperation<VT>[]> {
+export class MultiNodeAddOperation <VT extends EventValueESType> extends ComplexOperation<EventNodePairInsertOrOverwriteOperation<VT>[]> {
     updatesEditor = true
     updatesFP = false;
     constructor(public nodes: EventStartNode<VT>[], public seq: EventNodeSequence<VT>) {
@@ -690,7 +748,7 @@ export class MultiNodeDeleteOperation extends ComplexOperation<LazyOperation<typ
     }
 }
 
-export class EventNodeValueChangeOperation<VT> extends Operation {
+export class EventNodeValueChangeOperation <VT extends EventValueESType> extends Operation {
     updatesEditor = true
     node: EventNode<VT>
     value: VT;
@@ -773,7 +831,7 @@ export class EventNodeTimeChangeOperation extends Operation {
 }
 
 
-export class EventNodeEvaluatorChangeOperation<VT> extends Operation {
+export class EventNodeEvaluatorChangeOperation <VT extends EventValueESType> extends Operation {
     updatesEditor = true
     originalValue: Evaluator<VT>
     constructor(public node: EventStartNode<VT>, public value: Evaluator<VT>) {
@@ -792,7 +850,7 @@ export class EventNodeEvaluatorChangeOperation<VT> extends Operation {
 
 
 // 这个地方得懒一下，不然每亩，导致撤回操作时只能撤回第一个插值节点。
-export class EventInterpolationOperation<VT> extends ComplexOperation<LazyOperation<typeof EventNodePairInsertOperation>[]> {
+export class EventInterpolationOperation <VT extends EventValueESType> extends ComplexOperation<LazyOperation<typeof EventNodePairInsertOperation>[]> {
     updatesEditor = true;
     constructor(public eventStartNode: EventStartNode<VT>, public step: TimeT) {
         if (eventStartNode.next.type === NodeType.TAIL) {

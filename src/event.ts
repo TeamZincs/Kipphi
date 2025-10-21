@@ -12,7 +12,7 @@ import { err, ERROR_IDS, KPAError } from "./env";
 import { JudgeLine } from "./judgeline";
 
 /// #declaration:global
-export class EventNodeLike<T extends NodeType, VT = number> {
+export class EventNodeLike<T extends NodeType, VT extends EventValueESType = number> {
     type: T;
     /** 后一个事件节点 */
     next: [EventStartNode<VT>, null, ENOrTail<VT>][T] | null = null;
@@ -23,10 +23,10 @@ export class EventNodeLike<T extends NodeType, VT = number> {
         this.type = type;
     }
 }
-export type ENOrTail<VT = number> = EventNode<VT> | EventNodeLike<NodeType.TAIL, VT>;
-export type ENOrHead<VT = number> = EventNode<VT> | EventNodeLike<NodeType.HEAD, VT>;
-export type AnyEN<VT = number> = EventNode<VT> | EventNodeLike<NodeType.HEAD, VT> | EventNodeLike<NodeType.TAIL, VT>;
-export type EvSoE<VT = number>    = EventEndNode<VT> | EventStartNode<VT>;
+export type ENOrTail<VT extends EventValueESType = number> = EventNode<VT> | EventNodeLike<NodeType.TAIL, VT>;
+export type ENOrHead<VT extends EventValueESType = number> = EventNode<VT> | EventNodeLike<NodeType.HEAD, VT>;
+export type AnyEN<VT extends EventValueESType = number> = EventNode<VT> | EventNodeLike<NodeType.HEAD, VT> | EventNodeLike<NodeType.TAIL, VT>;
+export type EvSoE<VT extends EventValueESType = number>    = EventEndNode<VT> | EventStartNode<VT>;
 
 /**
  * 事件节点基类
@@ -43,7 +43,7 @@ export type EvSoE<VT = number>    = EventEndNode<VT> | EventStartNode<VT>;
  * 与RPE不同的是，KPA使用两个节点来表示一个事件，而不是一个对象。
  * Different from that in RPE, KPA uses two nodes rather than one object to represent an event.
  */
-export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDDLE, VT> {
+export abstract class EventNode<VT extends EventValueESType = number> extends EventNodeLike<NodeType.MIDDLE, VT> {
     time: TimeT;
     value: VT;
     evaluator: Evaluator<VT>;
@@ -172,9 +172,9 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
         EventNode.connect(start, end)
         return [start, end]
     }
-    static connect<VT>(node1: EventStartNode<VT>, node2: EventEndNode<VT> | EventNodeLike<NodeType.TAIL, VT>): void
-    static connect<VT>(node1: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT>, node2: EventStartNode<VT>): void
-    static connect<VT>(node1: ENOrHead<VT>, node2: ENOrTail<VT>): void {
+    static connect<VT extends EventValueESType>(node1: EventStartNode<VT>, node2: EventEndNode<VT> | EventNodeLike<NodeType.TAIL, VT>): void
+    static connect<VT extends EventValueESType>(node1: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT>, node2: EventStartNode<VT>): void
+    static connect<VT extends EventValueESType>(node1: ENOrHead<VT>, node2: ENOrTail<VT>): void {
         node1.next = node2;
         node2.previous = node1;
         if (node1 && node2) {
@@ -187,7 +187,7 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
      * @param startNode 
      * @returns 应该在何范围内更新跳数组
      */
-    static removeNodePair<VT>(endNode: EventEndNode<VT>, startNode: EventStartNode<VT>): [EventStartNode<VT> | EventNodeLike<NodeType.HEAD, VT>, EventStartNode<VT> | EventNodeLike<NodeType.TAIL,VT>] {
+    static removeNodePair<VT extends EventValueESType>(endNode: EventEndNode<VT>, startNode: EventStartNode<VT>): [EventStartNode<VT> | EventNodeLike<NodeType.HEAD, VT>, EventStartNode<VT> | EventNodeLike<NodeType.TAIL,VT>] {
         const prev = endNode.previous;
         const next = startNode.next;
         prev.next = next;
@@ -198,7 +198,7 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
         startNode.parentSeq = null; // 每亩的东西（
         return [this.previousStartOfStart(prev), this.nextStartOfEnd(next)]
     }
-    static insert<VT>(node: EventStartNode<VT>, tarPrev: EventStartNode<VT>): [EventNodeLike<NodeType.HEAD, VT> | EventStartNode<VT>, EventStartNode<VT> | EventNodeLike<NodeType.TAIL, VT>] {
+    static insert<VT extends EventValueESType>(node: EventStartNode<VT>, tarPrev: EventStartNode<VT>): [EventNodeLike<NodeType.HEAD, VT> | EventStartNode<VT>, EventStartNode<VT> | EventNodeLike<NodeType.TAIL, VT>] {
         const tarNext = tarPrev.next;
         if (node.previous.type === NodeType.HEAD) {
             throw err.CANNOT_INSERT_BEFORE_HEAD();
@@ -213,7 +213,7 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
      * @param node 
      * @returns the next node if it is a tailer, otherwise the next start node
      */
-    static nextStartOfStart<VT>(node: EventStartNode<VT>) {
+    static nextStartOfStart<VT extends EventValueESType>(node: EventStartNode<VT>) {
         return node.next.type === NodeType.TAIL ? node.next : node.next.next
     }
     /**
@@ -221,10 +221,10 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
      * @param node 
      * @returns itself if node is a tailer, otherwise the next start node
      */
-    static nextStartOfEnd<VT>(node: EventEndNode<VT> | EventNodeLike<NodeType.TAIL, VT>) {
+    static nextStartOfEnd<VT extends EventValueESType>(node: EventEndNode<VT> | EventNodeLike<NodeType.TAIL, VT>) {
         return node.type === NodeType.TAIL ? node : node.next
     }
-    static previousStartOfStart<VT>(node: EventStartNode<VT>): EventStartNode<VT> | EventNodeLike<NodeType.HEAD, VT> {
+    static previousStartOfStart<VT extends EventValueESType>(node: EventStartNode<VT>): EventStartNode<VT> | EventNodeLike<NodeType.HEAD, VT> {
         return node.previous.type === NodeType.HEAD ? node.previous : node.previous.previous;
     }
     /**
@@ -232,10 +232,10 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
      * @param node 
      * @returns 
      */
-    static secondPreviousStartOfEnd<VT>(node: EventEndNode<VT>): EventStartNode<VT> | EventNodeLike<NodeType.HEAD, VT> {
+    static secondPreviousStartOfEnd<VT extends EventValueESType>(node: EventEndNode<VT>): EventStartNode<VT> | EventNodeLike<NodeType.HEAD, VT> {
         return this.previousStartOfStart(node.previous);
     }
-    static nextStartInJumpArray<VT>(node: EventStartNode<VT>): EventStartNode<VT> | EventNodeLike<NodeType.TAIL, VT> {
+    static nextStartInJumpArray<VT extends EventValueESType>(node: EventStartNode<VT>): EventStartNode<VT> | EventNodeLike<NodeType.TAIL, VT> {
         if ((node.next as EventEndNode<VT>).next.isLastStart()) {
             return node.next.next.next as EventNodeLike<NodeType.TAIL, VT>;
         } else {
@@ -247,7 +247,7 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
      * @param node 
      * @returns 
      */
-    static getEndStart<VT>(node: EventStartNode<VT> | EventEndNode<VT>): [EventEndNode<VT>, EventStartNode<VT>] {
+    static getEndStart<VT extends EventValueESType>(node: EventStartNode<VT> | EventEndNode<VT>): [EventEndNode<VT>, EventStartNode<VT>] {
         if (node instanceof EventStartNode) {
             if (node.isFirstStart()) {
                 throw new Error("Cannot get previous start node of the first start node");
@@ -257,7 +257,7 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
             return [node, node.next]
         }
     }
-    static getStartEnd<VT>(node: EventStartNode<VT> | EventEndNode<VT>): [EventStartNode<VT>, EventEndNode<VT>] {
+    static getStartEnd<VT extends EventValueESType>(node: EventStartNode<VT> | EventEndNode<VT>): [EventStartNode<VT>, EventEndNode<VT>] {
         if (node instanceof EventStartNode) {
             return [node, <EventEndNode<VT>>node.next]
         } else if (node instanceof EventEndNode) {
@@ -266,7 +266,7 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
             throw new Error("unreachable");
         }
     }
-    static setToNewOrderedArray<VT>(dest: TimeT, set: Set<EventStartNode<VT>>): [EventStartNode<VT>[], EventStartNode<VT>[]] {
+    static setToNewOrderedArray<VT extends EventValueESType>(dest: TimeT, set: Set<EventStartNode<VT>>): [EventStartNode<VT>[], EventStartNode<VT>[]] {
         const nodes = [...set]
         nodes.sort((a, b) => TC.gt(a.time, b.time) ? 1 : -1);
         const offset = TC.sub(dest, nodes[0].time)
@@ -301,7 +301,7 @@ export abstract class EventNode<VT = number> extends EventNodeLike<NodeType.MIDD
     // #endregion
 }
 
-export class EventStartNode<VT = number> extends EventNode<VT> {
+export class EventStartNode<VT extends EventValueESType = number> extends EventNode<VT> {
     override next: EventEndNode<VT> | EventNodeLike<NodeType.TAIL, VT>;
     override previous: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT>;
     /** 
@@ -333,7 +333,7 @@ export class EventStartNode<VT = number> extends EventNode<VT> {
         if (this.next.type === NodeType.TAIL) {
             return this.value;
         }
-        return this.evaluator.eval(this, beats);
+        return this.evaluator.eval(this as NonLastStartNode<VT>, beats);
     }
     getSpeedValueAt(this: EventStartNode<number>, beats: number) {
         if (this.next.type === NodeType.TAIL) {
@@ -383,7 +383,7 @@ export class EventStartNode<VT = number> extends EventNode<VT> {
 
 export type NonLastStartNode<VT extends EventValueESType> = EventStartNode<VT> & {next: EventEndNode<VT>}
 
-export class EventEndNode<VT = number> extends EventNode<VT> {
+export class EventEndNode<VT extends EventValueESType = number> extends EventNode<VT> {
     override next!: EventStartNode<VT>;
     override previous!: EventStartNode<VT>;
 
@@ -434,7 +434,7 @@ export enum Monotonicity {
  * 插入或删除节点时，需要更新跳数组。
  * Remember to update the jump array when inserting or deleting nodes.
  */
-export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
+export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型的传染性这一块
     /**
      * @deprecated 谱面属性未实装，以后有必要的时候会添加为其赋值的逻辑
      */
@@ -499,7 +499,7 @@ export class EventNodeSequence<VT = number> { // 泛型的传染性这一块
      * @param endValue 结束值（RPEJSON没有）
      * @returns 
      */
-    static fromRPEJSON<T extends EventType, VT = number>(type: T, data: EventDataRPELike<VT>[], chart: Chart, pos: string, endValue?: number) {
+    static fromRPEJSON<T extends EventType, VT extends EventValueESType = number>(type: T, data: EventDataRPELike<VT>[], chart: Chart, pos: string, endValue?: number) {
         const {templateEasingLib: templates} = chart
         const length = data.length;
         // const isSpeed = type === EventType.Speed;

@@ -23,8 +23,8 @@ import { EvaluatorType, InterpreteAs, type ColorEasedEvaluatorKPA2, type Evaluat
  * @immutable
  * @since 2.0.0
  */
-export abstract class Evaluator<T> {
-    abstract eval(event: EventStartNode<T>, beats: number): T;
+export abstract class Evaluator<T extends EventValueESType> {
+    abstract eval(event: NonLastStartNode<T>, beats: number): T;
     abstract dump(): EvaluatorDataKPA2<T>;
 }
 
