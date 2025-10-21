@@ -185,7 +185,7 @@ export class Note {
             size: this.size,
             startTime: this.startTime,
             type: this.type,
-            visibleBeats: this.visibleBeats,
+            visibleBeats: this.visibleBeats === Infinity ? undefined : this.visibleBeats, // 无穷不要保存，节约空间
             yOffset: this.yOffset / this.speed,
             /** 新KPAJSON认为YOffset就应该是个绝对的值，不受速度影响 */
             /** 但是有历史包袱，所以加字段 */
