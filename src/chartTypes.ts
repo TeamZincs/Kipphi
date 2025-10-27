@@ -499,6 +499,7 @@ export interface ChartDataKPA {
 
 export interface ChartDataKPA2 {
     version: number;
+    $schema: string;
     offset: number;
     duration: number;
     info: {

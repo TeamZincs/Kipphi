@@ -1,0 +1,687 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "ChartDataKPA2",
+  "description": "KPA2格式谱面数据根对象",
+  "properties": {
+    "version": {
+      "type": "number",
+      "description": "谱面版本号"
+    },
+    "offset": {
+      "type": "number",
+      "description": "谱面偏移（以毫秒计量）"
+    },
+    "duration": {
+      "type": "number",
+      "description": "音乐时长"
+    },
+    "info": {
+      "type": "object",
+      "description": "谱面元数据信息",
+      "properties": {
+        "level": {
+          "type": "string",
+          "description": "谱面难度等级"
+        },
+        "name": {
+          "type": "string",
+          "description": "谱面名称"
+        },
+        "charter": {
+          "type": "string",
+          "description": "谱师名称"
+        },
+        "illustrator": {
+          "type": "string",
+          "description": "画师名称"
+        },
+        "composer": {
+          "type": "string",
+          "description": "曲师名称"
+        }
+      },
+      "required": ["level", "name", "charter", "illustrator", "composer"]
+    },
+    "ui": {
+      "type": "object",
+      "description": "UI组件配置",
+      "properties": {
+        "pause": {
+          "type": "number",
+          "description": "暂停按钮绑定位置（null为不绑定）"
+        },
+        "combonumber": {
+          "type": "number",
+          "description": "连击数字绑定位置（null为不绑定）"
+        },
+        "combo": {
+          "type": "number",
+          "description": "连击标识绑定位置（null为不绑定）"
+        },
+        "score": {
+          "type": "number",
+          "description": "分数显示绑定位置（null为不绑定）"
+        },
+        "bar": {
+          "type": "number",
+          "description": "进度条绑定位置（null为不绑定）"
+        },
+        "name": {
+          "type": "number",
+          "description": "曲名显示绑定位置（null为不绑定）"
+        },
+        "level": {
+          "type": "number",
+          "description": "难度等级显示绑定位置（null为不绑定）"
+        }
+      }
+    },
+    "templateEasings": {
+      "type": "array",
+      "description": "模板缓动定义列表",
+      "items": {
+        "type": "object",
+        "description": "模板缓动定义",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "缓动内容（序列ID）"
+          },
+          "name": {
+            "type": "string",
+            "description": "缓动名称"
+          }
+        },
+        "required": ["content", "name"]
+      }
+    },
+    "wrapperEasings": {
+      "type": "array",
+      "description": "包装器缓动定义列表",
+      "items": {
+        "type": "object",
+        "description": "包装器缓动定义",
+        "properties": {
+          "jsExpr": {
+            "type": "string",
+            "description": "JavaScript表达式"
+          },
+          "start": {
+            "type": "number",
+            "description": "起始值"
+          },
+          "end": {
+            "type": "number",
+            "description": "结束值"
+          },
+          "id": {
+            "type": "string",
+            "description": "缓动标识符"
+          }
+        },
+        "required": ["jsExpr", "start", "end", "id"]
+      }
+    },
+    "eventNodeSequences": {
+      "type": "array",
+      "description": "事件节点序列列表",
+      "items": {
+        "type": "object",
+        "description": "事件节点序列",
+        "properties": {
+          "events": {
+            "type": "array",
+            "description": "事件列表",
+            "items": {
+              "type": "object",
+              "description": "单个事件数据",
+              "properties": {
+                "startTime": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "description": "开始时间[整数, 分子, 分母]"
+                },
+                "endTime": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "description": "结束时间[整数, 分子, 分母]"
+                },
+                "start": {
+                  "description": "开始值"
+                },
+                "end": {
+                  "description": "结束值"
+                },
+                "evaluator": {
+                  "type": "object",
+                  "description": "评估器",
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "number",
+                          "enum": [0],
+                          "description": "评估器类型(eased)"
+                        },
+                        "easing": {
+                          "type": "object",
+                          "description": "缓动数据",
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "number",
+                                  "enum": [0],
+                                  "description": "缓动类型(normal)"
+                                },
+                                "identifier": {
+                                  "type": "number",
+                                  "description": "标识符"
+                                }
+                              },
+                              "required": ["type", "identifier"]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "number",
+                                  "enum": [1],
+                                  "description": "缓动类型(template)"
+                                },
+                                "identifier": {
+                                  "type": "string",
+                                  "description": "标识符"
+                                }
+                              },
+                              "required": ["type", "identifier"]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "number",
+                                  "enum": [2],
+                                  "description": "缓动类型(wrapper)"
+                                },
+                                "identifier": {
+                                  "type": "string",
+                                  "description": "标识符"
+                                }
+                              },
+                              "required": ["type", "identifier"]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "number",
+                                  "enum": [3],
+                                  "description": "缓动类型(bezier)"
+                                },
+                                "bezier": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "number"
+                                  },
+                                  "minItems": 4,
+                                  "maxItems": 4,
+                                  "description": "贝塞尔控制点坐标[x1, y1, x2, y2]"
+                                }
+                              },
+                              "required": ["type", "bezier"]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "number",
+                                  "enum": [4],
+                                  "description": "缓动类型(segmented)"
+                                },
+                                "left": {
+                                  "type": "number",
+                                  "description": "左边界"
+                                },
+                                "right": {
+                                  "type": "number",
+                                  "description": "右边界"
+                                },
+                                "inner": {
+                                  "type": "object",
+                                  "description": "内部缓动数据"
+                                }
+                              },
+                              "required": ["type", "left", "right", "inner"]
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["type", "easing"]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "number",
+                          "enum": [1],
+                          "description": "评估器类型(expressionbased)"
+                        },
+                        "jsExpr": {
+                          "type": "string",
+                          "description": "JavaScript表达式"
+                        }
+                      },
+                      "required": ["type", "jsExpr"]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "startTime",
+                "endTime",
+                "start",
+                "end",
+                "evaluator"
+              ]
+            }
+          },
+          "id": {
+            "type": "string",
+            "description": "事件节点序列标识符"
+          },
+          "type": {
+            "type": "number",
+            "enum": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            "description": "事件类型(moveX, moveY, rotate, alpha, speed, easing, bpm, scaleX, scaleY, text, color)"
+          },
+          "endValue": {
+            "description": "序列结束值"
+          }
+        },
+        "required": ["events", "id", "type", "endValue"]
+      }
+    },
+    "orphanLines": {
+      "type": "array",
+      "description": "无父级的、直属谱面的判定线列表",
+      "items": {
+        "type": "object",
+        "description": "判定线数据",
+        "properties": {
+          "cover": {
+            "type": "boolean",
+            "description": "是否有遮罩"
+          },
+          "id": {
+            "type": "number",
+            "description": "判定线唯一标识符"
+          },
+          "group": {
+            "type": "number",
+            "description": "所属判定线组索引"
+          },
+          "nnLists": {
+            "type": "object",
+            "description": "普通音符节点列表集合",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "speed": {
+                  "type": "number",
+                  "description": "音符速度"
+                },
+                "medianYOffset": {
+                  "type": "number",
+                  "description": "Y轴偏移中位数"
+                },
+                "noteNodes": {
+                  "type": "array",
+                  "description": "音符节点列表",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "notes": {
+                        "type": "array",
+                        "description": "音符列表",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "above": {
+                              "type": "number",
+                              "enum": [0, 1, 2],
+                              "description": "音符位置(0:下方, 1:上方, 2:特殊下方)"
+                            },
+                            "alpha": {
+                              "type": "number",
+                              "description": "音符不透明度"
+                            },
+                            "endTime": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 3,
+                              "maxItems": 3,
+                              "description": "结束时间[整数, 分子, 分母]"
+                            },
+                            "isFake": {
+                              "type": "number",
+                              "enum": [0, 1],
+                              "description": "是否为假音符(0:否, 1:是)"
+                            },
+                            "positionX": {
+                              "type": "number",
+                              "description": "音符在判定线上的X位置"
+                            },
+                            "size": {
+                              "type": "number",
+                              "description": "音符大小"
+                            },
+                            "speed": {
+                              "type": "number",
+                              "description": "音符速度"
+                            },
+                            "startTime": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 3,
+                              "maxItems": 3,
+                              "description": "开始时间[整数, 分子, 分母]"
+                            },
+                            "type": {
+                              "type": "number",
+                              "enum": [1, 2, 3, 4],
+                              "description": "音符类型(1:Tap, 2:Hold, 3:Flick, 4:Drag)"
+                            },
+                            "visibleTime": {
+                              "type": "number",
+                              "description": "音符可视时间（打击前多少秒开始显现）"
+                            },
+                            "yOffset": {
+                              "type": "number",
+                              "description": "Y值偏移，使音符被打击时的位置偏离判定线"
+                            },
+                            "zIndex": {
+                              "type": "number",
+                              "description": "对象Z轴索引"
+                            },
+                            "zIndexHitEffects": {
+                              "type": "number",
+                              "description": "击打效果Z轴索引"
+                            },
+                            "tint": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 3,
+                              "maxItems": 3,
+                              "description": "击打效果着色RGB值"
+                            },
+                            "tintHitEffects": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 3,
+                              "maxItems": 3,
+                              "description": "击打效果着色RGB值"
+                            },
+                            "judgeSize": {
+                              "type": "number",
+                              "description": "判定区域宽度"
+                            },
+                            "visibleBeats": {
+                              "type": "number",
+                              "description": "可见拍数"
+                            },
+                            "absoluteYOffset": {
+                              "type": "number",
+                              "description": "绝对Y轴偏移"
+                            }
+                          },
+                          "required": [
+                            "above",
+                            "alpha",
+                            "endTime",
+                            "isFake",
+                            "positionX",
+                            "size",
+                            "speed",
+                            "startTime",
+                            "type",
+                            "yOffset",
+                            "absoluteYOffset"
+                          ]
+                        }
+                      },
+                      "startTime": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": "节点中Note开始时间[整数, 分子, 分母]"
+                      }
+                    },
+                    "required": ["notes", "startTime"]
+                  }
+                }
+              },
+              "required": ["speed", "medianYOffset", "noteNodes"]
+            }
+          },
+          "hnLists": {
+            "type": "object",
+            "description": "Hold音符节点列表集合",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "speed": {
+                  "type": "number",
+                  "description": "音符速度"
+                },
+                "medianYOffset": {
+                  "type": "number",
+                  "description": "Y轴偏移中位数"
+                },
+                "noteNodes": {
+                  "type": "array",
+                  "description": "音符节点列表",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "notes": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/properties/orphanLines/items/properties/nnLists/additionalProperties/properties/noteNodes/items/properties/notes/items"
+                        }
+                      },
+                      "startTime": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": "节点中Hold的开始时间[整数, 分子, 分母]"
+                      }
+                    },
+                    "required": ["notes", "startTime"]
+                  }
+                }
+              },
+              "required": ["speed", "medianYOffset", "noteNodes"]
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "判定线名称"
+          },
+          "texture": {
+            "type": "string",
+            "description": "纹理图片路径"
+          },
+          "eventLayers": {
+            "type": "array",
+            "description": "事件层级列表",
+            "items": {
+              "type": "object",
+              "properties": {
+                "moveX": {
+                  "type": "string",
+                  "description": "X轴移动事件序列ID"
+                },
+                "moveY": {
+                  "type": "string",
+                  "description": "Y轴移动事件序列ID"
+                },
+                "rotate": {
+                  "type": "string",
+                  "description": "旋转事件序列ID"
+                },
+                "alpha": {
+                  "type": "string",
+                  "description": "透明度事件序列ID"
+                }
+              },
+              "required": ["moveX", "moveY", "rotate", "alpha"]
+            }
+          },
+          "speedEventNodeSeq": {
+            "type": "string",
+            "description": "速度事件序列ID"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/orphanLines/items"
+            },
+            "description": "子判定线列表",
+            "minItems": 0
+          },
+          "rotatesWithFather": {
+            "type": "boolean",
+            "description": "是否随父线旋转"
+          },
+          "anchor": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "锚点相对于图片的位置[x, y]（实际影响的是图片位置）"
+          },
+          "extended": {
+            "type": "object",
+            "description": "扩展事件",
+            "properties": {
+              "scaleXEvents": {
+                "type": "string",
+                "description": "X轴缩放事件序列ID"
+              },
+              "scaleYEvents": {
+                "type": "string",
+                "description": "Y轴缩放事件序列ID"
+              },
+              "textEvents": {
+                "type": "string",
+                "description": "文本事件序列ID"
+              },
+              "colorEvents": {
+                "type": "string",
+                "description": "颜色事件序列ID"
+              }
+            },
+            "required": ["scaleXEvents", "scaleYEvents"]
+          },
+          "zOrder": {
+            "type": "number",
+            "description": "Z轴顺序，决定重叠顺序"
+          }
+        },
+        "required": [
+          "cover",
+          "id",
+          "group",
+          "nnLists",
+          "hnLists",
+          "name",
+          "texture",
+          "eventLayers",
+          "speedEventNodeSeq",
+          "children",
+          "anchor"
+        ]
+      }
+    },
+    "bpmList": {
+      "type": "array",
+      "description": "BPM分段列表",
+      "items": {
+        "type": "object",
+        "properties": {
+          "bpm": {
+            "type": "number",
+            "description": "每分钟节拍数"
+          },
+          "startTime": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "开始时间[整数, 分子, 分母]"
+          }
+        },
+        "required": ["bpm", "startTime"]
+      }
+    },
+    "judgeLineGroups": {
+      "type": "array",
+      "description": "判定线组名称列表",
+      "items": {
+        "type": "string",
+        "description": "判定线组名称"
+      }
+    },
+    "chartTime": {
+      "type": "number",
+      "description": "谱面时间"
+    },
+    "rpeChartTime": {
+      "type": "number",
+      "description": "RPE格式谱面时间"
+    }
+  },
+  "required": [
+    "version",
+    "offset",
+    "duration",
+    "info",
+    "ui",
+    "templateEasings",
+    "wrapperEasings",
+    "eventNodeSequences",
+    "orphanLines",
+    "bpmList",
+    "judgeLineGroups"
+  ]
+}
