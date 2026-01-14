@@ -1,5 +1,4 @@
-
-import { VERSION } from "./version";
+import { SCHEMA, VERSION } from "./version";
 
 import {
     TimeCalculator} from "./bpm";
@@ -72,50 +71,95 @@ export type BasicEventName = "moveX" | "moveY" | "rotate" | "alpha" | "speed";
 
 export type UIName = "combo"  | "combonumber" | "score" | "pause" | "bar" | "name" | "level"
 
+/**
+ * 表示一张谱面的核心数据结构
+ * 
+ * 包含了谱面的所有元素：判定线、音符、事件序列等信息
+ */
 export class Chart {
+    /** 谱面中所有的判定线列表 */
     judgeLines: JudgeLine[] = [];
+    /** 时间计算器，用于处理BPM变化和时间转换 */
     timeCalculator = new TimeCalculator();
+    /** 无父级的根判定线列表 */
     orphanLines: JudgeLine[] = [];
-    // comboMapping: ComboMapping;
+    
+
+    
+    /** 谱面名称 */
     name: string = "unknown";
+    /** 谱面难度等级 */
     level: string = "unknown";
+    /** 曲师信息 */
     composer: string = "unknown";
+    /** 谱师信息 */
     charter: string = "unknown";
+    /** 插画师信息 */
     illustrator: string = "unknown";
+    
+    /** 谱面偏移时间（秒） */
     offset: number = 0;
     
+    /** 模板缓动库，用于管理和复用缓动函数 */
     templateEasingLib = new TemplateEasingLib(EventNodeSequence.newSeq<EventType.easing>, ExpressionEvaluator);
+    
+    /** 事件序列映射表，通过ID索引事件序列 */
     sequenceMap = new Map<string, EventNodeSequence<EventValueESType>>();
-
+    /** 有效节拍数（基于谱面持续时间计算得出） */
     effectiveBeats: number;
+    /** 音符节点列表，用于管理谱面上的所有音符 */
     nnnList: NNNList;
-    /**  */
+    /** 判定线组列表，用于组织和分类判定线 */
     judgeLineGroups: JudgeLineGroup[] = [];
+    /** 谱面持续时间（秒） */
     duration: number;
 
     // 以分钟计
+    /** 谱面制作所用时间（分钟） */
     chartingTime: number;
+    /** RPE格式的谱面制作时间 */
     rpeChartingTime: number;
 
     
+    /** 标记谱面是否已被修改 */
     modified: boolean = false;
+    /** 谱面最大连击数 */
     maxCombo: number = 0;
 
 
+    /** 暂停按钮绑定的判定线 */
     pauseAttach:       JudgeLine | null = null;
+    /** 连击数字绑定的判定线 */
     combonumberAttach: JudgeLine | null = null;
+    /** 连击标识绑定的判定线 */
     comboAttach:       JudgeLine | null = null;
+    /** 进度条绑定的判定线 */
     barAttach:         JudgeLine | null = null;
+    /** 分数显示绑定的判定线 */
     scoreAttach:       JudgeLine | null = null;
+    /** 歌曲名称显示绑定的判定线 */
     nameAttach:        JudgeLine | null = null;
+    /** 难度等级显示绑定的判定线 */
     levelAttach:       JudgeLine | null = null;
 
     constructor() {}
+    
+    /**
+     * 获取有效节拍数
+     * @returns 基于谱面持续时间计算的有效节拍数
+     */
     getEffectiveBeats() {
         const effectiveBeats = this.timeCalculator.secondsToBeats(this.duration)
         this.effectiveBeats = effectiveBeats
         return this.effectiveBeats
     }
+    
+    /**
+     * 从RPE格式的JSON数据创建谱面对象
+     * @param data RPE格式的谱面数据
+     * @param duration 谱面持续时间（秒）
+     * @returns 创建的Chart对象
+     */
     static fromRPEJSON(data: ChartDataRPE, duration: number) {
         const chart = new Chart();
         chart.judgeLineGroups = data.judgeLineGroup.map(group => new JudgeLineGroup(group));
@@ -155,6 +199,11 @@ export class Chart {
         return chart
     }
 
+    /**
+     * 从KPA格式的JSON数据创建谱面对象
+     * @param data KPA格式的谱面数据
+     * @returns 创建的Chart对象
+     */
     static fromKPAJSON(data: ChartDataKPA | ChartDataKPA2) {
         const chart = new Chart();
         
@@ -248,11 +297,21 @@ export class Chart {
         }
         return chart;
     }
+    
+    /**
+     * 初始化时间计算器
+     * @param bpmList BPM变化列表
+     */
     initCalculator(bpmList: BPMSegmentData[]) {
         this.timeCalculator.bpmList = bpmList;
         this.timeCalculator.duration = this.duration;
         this.timeCalculator.initSequence()
     }
+    
+    /**
+     * 更新有效节拍数
+     * @param duration 新的持续时间
+     */
     updateEffectiveBeats(duration: number) {
         const EB = this.timeCalculator.secondsToBeats(duration);
         for (let i = 0; i < this.judgeLines.length; i++) {
@@ -260,6 +319,11 @@ export class Chart {
             judgeLine.updateEffectiveBeats(EB);
         }
     }
+    
+    /**
+     * 导出为KPA格式数据
+     * @returns KPA格式的谱面数据对象
+     */
     dumpKPA(): Required<ChartDataKPA2> {
         const eventNodeSequenceCollector = new Set<EventNodeSequence>();
         const orphanLines = [];
@@ -273,6 +337,7 @@ export class Chart {
         }
         return {
             version: VERSION,
+            $schema: SCHEMA,
             duration: this.duration,
             bpmList: this.timeCalculator.dump(),
             templateEasings: envEasings,
@@ -301,14 +366,21 @@ export class Chart {
             rpeChartTime: this.rpeChartingTime
         };
     }
+    
+    /**
+     * 创建一个新的二级音符节点
+     * @param time 节点时间
+     * @returns 新创建的NNNode对象
+     */
     createNNNode(time: TimeT) {
         return new NNNode(time)
     }
+    
     /**
-     * 
-     * @param type 
-     * @param name 
-     * @returns 
+     * 创建一个新的事件节点序列
+     * @param type 事件类型
+     * @param name 序列名称（ID）
+     * @returns 新创建的事件节点序列
      * @throws {KPAError<ERROR_IDS.SEQUENCE_NAME_OCCUPIED>}
      */
     createEventNodeSequence<T extends EventType>(type: T, name: string) {
@@ -320,6 +392,7 @@ export class Chart {
         this.sequenceMap.set(name, seq);
         return seq;
     }
+    
     /**
      * 对谱面物量进行重新计数。
      * 
@@ -344,6 +417,7 @@ export class Chart {
         }
         this.maxCombo = combo;
     }
+    
     /**
      * 将UI绑定到某判定线
      * @param ui UI名称，与RPEJSON中的代号相同
@@ -358,6 +432,7 @@ export class Chart {
         this[key] = judgeLine;
         judgeLine.hasAttachUI = true;
     }
+    
     /**
      * 移除谱面中某个UI的绑定，使UI进入未绑定状态
      * @param ui UI名称，与RPEJSON中的相同
@@ -382,6 +457,12 @@ export class Chart {
                 judgeLine.hasAttachUI = false;
             }
     }
+    
+    /**
+     * 查询指定判定线上绑定的UI组件
+     * @param judgeLine 目标判定线
+     * @returns 绑定到该判定线上的UI组件名称数组
+     */
     queryJudgeLineUI(judgeLine: JudgeLine): UIName[] {
         const arr: UIName[] = [];
         for (const ui of ["combo", "combonumber", "score", "pause", "bar", "name", "level"] satisfies UIName[]) {
@@ -391,11 +472,12 @@ export class Chart {
         }
         return arr;
     }
+    
     /**
      * 扫描所有用到的判定线贴图（纹理）并返回
      * 
      * 给谱面播放器的接口，谱面播放器需要在初加载时提供贴图
-     * @returns 
+     * @returns 所有使用的纹理名称集合
      */
     scanAllTextures() {
         const textures: Set<string> = new Set;
@@ -404,12 +486,13 @@ export class Chart {
         }
         return textures
     }
+    
     /**
      * 使用KPA2数据创建一个缓动对象。
      * 
      * 只有对贝塞尔缓动和截段缓动才会创建新对象，其他几种缓动从缓动库等中的对象池获取
-     * @param data 
-     * @returns 
+     * @param data 缓动数据
+     * @returns 创建的缓动对象
      */
     createEasingFromData(data: EasingDataKPA2) {
         switch (data.type) {
@@ -425,13 +508,14 @@ export class Chart {
                 return this.templateEasingLib.getWrapper(data.identifier);
         }
     }
+    
     /**
      * 使用KPA2数据创建一个求值器对象。
      * 
      * 求值器只有缓动型和表达式型两类。
-     * @param data 
-     * @param type 
-     * @returns 
+     * @param data 求值器数据
+     * @param type 事件值类型
+     * @returns 创建的求值器对象
      */
     createEvaluator<T extends EventValueESType>(data: EvaluatorDataKPA2<T>, type: EventValueTypeOfType<T>): Evaluator<T> {
         switch (data.type) {
@@ -442,13 +526,14 @@ export class Chart {
                 return this.createExpressionEvaluator(data) as ExpressionEvaluator<T>;
         }
     }
+    
     /**
      * 使用KPA2数据创建一个缓动求值器。
      * 
      * 对于普通缓动，这些求值器是从对应类构造器的静态对象池属性中获取的。
-     * @param data 
-     * @param type 
-     * @returns 
+     * @param data 缓动求值器数据
+     * @param type 事件值类型
+     * @returns 创建的缓动求值器对象
      */
     createEasedEvaluator<T extends EventValueESType>(data: EasedEvaluatorDataOfType<T>, type: EventValueTypeOfType<T>): EasedEvaluatorOfType<T> {
         switch (type) {
@@ -466,11 +551,13 @@ export class Chart {
                     : new TextEasedEvaluator(this.createEasingFromData(data.easing), (data as TextEasedEvaluatorKPA2).interpretedAs) as EasedEvaluatorOfType<T>
         }
     }
+    
     /**
      * 用一个缓动和事件类型获取一个缓动求值器
-     * @param easing 
-     * @param type 
-     * @param interpreteAs 
+     * @param easing 缓动对象
+     * @param type 事件值类型
+     * @param interpreteAs 文本解释方式
+     * @returns 对应类型的缓动求值器
      */
     getEasedEvaluator<T extends string>(easing: Easing, type: EventValueType.text, interpreteAs: InterpreteAs): TextEasedEvaluator;
     getEasedEvaluator<T extends EventValueESType>(easing: Easing, type: EventValueTypeOfType<T>, interpreteAs?: InterpreteAs): EasedEvaluatorOfType<T> {
@@ -490,14 +577,21 @@ export class Chart {
                     : new TextEasedEvaluator(easing, interpreteAs) as EasedEvaluatorOfType<T>
         }
     }
+    
+    /**
+     * 根据JavaScript表达式创建表达式求值器
+     * @param data 表达式求值器数据
+     * @returns 创建的表达式求值器对象
+     */
     createExpressionEvaluator<T extends EventValueESType>(data: ExpressionEvaluatorDataKPA2) {
         return new ExpressionEvaluator<T>(data.jsExpr);
     }
+    
     /**
      * 使用KPA2JSON创建一对面对面节点
-     * @param data 
-     * @param type 
-     * @returns 
+     * @param data 事件数据
+     * @param type 事件值类型
+     * @returns 包含起始节点和结束节点的元组
      */
     createEventFromData<VT extends EventValueESType>(data: EventDataKPA2<VT>, type: EventValueTypeOfType<VT>): [EventStartNode<VT>, EventEndNode<VT>] {
         const start = new EventStartNode(data.startTime, data.start);
@@ -513,14 +607,27 @@ export class Chart {
     */
 }
 
+/**
+ * 表示一组判定线的容器
+ * 
+ * 用于组织和管理具有相同属性或用途的判定线集合
+ */
 export class JudgeLineGroup {
     /**
      * 该只读标记只是为了防止外部修改，内部可以修改
+     * 
+     * 属于该组的判定线列表，按ID升序排列
      */
     judgeLines: readonly JudgeLine[];
+    
+    /**
+     * 创建一个新的判定线组
+     * @param name 组名称
+     */
     constructor(public name: string) {
         this.judgeLines = []
     }
+    
     /**
      * 向判定线组添加一条判定线，并且保证其内部的判定线ID是升序排列的。
      * @param judgeLine 要添加的判定线
@@ -546,9 +653,10 @@ export class JudgeLineGroup {
         judgeLines.push(judgeLine);
         
     }
+    
     /**
      * 从判定线组移除一条判定线
-     * @param judgeLine 
+     * @param judgeLine 要移除的判定线
      */
     remove(judgeLine: JudgeLine) {
         // 只读仅对外部作限制
@@ -558,8 +666,9 @@ export class JudgeLineGroup {
             judgeLines.splice(index, 1);
         }
     }
+    
     /**
-     * 
+     * 检查该判定线组是否为默认组
      * @returns 该判定线组是否为默认判定线组，默认的判断标准是：名称为 "Default"（大小写不敏感）
      */
     isDefault() {
