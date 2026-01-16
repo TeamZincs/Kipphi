@@ -23,7 +23,7 @@
     "noPropertyAccessFromIndexSignature": false
   },
   "include": [
-    "../index.ts"
+    "./index.ts"
   ],
   "exclude": ["../dist"]
 }
