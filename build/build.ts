@@ -192,6 +192,26 @@ Bun.spawnSync(["tsc", "--declaration", "--emitDeclarationOnly", "dist/declaratio
     stdio: ["inherit", "inherit", "inherit"]
 });
 
+Bun.spawnSync(["tsc", "--declaration", "--emitDeclarationOnly", "src/index.ts", "--outFile", "dist/index.d.ts"], {
+    stdio: ["inherit", "inherit", "inherit"]
+});
+
+// 把index.d.ts里面的declare module "index"改成declare module "kipphi"
+Bun.write(
+  "dist/declaration.g.d.ts",
+  await Bun.file("dist/declaration.g.d.ts").text()
+        .then(text => text.replace(/declare module "index"/g, "declare module \"kipphi\""))
+);
+
+
+
+Bun.build({
+  entrypoints: ["src/index.ts"],
+  outdir: "dist/",
+  naming: "index.js",
+  format: "esm"
+});
+
 Bun.build({
   entrypoints: ["build/global.ts"],
   outdir: "dist/",
@@ -219,7 +239,10 @@ for await (const file of glob.scan(".")) {
   }
 }
 
-await Bun.write("packages/package-kipphi/index.ts", (await Bun.file("index.ts").text()).replaceAll("src/", ""))
+
+await cp("src/index.ts", "packages/package-kipphi/index.ts")
+await cp("dist/index.js", "packages/package-kipphi/index.js")
+await cp("dist/index.d.ts", "packages/package-kipphi/index.d.ts")
 
 await cp("README.md", "packages/package-kipphi/README.md")
 await cp("LICENSE", "packages/package-kipphi/LICENSE")
