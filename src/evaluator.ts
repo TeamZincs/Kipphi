@@ -9,7 +9,10 @@ import {
 import TC from "./time";
 
 import type { EventEndNode, EventStartNode, NonLastStartNode } from "./event";
-import { EvaluatorType, InterpreteAs, type ColorEasedEvaluatorKPA2, type EvaluatorDataKPA2, type EventValueESType, type ExpressionEvaluatorDataKPA2, type NumericEasedEvaluatorKPA2, type RGB, type TextEasedEvaluatorKPA2 } from "./chartTypes";
+import { EvaluatorType, InterpreteAs, MacroEvaluatorBodyData, MacroEvaluatorDataKPA2, type ColorEasedEvaluatorKPA2, type EvaluatorDataKPA2, type EventValueESType, type ExpressionEvaluatorDataKPA2, type NumericEasedEvaluatorKPA2, type RGB, type TextEasedEvaluatorKPA2 } from "./chartTypes";
+import type { JudgeLine } from "./judgeline";
+import { Chart } from "./chart";
+import { MACROS } from "./macro";
 
 
 /// #declaration:global
@@ -25,7 +28,7 @@ import { EvaluatorType, InterpreteAs, type ColorEasedEvaluatorKPA2, type Evaluat
  */
 export abstract class Evaluator<T extends EventValueESType> {
     abstract eval(event: NonLastStartNode<T>, beats: number): T;
-    abstract dump(): EvaluatorDataKPA2<T>;
+    abstract dumpFor(node: EventStartNode<T>): EvaluatorDataKPA2<T>;
 }
 
 
@@ -64,7 +67,7 @@ export class NumericEasedEvaluator extends EasedEvaluator<number> {
         super(easing);
     }
     private cache?: NumericEasedEvaluatorKPA2
-    override dump(): NumericEasedEvaluatorKPA2 {
+    override dumpFor(): NumericEasedEvaluatorKPA2 {
         return this.cache ??= {
             type: EvaluatorType.eased,
             easing: this.easing.dump()
@@ -88,7 +91,7 @@ export class ColorEasedEvaluator extends EasedEvaluator<RGB> {
     constructor(easing: Easing) {
         super(easing);
     }
-    override dump(): ColorEasedEvaluatorKPA2 {
+    override dumpFor(): ColorEasedEvaluatorKPA2 {
         return {
             type: EvaluatorType.eased,
             easing: this.easing.dump()
@@ -126,7 +129,7 @@ export class TextEasedEvaluator extends EasedEvaluator<string> {
     {
         super(easing);
     }
-    override dump(): TextEasedEvaluatorKPA2 {
+    override dumpFor(): TextEasedEvaluatorKPA2 {
         return {
             type: EvaluatorType.eased,
             easing: this.easing.dump(),
@@ -174,19 +177,59 @@ export class TextEasedEvaluator extends EasedEvaluator<string> {
     }
 }
 
-export class ExpressionEvaluator<T> extends Evaluator<T> {
+
+
+export class MacroEvaluator<T extends EventValueESType> extends Evaluator<T> {
+    readonly consumers: Map<EventStartNode<T>, ExpressionEvaluator<T>> = new Map();
+    constructor(public expression: string, public id: string) {
+        super();
+    }
+    compile(node: EventStartNode<T>, chart: Chart): ExpressionEvaluator<T> {
+        const jsExpr = this.expression.replace(/@([a-z\.]+)/, (k) => {
+            return JSON.stringify(MACROS[k](node, chart)) + " "
+        }).replace(/@\{\{(.+?)\}\}/g, (k) => {
+            const replaced = k.replace(new RegExp(Object.keys(MACROS).join("|"), "g"), (k) => {
+                return JSON.stringify(MACROS[k](node, chart)) + " "
+            });
+            return JSON.stringify(new Function("return " + replaced)()) + " ";
+        });
+        return new ExpressionEvaluator(jsExpr);
+    }
+    assignTo(node: EventStartNode<T>, chart: Chart): void {
+        node.evaluator = this;
+        this.consumers.set(node, this.compile(node, chart));
+    }
+    eval(event: NonLastStartNode<T>, beats: number): T {
+        return this.consumers.get(event)!.eval(event, beats);
+    }
+    dumpFor(node: EventStartNode<T>): MacroEvaluatorDataKPA2 {
+        return {
+            type: EvaluatorType.macro,
+            name: this.id,
+            compiled: this.consumers.get(node)!.jsExpr
+        }
+    }
+    dumpContent(): MacroEvaluatorBodyData {
+        return {
+            id: this.id,
+            macro: this.expression
+        }
+    }
+}
+
+export class ExpressionEvaluator<T extends EventValueESType> extends Evaluator<T> {
     readonly func: (t: number) => T;
     constructor(public readonly jsExpr: string) {
         super();
         this.func = new Function("t", "return " + jsExpr) as (t: number) => T;
     }
-    override eval(startNode: EventStartNode<T> & { next: EventEndNode }, beats: number): T {
+    override eval(startNode: NonLastStartNode<T>, beats: number): T {
         const next = startNode.next;
         const timeDelta = TC.getDelta(next.time, startNode.time)
         const current = beats - TC.toBeats(startNode.time)
         return this.func(current / timeDelta);
     }
-    override dump(): ExpressionEvaluatorDataKPA2 {
+    override dumpFor(): ExpressionEvaluatorDataKPA2 {
         return {
             type: EvaluatorType.expressionbased,
             jsExpr: this.jsExpr

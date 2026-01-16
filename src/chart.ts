@@ -1,7 +1,8 @@
 import { SCHEMA, VERSION } from "./version";
 
 import {
-    TimeCalculator} from "./bpm";
+    TimeCalculator
+} from "./bpm";
 
 import {
     BezierEasing,
@@ -55,10 +56,13 @@ import {
     type EventNodeSequenceDataKPA2,
     type ChartDataKPA2,
     type EventDataKPA2,
-    InterpreteAs
+    InterpreteAs,
+    MacroEvaluatorBodyData,
+    MacroEvaluatorDataKPA2
 } from "./chartTypes";
 import { ColorEasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorOfType } from "./evaluator";
 import { err, ERROR_IDS, KPAError }  from "./env";
+import { MacroLib, MacroTime, MacroValue } from "./macro";
 
 /// #declaration:global
 
@@ -102,6 +106,7 @@ export class Chart {
     
     /** 模板缓动库，用于管理和复用缓动函数 */
     templateEasingLib = new TemplateEasingLib(EventNodeSequence.newSeq<EventType.easing>, ExpressionEvaluator);
+    macroLib = new MacroLib();
     
     /** 事件序列映射表，通过ID索引事件序列 */
     sequenceMap = new Map<string, EventNodeSequence<EventValueESType>>();
@@ -217,6 +222,7 @@ export class Chart {
         chart.judgeLineGroups = data.judgeLineGroups.map(group => new JudgeLineGroup(group));
         chart.chartingTime = data.chartTime ?? 0;
         chart.rpeChartingTime = data.rpeChartTime ?? 0;
+        
 
 
         chart.initCalculator(data.bpmList);
@@ -241,7 +247,7 @@ export class Chart {
                 type VT = ValueTypeOfEventType<typeof seqData.type>
                 const sequence = EventNodeSequence.fromKPA2JSON<typeof seqData.type, VT>(
                     seqData.type,
-                    seqData.events as EventDataKPA2<VT>[],
+                    seqData.events as EventDataKPA2<VT>[], // ↑目前区别只在于这个方法名字
                     chart,
                     seqData.id,
                     seqData.endValue as VT
@@ -249,6 +255,9 @@ export class Chart {
                 sequence.id = seqData.id;
                 chart.sequenceMap.set(sequence.id, sequence);
             }
+
+            chart.macroLib.readTimeMacros((data as ChartDataKPA2).timeMacros);
+            chart.macroLib.readValueMacros((data as ChartDataKPA2).valueMacros);
         } else {
             
             const sequences = (data as ChartDataKPA).eventNodeSequences
@@ -342,6 +351,9 @@ export class Chart {
             bpmList: this.timeCalculator.dump(),
             templateEasings: envEasings,
             wrapperEasings: this.templateEasingLib.dumpWrapperEasings(),
+            macroEvaluators: this.macroLib.dumpMacroEvaluators(),
+            timeMacros: this.macroLib.dumpTimeMacros(),
+            valueMacros: this.macroLib.dumpValueMacros(),
             eventNodeSequences: eventNodeSequenceData,
             info: {
                 level: this.level,
@@ -517,13 +529,17 @@ export class Chart {
      * @param type 事件值类型
      * @returns 创建的求值器对象
      */
-    createEvaluator<T extends EventValueESType>(data: EvaluatorDataKPA2<T>, type: EventValueTypeOfType<T>): Evaluator<T> {
+    bindEvaluator<T extends EventValueESType>(node: EventStartNode<T>, data: EvaluatorDataKPA2<T>, type: EventValueTypeOfType<T>, pos: string) {
         switch (data.type) {
             case EvaluatorType.eased:
                 // 我管你这的那的 —— 小奶椰
-                return this.createEasedEvaluator(data, type) as unknown as Evaluator<T>;
+                node.evaluator = this.createEasedEvaluator(data, type) as unknown as Evaluator<T>;
+                break;
             case EvaluatorType.expressionbased:
-                return this.createExpressionEvaluator(data) as ExpressionEvaluator<T>;
+                node.evaluator = this.createExpressionEvaluator(data) as ExpressionEvaluator<T>;
+                break;
+            case EvaluatorType.macro:
+                this.bindMacroEvaluator(node, data, pos);
         }
     }
     
@@ -586,6 +602,19 @@ export class Chart {
     createExpressionEvaluator<T extends EventValueESType>(data: ExpressionEvaluatorDataKPA2) {
         return new ExpressionEvaluator<T>(data.jsExpr);
     }
+
+    bindMacroEvaluator(node: EventStartNode<EventValueESType>, data: MacroEvaluatorDataKPA2, pos: string) {
+        const key = data.name;
+        if (!key) {
+            throw err.MISSING_MACRO_EVALUATOR_KEY(pos);
+        }
+        const evaluator = this.macroLib.macroEvaluators.get(key);
+        if (!evaluator) {
+            throw err.MACRO_EVALUATOR_NOT_FOUND(key, pos);
+        }
+        node.evaluator = evaluator;
+        evaluator.consumers.set(node, new ExpressionEvaluator(data.compiled || "0"));
+    }
     
     /**
      * 使用KPA2JSON创建一对面对面节点
@@ -593,12 +622,41 @@ export class Chart {
      * @param type 事件值类型
      * @returns 包含起始节点和结束节点的元组
      */
-    createEventFromData<VT extends EventValueESType>(data: EventDataKPA2<VT>, type: EventValueTypeOfType<VT>): [EventStartNode<VT>, EventEndNode<VT>] {
+    createEventFromData<VT extends EventValueESType>(data: EventDataKPA2<VT>, type: EventValueTypeOfType<VT>, pos: string): [EventStartNode<VT>, EventEndNode<VT>] {
         const start = new EventStartNode(data.startTime, data.start);
         const end = new EventEndNode(data.endTime, data.end);
-        start.evaluator = this.createEvaluator(data.evaluator, type);
+        this.bindEvaluator(start, data.evaluator, type, pos);
+        if (typeof data.macroStart === "string") {
+            this.bindValueMacro(start, data.macroStart, pos)
+        }
+        if (typeof data.macroEnd === "string") {
+            this.bindValueMacro(end, data.macroEnd, pos)
+        }
+        if (typeof data.macroStartTime === "string") {
+            this.bindTimeMacro(start, data.macroStartTime, pos)
+        }
         EventNode.connect(start, end);
         return [start, end];
+    }
+    bindTimeMacro(node: EventStartNode<any>, id: string, pos: string) {
+        const obj = this.macroLib.timeMacros.get(id);
+        if (typeof obj === "object" && obj instanceof MacroTime) {
+            node.macroTime = obj;
+            obj.consumers.add(node);
+        } else {
+            err.TIME_MACRO_NOT_FOUND(id, pos).warn();
+        }
+        return null;
+    }
+    bindValueMacro(node: EventNode<any>, id: string, pos: string) {
+        const obj = this.macroLib.valueMacros.get(id);
+        if (typeof obj === "object" && obj instanceof MacroValue) {
+            node.macroValue = obj;
+            obj.consumers.add(node);
+        } else {
+            err.VALUE_MACRO_NOT_FOUND(id, pos).warn();
+        }
+        return null;
     }
     /* 暂时不用此方法，因为谱面播放器里面还是用反解法弄的
     updateNNListsFromENS(speedENS: SpeedENS) {

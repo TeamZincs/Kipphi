@@ -1,5 +1,5 @@
 import type { Chart, JudgeLineGroup } from "./chart";
-import { EventType, EventValueType, JudgeLineDataKPA2, NoteType, type EventDataRPELike, type EventLayerDataKPA, type JudgeLineDataKPA, type JudgeLineDataRPE, type NNListDataKPA, type NoteDataRPE, type RGB, type TimeT, type ValueTypeOfEventType } from "./chartTypes";
+import { EventType, EventValueESType, EventValueType, JudgeLineDataKPA2, NoteType, type EventDataRPELike, type EventLayerDataKPA, type JudgeLineDataKPA, type JudgeLineDataRPE, type NNListDataKPA, type NoteDataRPE, type RGB, type TimeT, type ValueTypeOfEventType } from "./chartTypes";
 import type { TemplateEasingLib } from "./easing";
 import { EventEndNode, EventNode, EventNodeLike, EventNodeSequence, EventStartNode, Monotonicity, SpeedENS } from "./event";
 import { HNList, NNList, Note, NoteNode, NNNList } from "./note";
@@ -251,7 +251,7 @@ export class JudgeLine {
         for (const child of data.children) {
             line.children.add(JudgeLine.fromKPAJSON(version, chart, child.id, child, templates, timeCalculator));
         }
-        const unwrap = <VT>(sequence: EventNodeSequence<unknown>, predicate: (value: unknown) => boolean, typeStr: keyof typeof EventValueType) => {
+        const unwrap = <VT extends EventValueESType>(sequence: EventNodeSequence<EventValueESType>, predicate: (value: unknown) => boolean, typeStr: keyof typeof EventValueType) => {
             const value = sequence.head.next.value
             if (!predicate(value)) {
                 throw err.EXPECTED_TYPED_ENS(typeStr, sequence.id, value);
@@ -556,7 +556,7 @@ export class JudgeLine {
         let startNode: EventStartNode<number> = this.speedSequence.getNodeAt(beats);
         let range: [number, number] = [undefined, undefined];
         // 启用遮罩时，两个Y边界都是正数，直接返回空数组
-        if (lineMonotonicity === Monotonicity.decreasing && startY >= 0 && endY > 0) {
+        if (lineMonotonicity === Monotonicity.increasing && startY >= 0 && endY > 0) {
 
             return result;
         }

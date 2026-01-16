@@ -212,7 +212,8 @@ export type EasingDataKPA2 = NormalEasingData | TemplateEasingData | BezierEasin
 
 export enum EvaluatorType {
     eased,
-    expressionbased
+    expressionbased,
+    macro
 }
 
 // Eased
@@ -237,14 +238,23 @@ export interface ExpressionEvaluatorDataKPA2 {
     jsExpr: string;
 }
 
+export interface MacroEvaluatorDataKPA2 {
+    type: EvaluatorType.macro;
+    name: string;
+    compiled: string;
+}
 
-export type EvaluatorDataKPA2<T> = EasedEvaluatorDataOfType<T> | ExpressionEvaluatorDataKPA2;
+
+export type EvaluatorDataKPA2<T> = EasedEvaluatorDataOfType<T> | ExpressionEvaluatorDataKPA2 | MacroEvaluatorDataKPA2;
 export interface EventDataKPA2<T = number> {
     startTime: TimeT;
     endTime: TimeT;
     start: T;
     end: T;
     evaluator: EvaluatorDataKPA2<T>;
+    macroEnd?: string;
+    macroStart?: string;
+    macroStartTime?: string;
 }
 
 export enum EventValueType {
@@ -468,6 +478,19 @@ export interface WrapperEasingBodyData {
     id: string;
 }
 
+export interface MacroEvaluatorBodyData {
+    macro: string;
+    id: string;
+}
+
+export interface MacroTimeBodyData {
+    id: string;
+    macro: string;
+}
+export interface MacroValueBodyData {
+    id: string;
+    macro: string;
+}
 export interface ChartDataKPA {
     version: number;
     offset: number;
@@ -510,16 +533,19 @@ export interface ChartDataKPA2 {
         composer: string;
     };
     ui: {
-        pause: number;
-        combonumber: number;
-        combo: number;
-        score: number;
-        bar: number;
-        name: number;
-        level: number;
+        pause?: number;
+        combonumber?: number;
+        combo?: number;
+        score?: number;
+        bar?: number;
+        name?: number;
+        level?: number;
     }
     templateEasings: TemplateEasingBodyData[];
-    wrapperEasings: WrapperEasingBodyData[]
+    wrapperEasings: WrapperEasingBodyData[];
+    macroEvaluators: MacroEvaluatorBodyData[];
+    timeMacros: MacroTimeBodyData[];
+    valueMacros: MacroValueBodyData[];
     eventNodeSequences: EventNodeSequenceDataKPA2<unknown>[];
     orphanLines: JudgeLineDataKPA2[];
     bpmList: BPMSegmentData[];

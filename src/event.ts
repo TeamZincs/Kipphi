@@ -10,6 +10,7 @@ import { NodeType } from "./util";
 
 import { err, ERROR_IDS, KPAError } from "./env";
 import { JudgeLine } from "./judgeline";
+import { MacroTime, MacroValue } from "./macro";
 
 /// #declaration:global
 export class EventNodeLike<T extends NodeType, VT extends EventValueESType = number> {
@@ -47,6 +48,7 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
     time: TimeT;
     value: VT;
     evaluator: Evaluator<VT>;
+    macroValue: MacroValue;
     constructor(time: TimeT, value: VT) {
         super(NodeType.MIDDLE);
         this.time = TC.validateIp([...time]);
@@ -106,11 +108,11 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
         const right = data.easingRight;
         const wrap = (easing: Easing): EasedEvaluator<VT> => {
             if (typeof data.start === "number") {
-                return new NumericEasedEvaluator(easing) as EasedEvaluator<VT>;
+                return new NumericEasedEvaluator(easing) as unknown as EasedEvaluator<VT>;
             } else if (typeof data.start === "string") {
                 return new TextEasedEvaluator(easing, interpreteAs) as unknown as EasedEvaluator<VT>;
             } else {
-                return new ColorEasedEvaluator(easing) as EasedEvaluator<VT>;
+                return new ColorEasedEvaluator(easing) as unknown as EasedEvaluator<VT>;
             }
         };
         if ((left && right) && (left !== 0.0 || right !== 1.0)) {
@@ -304,6 +306,7 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
 export class EventStartNode<VT extends EventValueESType = number> extends EventNode<VT> {
     override next: EventEndNode<VT> | EventNodeLike<NodeType.TAIL, VT>;
     override previous: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT>;
+    macroTime: MacroTime | null = null;
     /** 
      * 对于速度事件，从0时刻到此节点的总积分
      */
@@ -324,7 +327,7 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
             end: endNode.value,
             startTime: this.time,
             endTime: endNode.time,
-            evaluator: this.evaluator.dump(),
+            evaluator: this.evaluator.dumpFor(this),
         }
     }
     getValueAt(beats: number): VT {
@@ -601,6 +604,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             type === EventType.easing
                 ? TC.toBeats(data[length - 1].endTime)
                 : chart.effectiveBeats);
+        const macroLib = chart.macroLib;
         let listLength = length;
         let lastEnd: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT> = seq.head;
         // 如果第一个事件不从0时间开始，那么添加一对面对面节点来垫背
@@ -622,7 +626,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         let lastEndTime: TimeT = [0, 0, 1];
         for (let index = 0; index < length; index++) {
             const event = data[index];
-            const [start, end] = chart.createEventFromData<VT>(event, valueType);
+            const [start, end] = chart.createEventFromData<VT>(event, valueType, `${pos}.events[${index}]`);
             // 从前面复制了，复用性减一
             // KPA2没有更改RPE的按事件存储的机制。
             if (TC.lt(event.startTime, lastEndTime)) { // event.startTime < lastEndTime

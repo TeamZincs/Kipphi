@@ -14,6 +14,7 @@
 
 // 就挺神奇的！明明typeof后面跟值，这里却可以写成类型导入
 import { type TimeT, type EventValueType } from "./chartTypes";
+import { EventNode } from "./event";
 import { toTimeString } from "./util";
 
 // occupied 1
@@ -33,6 +34,7 @@ const
     EASING = 0xA00,
     NOTE = 0xB00,
     TC = 0xC00,
+    MACRO = 0xD00,
     INTERNAL = 0xF00,
 
     OCCPIED = 0x10,
@@ -72,13 +74,18 @@ export enum ERROR_IDS {
     NODES_HAS_ZERO_DELTA =                          EASING     | INVALID_USAGE | 3,
 
     CANNOT_DIVIDE_EXPRESSION_EVALUATOR =            EVALUATOR  | INVALID_USAGE | 0,
+    MISSING_MACRO_EVALUATOR_KEY =                   EVALUATOR  | INVALID_DATA  | 0,
+    MACRO_EVALUATOR_NOT_FOUND =                     EVALUATOR  | INVALID_DATA  | 1,
     
     
 
     INVALID_NOTE_PROP_TYPE =                        NOTE       | INVALID_TYPE  | 0,
 
 
-    INVALID_TIME_TUPLE =                            TC         | INVALID_DATA  | 0
+    INVALID_TIME_TUPLE =                            TC         | INVALID_DATA  | 0,
+
+    TIME_MACRO_NOT_FOUND =                          MACRO      | INVALID_DATA  | 0,
+    VALUE_MACRO_NOT_FOUND =                         MACRO      | INVALID_DATA  | 1,
 }
 
 export const ERRORS = {
@@ -144,6 +151,15 @@ export const ERRORS = {
 
     UNIMPLEMENTED_TEMPLATE_EASING: (temEasName: string) =>
         `Unimplemented template easing: '${temEasName}'`,
+
+    MISSING_MACRO_EVALUATOR_KEY: (pos: string) =>
+        `Missing Macro Evaluator key. At ${pos}`,
+    MACRO_EVALUATOR_NOT_FOUND: (evaluatorId: string, pos: string) =>
+        `Macro Evaluator '${evaluatorId}' not found. At ${pos}`,
+    TIME_MACRO_NOT_FOUND: (macroId: string, pos: string) =>
+        `Time Macro '${macroId}' not found. At ${pos}`,
+    VALUE_MACRO_NOT_FOUND: (macroId: string, pos: string) =>
+        `Value Macro '${macroId}' not found. At ${pos}`,
 
 } satisfies Record<keyof typeof ERROR_IDS, (...args: any[]) => string>
 
