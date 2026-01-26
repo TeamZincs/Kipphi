@@ -1,21 +1,28 @@
 import { Operation, ComplexOperation, UnionOperation } from "./basic";
 
 import TC from "../time";
-import { EventType, EventValueESType, ExtendedEventTypeName, NoteType, RGB, TimeT } from "../chartTypes";
-import { Chart } from "../chart";
-import { TemplateEasing, TemplateEasingLib } from "../easing";
-import { EventEndNode, EventStartNode, EventNodeSequence, EventNode, EventNodeLike, NonLastStartNode, SpeedENS } from "../event";
-import { JudgeLine, ExtendedLayer } from "../judgeline";
+import { NoteType, TimeT } from "../chartTypes";
+import { JudgeLine } from "../judgeline";
 import { Note, notePropTypes, NoteNode, HNList, NNList } from "../note";
-import { checkType, NodeType } from "../util";
-import { EasedEvaluator, Evaluator, NumericEasedEvaluator } from "../evaluator";
-import { err, ERROR_IDS, KPAError } from "../env";
+import { checkType } from "../util";
+import { err } from "../env";
 
 
 type NotePropNamePhiZone = "judgeSize" | "tint" | "tintHitEffects";
 
-type NotePropName = "speed" | "type" | "positionX" | "startTime" | "endTime" | "alpha" | "size" | "visibleBeats" | "yOffset" | "above" | "isFake" | NotePropNamePhiZone;
+export type NotePropName = "speed" | "type" | "positionX" | "startTime" | "endTime" | "alpha" | "size" | "visibleBeats" | "yOffset" | "above" | "isFake" | NotePropNamePhiZone;
 
+/**
+ * 修改 Note 的任意属性值
+ * @example
+ * // 修改 note 的 above 属性
+ * operationList.do(new NotePropChangeOperation(note, "above", true));
+ * // 修改 note 的 speed 属性
+ * // 一般不会这样做，因为修改 note 的 speed 需要把note换到另一个序列（`NNList`）中
+ * // 应使用NoteSpeedChangeOperation。YOffset也是同样的道理。
+ * operationList.do(new NotePropChangeOperation(note, "speed", 1.5));
+ * @template T - 要修改的属性名，必须是 `NotePropName` 类型
+ */
 export class NotePropChangeOperation<T extends NotePropName> extends Operation {
     field: T;
     note: Note;
@@ -98,9 +105,11 @@ export class NoteRemoveOperation extends Operation {
 }
 
 /**
- * 删除一个note
- * 从语义上删除Note要用这个操作
- * 结果上，这个会更新编辑器
+ * 删除一个 note（语义层面的删除）
+ * 从语义上删除 Note 要用这个操作
+ * 注意：实际移除由 NoteRemoveOperation 完成，NoteDeleteOperation 仅负责更新编辑器
+ * @example
+ * operationList.do(new NoteDeleteOperation(note));
  */
 export class NoteDeleteOperation extends NoteRemoveOperation {
     updatesEditor = true
@@ -119,6 +128,8 @@ export class MultiNoteDeleteOperation extends ComplexOperation<NoteDeleteOperati
     }
 
 }
+
+
 
 export class NoteAddOperation extends Operation {
     noteNode: NoteNode
@@ -177,6 +188,14 @@ export class MultiNoteAddOperation extends ComplexOperation<NoteAddOperation[]> 
     }
 }
 
+/**
+ * 修改 Note 的时间位置（不直接修改 startTime，而是将 Note 移动到另一个 NoteNode）
+ * 注意：不能直接修改 note.startTime 属性，需要通过 getNodeOf 获取目标时间的 NoteNode
+ * @example
+ * // 将 note 移动到目标时间位置
+ * const targetNode = note.parentNode.parentSeq.getNodeOf(targetTime);
+ * operationList.do(new NoteTimeChangeOperation(note, targetNode));
+ */
 export class NoteTimeChangeOperation extends ComplexOperation<[
     NoteRemoveOperation,
     NotePropChangeOperation<"startTime">,
@@ -230,6 +249,13 @@ export class NoteTimeChangeOperation extends ComplexOperation<[
     }
 }
 
+/**
+ * 修改 hold 音符的 endTime 属性
+ * 直接修改 hold 音符的 endTime（不同于 NoteTimeChangeOperation）
+ * @example
+ * // 修改 hold 音符的结束时间
+ * operationList.do(new HoldEndTimeChangeOperation(note, newEndTime));
+ */
 export class HoldEndTimeChangeOperation extends NotePropChangeOperation<"endTime"> {
     constructor(note: Note, value: TimeT) {
         super(note, "endTime", value)
@@ -267,13 +293,18 @@ export class HoldEndTimeChangeOperation extends NotePropChangeOperation<"endTime
 }
 
 
+
+/**
+ * 修改 Note 的 speed 属性
+ * 需要传入 JudgeLine 参数，因为 speed 变化会影响 note 在何 NNList 中
+ * @example
+ * // 修改 note 的 speed 值
+ * operationList.do(new NoteSpeedChangeOperation(note, 2.0, judgeLine));
+ */
 export class NoteSpeedChangeOperation
 extends ComplexOperation<[NotePropChangeOperation<"speed">, NoteRemoveOperation, NoteAddOperation]> {
     updatesEditor = true
-    originalTree: NNList;
-    judgeLine: JudgeLine;
-    targetTree: NNList
-    constructor(note: Note, value: number, line: JudgeLine) {
+    constructor(public note: Note, value: number, line: JudgeLine) {
         const valueChange = new NotePropChangeOperation(note, "speed", value);
         const tree = line.getNNList(value, note.yOffset, note.type === NoteType.hold, true)
         const node = tree.getNodeOf(note.startTime);
@@ -286,10 +317,7 @@ extends ComplexOperation<[NotePropChangeOperation<"speed">, NoteRemoveOperation,
 export class NoteYOffsetChangeOperation
 extends ComplexOperation<[NotePropChangeOperation<"yOffset">, NoteRemoveOperation, NoteAddOperation]> {
     updatesEditor = true
-    originalTree: NNList;
-    judgeLine: JudgeLine;
-    targetTree: NNList
-    constructor(note: Note, value: number, line: JudgeLine) {
+    constructor(public note: Note, value: number, line: JudgeLine) {
         const valueChange = new NotePropChangeOperation(note, "yOffset", value);
         const tree = line.getNNList(note.speed, value, note.type === NoteType.hold, true)
         const node = tree.getNodeOf(note.startTime);
@@ -300,8 +328,17 @@ extends ComplexOperation<[NotePropChangeOperation<"yOffset">, NoteRemoveOperatio
 }
 
 
-export class NoteTypeChangeOperation 
+/**
+ * 修改 Note 的 type 属性（音符类型）
+ * 在 tap/drag/flick/hold 之间切换，切换到/从 hold 时需要重新定位 NoteNode
+ * @example
+ * // 将 note 改为 hold 类型
+ * operationList.do(new NoteTypeChangeOperation(note, NoteType.hold));
+ */
+export class NoteTypeChangeOperation
 extends ComplexOperation<[NotePropChangeOperation<"type">, NoteRemoveOperation, NoteAddOperation] | [NotePropChangeOperation<"type">]> {
+    note: Note;
+    value: number;
     constructor(note: Note, value: number) {
         const isHold = note.type === NoteType.hold
         const valueChange = new NotePropChangeOperation(note, "type", value);
@@ -314,6 +351,8 @@ extends ComplexOperation<[NotePropChangeOperation<"type">, NoteRemoveOperation, 
         } else {
             super(valueChange);
         }
+        this.note = note;
+        this.value = value;
         this.updatesEditor = true;
     }
 }

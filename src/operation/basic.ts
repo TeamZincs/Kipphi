@@ -12,7 +12,6 @@ interface DirectlyInstaciableEventMap {
     "noundo": OpEvent;
     "noredo": OpEvent;
     "firstmodified": OpEvent;
-    "needsupdate": OpEvent;
 }
 
 // 创建一个类型来检测意外的 override
@@ -29,6 +28,7 @@ interface OpEventMap extends CheckFinalOverrides<DirectlyInstaciableEventMap> {
     "undo": OperationEvent;
     "redo": OperationEvent;
     "do": OperationEvent;
+    "needsupdate": OperationEvent;
     "needsreflow": NeedsReflowEvent;
 }
 
@@ -52,7 +52,7 @@ export class NeedsReflowEvent extends OpEvent {
 }
 
 export class OperationEvent extends OpEvent {
-    constructor(t: "do" | "undo" | "redo" | "error", public operation: Operation) {
+    constructor(t: "do" | "undo" | "redo" | "error" | "needsupdate", public operation: Operation) {
         super(t);
     }
 }
@@ -154,7 +154,7 @@ export class OperationList extends EventTarget {
     processFlags(operation: Operation) {
 
         if (operation.updatesEditor) {
-            this.dispatchEvent(OpEvent.create("needsupdate"));
+            this.dispatchEvent(new OperationEvent("needsupdate", operation));
         }
         if (operation.comboDelta) {
             this.dispatchEvent(new MaxComboChangeEvent(operation.comboDelta));

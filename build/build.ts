@@ -8,7 +8,7 @@ import { parse } from '@babel/parser';
 import traverse from "@babel/traverse";
 import { hash } from 'bun';
 import { rename, exists, rm, cp } from "fs/promises";
-import { basename, join } from "path";
+import { basename, join, relative } from "path";
 import util from 'util';
 
 type DeclarationType = 'global' | 'local';
@@ -230,10 +230,10 @@ if (await exists("dist/declaration")) {
     await rename("dist/declaration.g.ts", "dist/declaration");
 }
 
-const glob = new Bun.Glob("src/*");
+const glob = new Bun.Glob("src/**/*");
 for await (const file of glob.scan(".")) {
   console.log(file);
-  const fileName = basename(file);
+  const fileName = relative("src", file)
   if (fileName) {
     await cp(file, `packages/package-kipphi/${fileName}`);
   }
