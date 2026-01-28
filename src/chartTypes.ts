@@ -247,14 +247,39 @@ export interface MacroEvaluatorDataKPA2 {
 
 export type EvaluatorDataKPA2<T> = EasedEvaluatorDataOfType<T> | ExpressionEvaluatorDataKPA2 | MacroEvaluatorDataKPA2;
 export interface EventDataKPA2<T = number> {
+    /** 开始时间 */
     startTime: TimeT;
+    /** 结束时间 */
     endTime: TimeT;
+    /** 起始值 */
     start: T;
+    /** 终值 */
     end: T;
+    /** 求值器 */
     evaluator: EvaluatorDataKPA2<T>;
+    /** 终值绑定的宏的ID */
     macroEnd?: string;
+    /** 起始值绑定的宏的ID */
     macroStart?: string;
+    /** 起始时间绑定的宏的ID */
     macroStartTime?: string;
+    /** 将该事件的起始节点关联到一个宏的某个参数 */
+    linkedMacro?: [macroId: string, nodeId: number]
+}
+
+export interface FinalEventStartNodeDataKPA2<T = number> {
+    /** 开始时间 */
+    startTime: TimeT;
+    /** 起始值 */
+    start: T;
+    /** 求值器 */
+    evaluator: EvaluatorDataKPA2<T>;
+    /** 起始值绑定的宏的ID */
+    macroStart?: string;
+    /** 起始时间绑定的宏的ID */
+    macroStartTime?: string;
+    /** 将该事件的起始节点关联到一个宏的某个参数 */
+    linkedMacro?: [macroId: string, nodeId: number]
 }
 
 export enum EventValueType {
@@ -468,7 +493,7 @@ export interface EventNodeSequenceDataKPA2<VT> {
     events: EventDataKPA2<VT>[];
     id: string;
     type: EventType;
-    endValue: VT;
+    final: FinalEventStartNodeDataKPA2<VT>;
 }
 
 export interface WrapperEasingBodyData {

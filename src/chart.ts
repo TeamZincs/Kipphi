@@ -58,7 +58,8 @@ import {
     type EventDataKPA2,
     InterpreteAs,
     MacroEvaluatorBodyData,
-    MacroEvaluatorDataKPA2
+    MacroEvaluatorDataKPA2,
+    FinalEventStartNodeDataKPA2
 } from "./chartTypes";
 import { ColorEasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorOfType } from "./evaluator";
 import { err, ERROR_IDS, KPAError }  from "./env";
@@ -247,10 +248,10 @@ export class Chart {
                 type VT = ValueTypeOfEventType<typeof seqData.type>
                 const sequence = EventNodeSequence.fromKPA2JSON<typeof seqData.type, VT>(
                     seqData.type,
-                    seqData.events as EventDataKPA2<VT>[], // ↑目前区别只在于这个方法名字
+                    seqData.events as EventDataKPA2<VT>[],
                     chart,
                     seqData.id,
-                    seqData.endValue as VT
+                    seqData.final as FinalEventStartNodeDataKPA2<VT>
                 );
                 sequence.id = seqData.id;
                 chart.sequenceMap.set(sequence.id, sequence);
@@ -637,6 +638,17 @@ export class Chart {
         }
         EventNode.connect(start, end);
         return [start, end];
+    }
+    createFinalEventStartNodeFromData<VT extends EventValueESType>(data: FinalEventStartNodeDataKPA2<VT>, type: EventValueTypeOfType<VT>, pos: string): EventStartNode<VT> {
+        const node = new EventStartNode(data.startTime, data.start);
+        this.bindEvaluator(node, data.evaluator, type, pos);
+        if (typeof data.macroStart === "string") {
+            this.bindValueMacro(node, data.macroStart, pos);
+        }
+        if (typeof data.macroStartTime === "string") {
+            this.bindTimeMacro(node, data.macroStartTime, pos);
+        }
+        return node;
     }
     bindTimeMacro(node: EventStartNode<any>, id: string, pos: string) {
         const obj = this.macroLib.timeMacros.get(id);

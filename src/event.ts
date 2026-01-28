@@ -1,5 +1,5 @@
 import type { Chart } from "./chart";
-import { EventType, type TimeT, type EventDataKPA, type RGB, type EventDataRPELike, InterpreteAs, type ValueTypeOfEventType, type EventNodeSequenceDataKPA, type EventDataKPA2, type EventNodeSequenceDataKPA2, type EventValueESType, EventValueType, EventValueTypeOfType } from "./chartTypes";
+import { EventType, type TimeT, type EventDataKPA, type RGB, type EventDataRPELike, InterpreteAs, type ValueTypeOfEventType, type EventNodeSequenceDataKPA, type EventDataKPA2, type EventNodeSequenceDataKPA2, type EventValueESType, EventValueType, EventValueTypeOfType, FinalEventStartNodeDataKPA2 } from "./chartTypes";
 import { TemplateEasingLib, BezierEasing, Easing, rpeEasingArray, SegmentedEasing, linearEasing, fixedEasing, TemplateEasing, NormalEasing } from "./easing";
 import { ColorEasedEvaluator, EasedEvaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type Evaluator } from "./evaluator";
 import { JumpArray } from "./jumparray";
@@ -327,9 +327,16 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
             end: endNode.value,
             startTime: this.time,
             endTime: endNode.time,
-            evaluator: this.evaluator.dumpFor(this),
+            evaluator: this.evaluator.dumpFor(this)
         }
     }
+    dumpAsFinal(): FinalEventStartNodeDataKPA2<VT> {
+        return {
+            start: this.value,
+            startTime: this.time,
+            evaluator: this.evaluator.dumpFor(this)
+        }
+    } 
     getValueAt(beats: number): VT {
         // 除了尾部的开始节点，其他都有下个节点
         // 钩定型缓动也有
@@ -498,7 +505,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
      * @param type 事件类型（不是数值类型，也不是数值ECMAScript类型）
      * @param data 事件数据的数组
      * @param chart 
-     * @param pos 当前事件序列应当具有什么ID（用于报错和警告）
+     * @param pos 当前事件序列应当具有什么ID（用于报错和警告，外部调用可以写空字符串）
      * @param endValue 结束值（RPEJSON没有）
      * @returns 
      */
@@ -585,7 +592,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
      * @param data 事件数据的数组
      * @param chart 
      * @param pos 当前事件序列应当具有什么ID（用于报错和警告）
-     * @param endValue 结束值（RPEJSON没有）
+     * @param finalNodeData 最终节点数据
      * @returns 
      */
     static fromKPA2JSON<T extends EventType, VT extends EventValueESType = number>(
@@ -593,7 +600,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         data: EventDataKPA2<VT>[],
         chart: Chart,
         pos: string,
-        endValue?: VT
+        finalNodeData: FinalEventStartNodeDataKPA2<VT>
     )
     {
         const length = data.length;
@@ -604,7 +611,6 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             type === EventType.easing
                 ? TC.toBeats(data[length - 1].endTime)
                 : chart.effectiveBeats);
-        const macroLib = chart.macroLib;
         let listLength = length;
         let lastEnd: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT> = seq.head;
         // 如果第一个事件不从0时间开始，那么添加一对面对面节点来垫背
@@ -662,15 +668,9 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             lastEnd = end;
         }
         const last = lastEnd;
-        const tail = new EventStartNode(
-            last.type === NodeType.HEAD ? [0, 0, 1] : last.time,
-            last.type === NodeType.HEAD ? endValue : last.value
-        );
-        EventNode.connect(last, tail);
-        // last can be a header, in which case easing is undefined.
-        // then we use the easing that initialized in the EventStartNode constructor.
-        tail.evaluator = last.previous?.evaluator ?? tail.evaluator;
-        EventNode.connect(tail, seq.tail)
+        const final = chart.createFinalEventStartNodeFromData(finalNodeData, valueType, pos + ".finalNode");
+        EventNode.connect(last, final);
+        EventNode.connect(final, seq.tail)
         seq.listLength = listLength;
         seq.initJump();
         if (type === EventType.speed) {
@@ -791,6 +791,10 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
      * @param this 
      * @param node 
      * @param tc 
+     * 
+     * @example
+     * node.value += 1;
+     * (node.parentSequence as SpeedENS).updateFloorPositionAfter(node, tc);
      */
     updateFloorPositionAfter(this: SpeedENS, node: EventStartNode, tc: TimeCalculator): void {
         let currentFP: number;
@@ -826,7 +830,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             type: this.type,
             events: nodes,
             id: this.id,
-            endValue: currentNode.value
+            final: currentNode.dumpAsFinal()
         };
     }
 
