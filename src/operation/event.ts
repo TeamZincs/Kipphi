@@ -118,16 +118,32 @@ export class EventNodeValueChangeOperation <VT extends EventValueESType> extends
         this.value = val;
         this.originalValue = node.value
     }
-    do() {
+    do(chart: Chart) {
         this.node.value = this.value
+        if (this.node.parentSeq.type === EventType.speed) {
+            this.updateSpeedENS(chart);
+        }
     }
-    undo() {
+    undo(chart: Chart) {
         this.node.value = this.originalValue
+        if (this.node.parentSeq.type === EventType.speed) {
+            this.updateSpeedENS(chart);
+        }
     }
-    rewrite(operation: EventNodeValueChangeOperation<VT>): boolean {
+    updateSpeedENS(chart: Chart) {
+        (this.node.parentSeq as SpeedENS).updateFloorPositionAfter(
+            EventNode.getStartEnd(this.node as unknown as EventStartNode<number> | EventEndNode<number>)[0],
+            chart.timeCalculator
+        );
+    }
+    rewrite(operation: EventNodeValueChangeOperation<VT>, chart: Chart): boolean {
         if (operation.node === this.node) {
             this.value = operation.value;
-            this.node.value = operation.value
+            this.node.value = operation.value;
+                
+            if (this.node.parentSeq.type === EventType.speed) {
+                this.updateSpeedENS(chart);
+            }
             return true;
         }
         return false;

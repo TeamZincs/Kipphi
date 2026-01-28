@@ -135,7 +135,7 @@ export class OperationList extends EventTarget {
             const lastOp = this.operations[this.operations.length - 1]
             if (operation.constructor === lastOp.constructor) {
                 // 返回值指示是否重写成功
-                if (lastOp.rewrite(operation)) {
+                if (lastOp.rewrite(operation, this.chart)) {
                     this.processFlags(operation)
                     return;
                 }
@@ -188,7 +188,7 @@ export abstract class Operation {
     }
     abstract do(chart: Chart): void
     abstract undo(chart: Chart): void
-    rewrite(op: typeof this): boolean {return false;}
+    rewrite(op: this, chart: Chart): boolean {return false;}
     toString(): string {
         return this.constructor.name;
     }
