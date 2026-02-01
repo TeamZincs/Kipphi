@@ -1,5 +1,5 @@
 import { Operation, ComplexOperation } from "./basic";
-import { MacroTime, MacroValue} from "../macro"
+import { EventMacroTime, EventMacroValue} from "../macro"
 import { EventStartNode } from "../event";
 import { TimeT } from "../chartTypes";
 import { Chart } from "../chart";
@@ -18,9 +18,9 @@ export class EventNodeMacroTimeReevaluateOperation extends EventNodeTimeChangeOp
 }
 
 export class MacroTimeAssignOperation extends Operation {
-    public originalMacroTime: MacroTime;
+    public originalMacroTime: EventMacroTime;
     private timeChangeOperation: EventNodeMacroTimeReevaluateOperation;
-    constructor(public macroTime: MacroTime, public node: EventStartNode<any>) {
+    constructor(public macroTime: EventMacroTime, public node: EventStartNode<any>) {
         super();
         this.originalMacroTime = node.macroTime;
     }
@@ -36,7 +36,7 @@ export class MacroTimeAssignOperation extends Operation {
 }
 
 export class MacroTimeDeassginOperation extends Operation {
-    public originalMacroTime: MacroTime;
+    public originalMacroTime: EventMacroTime;
     constructor(public node: EventStartNode<any>) {
         super();
         this.originalMacroTime = node.macroTime;
@@ -50,7 +50,7 @@ export class MacroTimeDeassginOperation extends Operation {
 }
 
 export class MacroTimeReevaluateOperation extends ComplexOperation<EventNodeMacroTimeReevaluateOperation[]> {
-    constructor(macroTime: MacroTime, chart: Chart) {
+    constructor(macroTime: EventMacroTime, chart: Chart) {
         const ops: EventNodeMacroTimeReevaluateOperation[] = [];
         for (const node of macroTime.consumers) {
             ops.push(new EventNodeMacroTimeReevaluateOperation(node, chart));

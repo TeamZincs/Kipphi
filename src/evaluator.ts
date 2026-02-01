@@ -12,7 +12,7 @@ import type { EventEndNode, EventStartNode, NonLastStartNode } from "./event";
 import { EvaluatorType, InterpreteAs, MacroEvaluatorBodyData, MacroEvaluatorDataKPA2, type ColorEasedEvaluatorKPA2, type EvaluatorDataKPA2, type EventValueESType, type ExpressionEvaluatorDataKPA2, type NumericEasedEvaluatorKPA2, type RGB, type TextEasedEvaluatorKPA2 } from "./chartTypes";
 import type { JudgeLine } from "./judgeline";
 import { Chart } from "./chart";
-import { MACROS } from "./macro";
+import { EVENT_MACROS } from "./macro";
 
 
 /// #declaration:global
@@ -185,11 +185,12 @@ export class MacroEvaluator<T extends EventValueESType> extends Evaluator<T> {
         super();
     }
     compile(node: EventStartNode<T>, chart: Chart): ExpressionEvaluator<T> {
-        const jsExpr = this.expression.replace(/@([a-z\.]+)/, (k) => {
-            return JSON.stringify(MACROS[k](node, chart)) + " "
+        const jsExpr = this.expression
+        .replace(/@([a-z\.]+)/, (k) => {
+            return JSON.stringify(EVENT_MACROS[k](node, chart)) + " "
         }).replace(/@\{\{(.+?)\}\}/g, (k) => {
-            const replaced = k.replace(new RegExp(Object.keys(MACROS).join("|"), "g"), (k) => {
-                return JSON.stringify(MACROS[k](node, chart)) + " "
+            const replaced = k.replace(new RegExp(Object.keys(EVENT_MACROS).join("|"), "g"), (k) => {
+                return JSON.stringify(EVENT_MACROS[k](node, chart)) + " "
             });
             return JSON.stringify(new Function("return " + replaced)()) + " ";
         });

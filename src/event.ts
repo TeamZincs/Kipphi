@@ -1,5 +1,5 @@
 import type { Chart } from "./chart";
-import { EventType, type TimeT, type EventDataKPA, type RGB, type EventDataRPELike, InterpreteAs, type ValueTypeOfEventType, type EventNodeSequenceDataKPA, type EventDataKPA2, type EventNodeSequenceDataKPA2, type EventValueESType, EventValueType, EventValueTypeOfType, FinalEventStartNodeDataKPA2 } from "./chartTypes";
+import { EventType, type TimeT, type EventDataKPA, type RGB, type EventDataRPELike, InterpreteAs, type ValueTypeOfEventType, type EventNodeSequenceDataKPA, type EventDataKPA2, type EventNodeSequenceDataKPA2, type EventValueESType, EventValueType, EventValueTypeOfType, FinalEventStartNodeDataKPA2, EvaluatorType, EasingType } from "./chartTypes";
 import { TemplateEasingLib, BezierEasing, Easing, rpeEasingArray, SegmentedEasing, linearEasing, fixedEasing, TemplateEasing, NormalEasing } from "./easing";
 import { ColorEasedEvaluator, EasedEvaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type Evaluator } from "./evaluator";
 import { JumpArray } from "./jumparray";
@@ -10,7 +10,7 @@ import { NodeType } from "./util";
 
 import { err, ERROR_IDS, KPAError } from "./env";
 import { JudgeLine } from "./judgeline";
-import { MacroTime, MacroValue } from "./macro";
+import { EventMacro, EventMacroTime, EventMacroValue, Macroable } from "./macro";
 
 /// #declaration:global
 export class EventNodeLike<T extends NodeType, VT extends EventValueESType = number> {
@@ -48,7 +48,8 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
     time: TimeT;
     value: VT;
     evaluator: Evaluator<VT>;
-    macroValue: MacroValue;
+    macroValue: EventMacroValue;
+    linkedMacros: Set<EventMacro<Macroable>> = new Set();
     constructor(time: TimeT, value: VT) {
         super(NodeType.MIDDLE);
         this.time = TC.validateIp([...time]);
@@ -306,7 +307,7 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
 export class EventStartNode<VT extends EventValueESType = number> extends EventNode<VT> {
     override next: EventEndNode<VT> | EventNodeLike<NodeType.TAIL, VT>;
     override previous: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT>;
-    macroTime: MacroTime | null = null;
+    macroTime: EventMacroTime | null = null;
     /** 
      * 对于速度事件，从0时刻到此节点的总积分
      */
@@ -327,14 +328,23 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
             end: endNode.value,
             startTime: this.time,
             endTime: endNode.time,
-            evaluator: this.evaluator.dumpFor(this)
+            evaluator: this.evaluator.dumpFor(this),
+            macroStart: this.macroValue?.dumpForNode(this),
+            macroEnd: this.macroValue?.dumpForNode(endNode),
+            macroStartTime: this.macroTime?.dumpForNode(this),
+            // 没有macroEndTime
+            startLinkedMacro: [...this.linkedMacros].map(macro => macro.dumpLinkForNode(this)),
+            endLinkedMacro: [...endNode.linkedMacros].map(macro => macro.dumpLinkForNode(endNode))
         }
     }
     dumpAsFinal(): FinalEventStartNodeDataKPA2<VT> {
         return {
             start: this.value,
             startTime: this.time,
-            evaluator: this.evaluator.dumpFor(this)
+            evaluator: this.evaluator.dumpFor(this),
+            macro: this.macroValue.dumpForNode(this),
+            macroTime: this.macroTime?.dumpForNode(this),
+            linkedMacro: [...this.linkedMacros].map(macro => macro.dumpLinkForNode(this)),
         }
     } 
     getValueAt(beats: number): VT {
@@ -668,7 +678,23 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             lastEnd = end;
         }
         const last = lastEnd;
-        const final = chart.createFinalEventStartNodeFromData(finalNodeData, valueType, pos + ".finalNode");
+        const final = chart.createFinalEventStartNodeFromData(
+            finalNodeData || {
+                // @ts-expect-error 简化写法
+                start: last.value ?? this.getDefaultValueFromEventType(type),
+                // @ts-expect-error 极其边缘情况，finalNodeData只有在内测的谱面里面才可能为null，且last一般都有值
+                startTime: last.time,
+                evaluator: {
+                    type: EvaluatorType.eased,
+                    easing: {
+                        type: EasingType.normal,
+                        identifier: linearEasing.rpeId
+                    }
+                }
+            } satisfies FinalEventStartNodeDataKPA2<any>,
+            valueType,
+            pos + ".finalNode"
+        );
         EventNode.connect(last, final);
         EventNode.connect(final, seq.tail)
         seq.listLength = listLength;

@@ -86,6 +86,11 @@ export enum ERROR_IDS {
 
     TIME_MACRO_NOT_FOUND =                          MACRO      | INVALID_DATA  | 0,
     VALUE_MACRO_NOT_FOUND =                         MACRO      | INVALID_DATA  | 1,
+    UNKNOWN_MACRO_EXPRESSION =                      MACRO      | INVALID_DATA  | 2,
+    JAVASCRIPT_SYNTAX_ERROR =                       MACRO      | INVALID_DATA  | 3,
+    PROTO_PRESENT_IN_NONPARAMETRIC =                MACRO      | INVALID_USAGE | 0,
+    PARAMETRIC_MACRO_REQUIRES_PROTO_KEY =           MACRO      | INVALID_DATA  | 4,
+    MACRO_NOT_PARAMETRIC =                          MACRO      | INVALID_DATA  | 5,
 }
 
 export const ERRORS = {
@@ -160,7 +165,16 @@ export const ERRORS = {
         `Time Macro '${macroId}' not found. At ${pos}`,
     VALUE_MACRO_NOT_FOUND: (macroId: string, pos: string) =>
         `Value Macro '${macroId}' not found. At ${pos}`,
-
+    UNKNOWN_MACRO_EXPRESSION: (expression: string, macroId: string) =>
+        `Unknown Macro Expression '${expression}'. At ${macroId}`,
+    PROTO_PRESENT_IN_NONPARAMETRIC: (macroId: string) =>
+        `'@proto can only be used in parametric Macros. At ${macroId}'`,
+    JAVASCRIPT_SYNTAX_ERROR: (error: Error, macroId: string) =>
+        `JavaScript Syntax Error: ${error.message}. At ${macroId}`,
+    PARAMETRIC_MACRO_REQUIRES_PROTO_KEY: (pos) =>
+        `Parametric Macro requires key. At ${pos}`,
+    MACRO_NOT_PARAMETRIC: (macroId: string, pos) =>
+        `Macro '${macroId}' is not parametric. At ${pos}`,
 } satisfies Record<keyof typeof ERROR_IDS, (...args: any[]) => string>
 
 export class KPAError<ET extends ERROR_IDS> extends Error {

@@ -246,6 +246,10 @@ export interface MacroEvaluatorDataKPA2 {
 
 
 export type EvaluatorDataKPA2<T> = EasedEvaluatorDataOfType<T> | ExpressionEvaluatorDataKPA2 | MacroEvaluatorDataKPA2;
+
+export type MacroData = [id: string, proto: number] | string;
+export type MacroLink = [macroTypeAndId: `${'value' | 'time'}:${string}`, nodeId: number]
+
 export interface EventDataKPA2<T = number> {
     /** 开始时间 */
     startTime: TimeT;
@@ -258,13 +262,14 @@ export interface EventDataKPA2<T = number> {
     /** 求值器 */
     evaluator: EvaluatorDataKPA2<T>;
     /** 终值绑定的宏的ID */
-    macroEnd?: string;
+    macroEnd?: MacroData;
     /** 起始值绑定的宏的ID */
-    macroStart?: string;
+    macroStart?: MacroData;
     /** 起始时间绑定的宏的ID */
-    macroStartTime?: string;
+    macroStartTime?: MacroData;
     /** 将该事件的起始节点关联到一个宏的某个参数 */
-    linkedMacro?: [macroId: string, nodeId: number]
+    startLinkedMacro?: MacroLink[];
+    endLinkedMacro?: MacroLink[];
 }
 
 export interface FinalEventStartNodeDataKPA2<T = number> {
@@ -275,11 +280,11 @@ export interface FinalEventStartNodeDataKPA2<T = number> {
     /** 求值器 */
     evaluator: EvaluatorDataKPA2<T>;
     /** 起始值绑定的宏的ID */
-    macroStart?: string;
+    macro?: MacroData;
     /** 起始时间绑定的宏的ID */
-    macroStartTime?: string;
+    macroTime?: MacroData;
     /** 将该事件的起始节点关联到一个宏的某个参数 */
-    linkedMacro?: [macroId: string, nodeId: number]
+    linkedMacro?: MacroLink[];
 }
 
 export enum EventValueType {
@@ -511,10 +516,12 @@ export interface MacroEvaluatorBodyData {
 export interface MacroTimeBodyData {
     id: string;
     macro: string;
+    parametric?: boolean;
 }
 export interface MacroValueBodyData {
     id: string;
     macro: string;
+    parametric?: boolean;
 }
 export interface ChartDataKPA {
     version: number;

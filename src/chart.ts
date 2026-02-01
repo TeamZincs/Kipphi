@@ -59,11 +59,13 @@ import {
     InterpreteAs,
     MacroEvaluatorBodyData,
     MacroEvaluatorDataKPA2,
-    FinalEventStartNodeDataKPA2
+    FinalEventStartNodeDataKPA2,
+    MacroData,
+    MacroLink
 } from "./chartTypes";
 import { ColorEasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorOfType } from "./evaluator";
 import { err, ERROR_IDS, KPAError }  from "./env";
-import { MacroLib, MacroTime, MacroValue } from "./macro";
+import { MacroLib, EventMacroTime, EventMacroValue, EventMacro } from "./macro";
 
 /// #declaration:global
 
@@ -627,14 +629,24 @@ export class Chart {
         const start = new EventStartNode(data.startTime, data.start);
         const end = new EventEndNode(data.endTime, data.end);
         this.bindEvaluator(start, data.evaluator, type, pos);
-        if (typeof data.macroStart === "string") {
+        if (data.macroStart) {
             this.bindValueMacro(start, data.macroStart, pos)
         }
-        if (typeof data.macroEnd === "string") {
+        if (data.macroEnd) {
             this.bindValueMacro(end, data.macroEnd, pos)
         }
-        if (typeof data.macroStartTime === "string") {
+        if (data.macroStartTime) {
             this.bindTimeMacro(start, data.macroStartTime, pos)
+        }
+        if (data.startLinkedMacro) {
+            for (const macroLink of data.startLinkedMacro) {
+                this.linkMacro(start, macroLink, pos)
+            }
+        }
+        if (data.endLinkedMacro) {
+            for (const macroLink of data.endLinkedMacro) {
+                this.linkMacro(end, macroLink, pos)
+            }
         }
         EventNode.connect(start, end);
         return [start, end];
@@ -642,31 +654,50 @@ export class Chart {
     createFinalEventStartNodeFromData<VT extends EventValueESType>(data: FinalEventStartNodeDataKPA2<VT>, type: EventValueTypeOfType<VT>, pos: string): EventStartNode<VT> {
         const node = new EventStartNode(data.startTime, data.start);
         this.bindEvaluator(node, data.evaluator, type, pos);
-        if (typeof data.macroStart === "string") {
-            this.bindValueMacro(node, data.macroStart, pos);
+        if (typeof data.macro === "string") {
+            this.bindValueMacro(node, data.macro, pos);
         }
-        if (typeof data.macroStartTime === "string") {
-            this.bindTimeMacro(node, data.macroStartTime, pos);
+        if (typeof data.macroTime === "string") {
+            this.bindTimeMacro(node, data.macroTime, pos);
+        }
+        if (data.linkedMacro) {
+            for (const macroLink of data.linkedMacro) {
+                this.linkMacro(node, macroLink, pos)
+            }
         }
         return node;
     }
-    bindTimeMacro(node: EventStartNode<any>, id: string, pos: string) {
-        const obj = this.macroLib.timeMacros.get(id);
-        if (typeof obj === "object" && obj instanceof MacroTime) {
-            node.macroTime = obj;
-            obj.consumers.add(node);
+    bindTimeMacro(node: EventStartNode<any>, macroData: MacroData, pos: string) {
+        const id = macroData[0];
+        const macro = this.macroLib.timeMacros.get(id);
+        if (typeof macro === "object" && macro instanceof EventMacroTime) {
+            node.macroTime = macro;
+            macro.bindNode(node, macroData, pos);
         } else {
             err.TIME_MACRO_NOT_FOUND(id, pos).warn();
         }
         return null;
     }
-    bindValueMacro(node: EventNode<any>, id: string, pos: string) {
-        const obj = this.macroLib.valueMacros.get(id);
-        if (typeof obj === "object" && obj instanceof MacroValue) {
-            node.macroValue = obj;
-            obj.consumers.add(node);
+    bindValueMacro(node: EventNode<any>, macroData: MacroData, pos: string) {
+        const id = macroData[0];
+        const macro = this.macroLib.valueMacros.get(id);
+        if (typeof macro === "object" && macro instanceof EventMacroValue) {
+            node.macroValue = macro;
+            macro.bindNode(node, macroData, pos);
         } else {
             err.VALUE_MACRO_NOT_FOUND(id, pos).warn();
+        }
+        return null;
+    }
+    linkMacro(node: EventNode<EventValueESType>, linkData: MacroLink, pos: string) {
+        const prefix = linkData[0].split(":")[0] as 'time' | 'value';
+        const macroDict = prefix === 'time' ? this.macroLib.timeMacros : this.macroLib.valueMacros;
+        const realName = linkData[0].substring(prefix.length + 1);
+        const macro = macroDict.get(realName);
+        if (typeof macro === "object" && macro instanceof EventMacro) {
+            macro.linkProtoNode(node, linkData[1]);
+        } else {
+            err[`${prefix.toUpperCase() as 'TIME' | 'VALUE'}_MACRO_NOT_FOUND`](realName, pos).warn();
         }
         return null;
     }
