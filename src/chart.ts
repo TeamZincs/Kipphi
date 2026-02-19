@@ -259,8 +259,8 @@ export class Chart {
                 chart.sequenceMap.set(sequence.id, sequence);
             }
 
-            chart.macroLib.readTimeMacros((data as ChartDataKPA2).timeMacros);
-            chart.macroLib.readValueMacros((data as ChartDataKPA2).valueMacros);
+            chart.macroLib.readTimeMacros((data as ChartDataKPA2).timeMacros ?? []);
+            chart.macroLib.readValueMacros((data as ChartDataKPA2).valueMacros ?? []);
         } else {
             
             const sequences = (data as ChartDataKPA).eventNodeSequences
