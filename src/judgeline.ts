@@ -775,7 +775,7 @@ export class JudgeLine {
                 return list;
             }
         }
-        const list = isHold ? new HNList(speed, medianYOffset, this.chart.timeCalculator.duration) : new NNList(speed, medianYOffset, this.chart.timeCalculator.duration)
+        const list = isHold ? new HNList(speed, medianYOffset, this.chart.effectiveBeats) : new NNList(speed, medianYOffset, this.chart.effectiveBeats)
         list.parentLine = this;
         NoteNode.connect(list.head, list.tail)
         if (initsJump) list.initJump();
