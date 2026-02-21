@@ -74,7 +74,7 @@ export class MaxComboChangeEvent extends OpEvent {
 export class OperationList extends EventTarget {
     operations: Operation[];
     undoneOperations: Operation[];
-    constructor(public chart: Chart) {
+    constructor(public readonly chart: Chart) {
         super()
         this.operations = [];
         this.undoneOperations = [];

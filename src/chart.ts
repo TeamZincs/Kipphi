@@ -87,7 +87,7 @@ export class Chart {
     /** 谱面中所有的判定线列表 */
     judgeLines: JudgeLine[] = [];
     /** 时间计算器，用于处理BPM变化和时间转换 */
-    timeCalculator = new TimeCalculator();
+    readonly timeCalculator = new TimeCalculator();
     /** 无父级的根判定线列表 */
     orphanLines: JudgeLine[] = [];
     
@@ -108,11 +108,11 @@ export class Chart {
     offset: number = 0;
     
     /** 模板缓动库，用于管理和复用缓动函数 */
-    templateEasingLib = new TemplateEasingLib(EventNodeSequence.newSeq<EventType.easing>, ExpressionEvaluator);
-    macroLib = new MacroLib();
+    readonly templateEasingLib = new TemplateEasingLib(EventNodeSequence.newSeq<EventType.easing>, ExpressionEvaluator);
+    readonly macroLib = new MacroLib();
     
     /** 事件序列映射表，通过ID索引事件序列 */
-    sequenceMap = new Map<string, EventNodeSequence<EventValueESType>>();
+    readonly sequenceMap = new Map<string, EventNodeSequence<EventValueESType>>();
     /** 有效节拍数（基于谱面持续时间计算得出） */
     effectiveBeats: number;
     /** 音符节点列表，用于管理谱面上的所有音符 */

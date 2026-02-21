@@ -266,7 +266,7 @@ export class TimeCalculator {
     /** BPM片段数据列表 */
     bpmList: BPMSegmentData[];
     /** BPM序列 */
-    bpmSequence: BPMSequence;
+    readonly bpmSequence: BPMSequence;
     /** 总持续时间 */
     duration: number;
 
@@ -281,6 +281,7 @@ export class TimeCalculator {
      */
     initSequence() {
         const bpmList = this.bpmList;
+        // @ts-expect-error 不在构造器中初始化的只读属性
         this.bpmSequence = new BPMSequence(bpmList, this.duration);
     }
     
