@@ -9,7 +9,7 @@ import {
 import TC from "./time";
 
 import type { EventEndNode, EventStartNode, NonLastStartNode } from "./event";
-import { EvaluatorType, InterpreteAs, MacroEvaluatorBodyData, MacroEvaluatorDataKPA2, type ColorEasedEvaluatorKPA2, type EvaluatorDataKPA2, type EventValueESType, type ExpressionEvaluatorDataKPA2, type NumericEasedEvaluatorKPA2, type RGB, type TextEasedEvaluatorKPA2 } from "./chartTypes";
+import { EasingType, EvaluatorType, EventValueType, EventValueTypeOfType, InterpreteAs, MacroEvaluatorBodyData, MacroEvaluatorDataKPA2, type ColorEasedEvaluatorKPA2, type EvaluatorDataKPA2, type EventValueESType, type ExpressionEvaluatorDataKPA2, type NumericEasedEvaluatorKPA2, type RGB, type TextEasedEvaluatorKPA2 } from "./chartTypes";
 import type { JudgeLine } from "./judgeline";
 import { Chart } from "./chart";
 import { EVENT_MACROS } from "./macro";
@@ -57,6 +57,24 @@ export abstract class EasedEvaluator<T extends EventValueESType> extends Evaluat
      * @returns 
      */
     abstract deriveWithEasing(easing: Easing): EasedEvaluator<T>;
+
+    static getEvaluatorFromEasing<T extends EventValueESType>(type: EventValueTypeOfType<T>, easing: Easing, interpretedAs?: InterpreteAs) {
+        const easingIsNormal = easing instanceof NormalEasing;
+        switch (type) {
+            case EventValueType.numeric:
+                return easingIsNormal
+                    ? NumericEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId] as EasedEvaluatorOfType<T>
+                    : new NumericEasedEvaluator(easing) as EasedEvaluatorOfType<T>;
+            case EventValueType.color:
+                return easingIsNormal
+                    ? ColorEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId] as EasedEvaluatorOfType<T>
+                    : new ColorEasedEvaluator(easing) as EasedEvaluatorOfType<T>;
+            case EventValueType.text:
+                return easingIsNormal
+                    ? TextEasedEvaluator.evaluatorsOfNoEzAndItpAs[easing.rpeId][interpretedAs ?? InterpreteAs.str] as EasedEvaluatorOfType<T>
+                    : new TextEasedEvaluator(easing, interpretedAs) as EasedEvaluatorOfType<T>
+        }
+    }
 }
 
 export type EasedEvaluatorOfType<T extends EventValueESType> = T extends number ? NumericEasedEvaluator : T extends RGB ? ColorEasedEvaluator : TextEasedEvaluator;
