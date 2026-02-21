@@ -2,7 +2,8 @@ import { Chart, JudgeLineGroup, BasicEventName, UIName } from "../chart";
 import { ExtendedEventTypeName, RGB } from "../chartTypes";
 import { EventNodeSequence } from "../event";
 import { JudgeLine, ExtendedLayer } from "../judgeline";
-import { Operation } from "./basic";
+import { ComplexOperation, LazyOperation, Operation } from "./basic";
+import { EventNodeSequenceRenameOperation } from "./event";
 
 
 
@@ -133,7 +134,7 @@ export class JudgeLineCreateOperation extends Operation {
     }
 }
 
-export class JudgeLineDeleteOperation extends Operation {
+class JudgeLineRemoveOperation extends Operation {
     readonly originalGroup: JudgeLineGroup;
     constructor(public chart: Chart, public judgeLine: JudgeLine) {
         super();
@@ -150,12 +151,17 @@ export class JudgeLineDeleteOperation extends Operation {
         this.originalGroup.remove(this.judgeLine);
     }
     undo() {
-        this.chart.judgeLines.push(this.judgeLine);
+        this.chart.judgeLines.splice(this.judgeLine.id, 0, this.judgeLine);
         this.chart.orphanLines.push(this.judgeLine);
         this.originalGroup.add(this.judgeLine);
     }
 }
 
+export class JudgeLineDeleteOperation extends ComplexOperation<[JudgeLineRemoveOperation, ...LazyOperation<typeof JudgeLineIdChangeOperation>[]]> {
+    constructor(public chart: Chart, public judgeLine: JudgeLine) {
+        super(new JudgeLineRemoveOperation(chart, judgeLine), ...chart.judgeLines.slice(judgeLine.id + 1).map(line => JudgeLineIdChangeOperation.lazy(line)));
+    }
+}
 
 
 export class JudgeLineENSChangeOperation extends Operation {
@@ -242,5 +248,57 @@ export class JudgeLineDetachAllUIOperation extends Operation {
         for (const ui of this.uinames) {
             this.chart.attachUIToLine(ui, this.judgeLine);
         }
+    }
+}
+
+/**
+ * 修改判定线id
+ * 不需要自己传入ID
+ */
+export class JudgeLineIdChangeOperation extends ComplexOperation<EventNodeSequenceRenameOperation[]> {
+    originalValue: number;
+    public value: number;
+    public judgeLine: JudgeLine;
+    /**
+     * 
+     * @param judgeLine 
+     * @param renamesENS 是否对事件序列进行重命名
+     */
+    constructor(judgeLine: JudgeLine, renamesENS: boolean = true) {
+        const value = judgeLine.chart.judgeLines.indexOf(judgeLine);
+        const extendedLayer = judgeLine.extendedLayer;
+        const ineffective = value === judgeLine.id;
+        if (renamesENS && !ineffective) {
+            super(
+                ...judgeLine.eventLayers
+                .flatMap((layer) => [layer.alpha, layer.moveX, layer.moveY, layer.rotate])
+                .filter(seq => seq && seq.id.match(/^#\d+\./))
+                .map(seq => new EventNodeSequenceRenameOperation(
+                    seq,
+                    `#${value}.${seq.id.substring(seq.id.indexOf(".") + 1)}`
+                )),
+                ...[extendedLayer.scaleX, extendedLayer.scaleY, extendedLayer.text, extendedLayer.color,
+                    judgeLine.speedSequence]
+                .filter(seq => seq && seq.id.match(/^#\d+\./))
+                .map(seq => new EventNodeSequenceRenameOperation(
+                    seq,
+                    `#${value}.${seq.id.substring(seq.id.indexOf(".") + 1)}`
+                ))
+            );
+        } else {
+            super();
+        }
+        this.ineffective = ineffective;
+        this.judgeLine = judgeLine;
+        this.originalValue = judgeLine.id;
+        this.value = value;
+    }
+    do(chart: Chart) {
+        this.judgeLine.id = this.value;
+        super.do(chart);
+    }
+    undo(chart: Chart) {
+        this.judgeLine.id = this.originalValue;
+        super.do(chart);
     }
 }

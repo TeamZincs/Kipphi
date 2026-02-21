@@ -52,7 +52,7 @@ export class MacroTimeDeassginOperation extends Operation {
 export class MacroTimeReevaluateOperation extends ComplexOperation<EventNodeMacroTimeReevaluateOperation[]> {
     constructor(macroTime: EventMacroTime, chart: Chart) {
         const ops: EventNodeMacroTimeReevaluateOperation[] = [];
-        for (const node of macroTime.consumers) {
+        for (const [node, _] of macroTime.consumers) {
             ops.push(new EventNodeMacroTimeReevaluateOperation(node, chart));
         }
         super(...ops);

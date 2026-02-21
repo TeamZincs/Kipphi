@@ -390,7 +390,7 @@ export class MultiNodeDeleteOperation extends ComplexOperation<LazyOperation<typ
 export class EventNodeSequenceRenameOperation extends Operation { 
     updatesEditor: boolean = true;
     originalName: string;
-    constructor(public sequence: EventNodeSequence, public newName: string) {
+    constructor(public sequence: EventNodeSequence<EventValueESType>, public newName: string) {
         super();
         this.originalName = sequence.id;
         if (this.originalName === newName) {
