@@ -16,5 +16,11 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "exports": {
+    "./operation": null,
+    ".": {
+      "import": "./index.ts"
+    }
   }
 }
