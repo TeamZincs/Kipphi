@@ -58,7 +58,7 @@ export abstract class EasedEvaluator<T extends EventValueESType> extends Evaluat
      */
     abstract deriveWithEasing(easing: Easing): EasedEvaluator<T>;
 
-    static getEvaluatorFromEasing<T extends EventValueESType>(type: EventValueTypeOfType<T>, easing: Easing, interpretedAs?: InterpreteAs) {
+    static getEvaluatorFromEasing<T extends EventValueESType>(type: EventValueTypeOfType<T>, easing: Easing, interpretedAs?: InterpreteAs): EasedEvaluatorOfType<T> {
         const easingIsNormal = easing instanceof NormalEasing;
         switch (type) {
             case EventValueType.numeric:

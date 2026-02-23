@@ -497,7 +497,7 @@ easingArray.forEach((easing, index) => {
 })
 
 export const rpeEasingArray = [
-    null,
+    fixedEasing,
     linearEasing, // 1
     easingMap.sine.out, // 2
     easingMap.sine.in, // 3
