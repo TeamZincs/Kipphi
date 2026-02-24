@@ -66,6 +66,9 @@ export class JudgeLine {
      */
     // renderMatrix: Matrix;
 
+    /**
+     * 是否随父线旋转
+     */
     rotatesWithFather: boolean = false;
 
     id: number;
@@ -84,7 +87,7 @@ export class JudgeLine {
         line.name = data.Name;
         chart.judgeLineGroups[data.Group].add(line);
         line.cover = Boolean(data.isCover);
-        line.rotatesWithFather = data.rotateWithFather;
+        line.rotatesWithFather = data.rotateWithFather ?? false;
         line.anchor = data.anchor ?? [0.5, 0.5];
         line.texture = data.Texture || "line.png";
         line.zOrder = data.zOrder ?? 0;
@@ -180,7 +183,8 @@ export class JudgeLine {
             line.speedSequence = EventNodeSequence.mergeSequences(speedSequences) as SpeedENS;
             line.speedSequence.updateFloorPositionAfter(line.speedSequence.head.next, timeCalculator);
         } else {
-            line.speedSequence = chart.createEventNodeSequence(EventType.speed, `#${id}.speed`) as SpeedENS;
+            line.speedSequence = speedSequences[0]
+            chart.registerEventNodeSequence(EventType.speed, `#${id}.speed`, speedSequences[0]);
         }
         if (data.extended) {
             if (data.extended.scaleXEvents) {
@@ -220,7 +224,7 @@ export class JudgeLine {
         const line = new JudgeLine(chart)
         line.id = id;
         line.name = lowerCaseNameAndTexture ? (data as JudgeLineDataKPA2).name : (data as JudgeLineDataKPA).Name;
-        line.rotatesWithFather = data.rotatesWithFather;
+        line.rotatesWithFather = data.rotatesWithFather ?? false;
         line.anchor = data.anchor ?? [0.5, 0.5];
         line.texture = (lowerCaseNameAndTexture ? (data as JudgeLineDataKPA2).texture : (data as JudgeLineDataKPA).Texture)  ?? "line.png";
         line.cover = data.cover ?? true;
@@ -283,16 +287,19 @@ export class JudgeLine {
                     ly.speed = null;
                 }
             }
-            let seq: EventNodeSequence<number>;
-            if (oldSequences.length > 0) {
+            let seq: SpeedENS;
+            if (oldSequences.length > 1) {
                 
                 seq = EventNodeSequence.mergeSequences(
                     oldSequences
-                );
-                (seq as SpeedENS).updateFloorPositionAfter((seq as SpeedENS).head.next, timeCalculator);
+                ) as SpeedENS;
+                seq.updateFloorPositionAfter((seq as SpeedENS).head.next, timeCalculator);
+            } else if (oldSequences.length === 1) {
+                chart.registerEventNodeSequence(EventType.speed, `#${line.id}.speed`, oldSequences[0]);
+                seq = oldSequences[0];
+                seq.updateFloorPositionAfter(seq.head.next, timeCalculator);
             } else {
-                seq = chart.createEventNodeSequence(EventType.speed, `#${line.id}.speed`);
-
+                seq = chart.createEventNodeSequence(EventType.speed, `#${line.id}.speed`) as SpeedENS;
             }
             line.speedSequence = seq as SpeedENS;
         }

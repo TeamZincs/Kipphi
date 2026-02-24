@@ -407,6 +407,14 @@ export class Chart {
         this.sequenceMap.set(name, seq);
         return seq;
     }
+
+    registerEventNodeSequence<T extends EventType>(type: T, name: string, seq: EventNodeSequence<T>) {
+        if (this.sequenceMap.has(name)) {
+            throw err.SEQUENCE_NAME_OCCUPIED(name);
+        }
+        seq.id = name;
+        this.sequenceMap.set(name, seq);
+    }
     
     /**
      * 对谱面物量进行重新计数。
