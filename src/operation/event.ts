@@ -79,7 +79,7 @@ export class EventNodePairInsertOperation <VT extends EventValueESType> extends 
         if (!this.sequence) {
             throw err.PARENT_SEQUENCE_NOT_FOUND(targetPrevious?.time);
         }
-        this.updatesFP = updatesFP && node.isSpeed();
+        this.updatesFP = updatesFP && targetPrevious.isSpeed();
     }
     do() {
         const [endNode, startNode] = EventNode.insert(this.node, this.tarPrev);
