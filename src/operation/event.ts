@@ -94,14 +94,17 @@ export class EventNodePairInsertOrOverwriteOperation <VT extends EventValueESTyp
 extends UnionOperation<EventNodePairInsertOperation<VT> | EventNodeValueChangeOperation<VT>> {
     overlapping: boolean = false;
     constructor(node: EventStartNode<VT>, targetPrevious: EventStartNode<VT>, updatesFP = true) {
+        const equalTime = TC.eq(node.time, targetPrevious.time);
         super(() => {
-            if (TC.eq(node.time, targetPrevious.time)) {
-                this.overlapping = true;
+            if (equalTime) {
                 return new EventNodeValueChangeOperation(targetPrevious, node.value);
             } else {
                 return new EventNodePairInsertOperation(node, targetPrevious, updatesFP);
             }
-        })
+        });
+        if (equalTime) {
+            this.overlapping = true;
+        }
     }
 }
 
