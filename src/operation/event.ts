@@ -91,7 +91,7 @@ export class EventNodePairInsertOperation <VT extends EventValueESType> extends 
 }
 
 export class EventNodePairInsertOrOverwriteOperation <VT extends EventValueESType>
-extends UnionOperation<EventNodePairInsertOperation<VT> | EventNodeValueChangeOperation<VT>> {
+extends UnionOperation<LazyOperation<typeof EventNodePairInsertOperation<VT>> | EventNodeValueChangeOperation<VT>> {
     overlapping: boolean = false;
     constructor(node: EventStartNode<VT>, targetPrevious: EventStartNode<VT>, updatesFP = true) {
         const equalTime = TC.eq(node.time, targetPrevious.time);
@@ -99,7 +99,8 @@ extends UnionOperation<EventNodePairInsertOperation<VT> | EventNodeValueChangeOp
             if (equalTime) {
                 return new EventNodeValueChangeOperation(targetPrevious, node.value);
             } else {
-                return new EventNodePairInsertOperation(node, targetPrevious, updatesFP);
+                return EventNodePairInsertOperation.lazy(node, targetPrevious, updatesFP);
+                // 此处使用懒操作，防止构造器认为自己在连接两个孤立节点而报错
             }
         });
         if (equalTime) {
