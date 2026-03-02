@@ -586,7 +586,6 @@ export class Chart {
      * @param interpreteAs 文本解释方式
      * @returns 对应类型的缓动求值器
      */
-    getEasedEvaluator<T extends string>(easing: Easing, type: EventValueType.text, interpreteAs: InterpreteAs): TextEasedEvaluator;
     getEasedEvaluator<T extends EventValueESType>(easing: Easing, type: EventValueTypeOfType<T>, interpreteAs?: InterpreteAs): EasedEvaluatorOfType<T> {
         const easingIsNormal = easing instanceof NormalEasing;
         switch (type) {

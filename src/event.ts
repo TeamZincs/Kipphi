@@ -342,7 +342,7 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
             start: this.value,
             startTime: this.time,
             evaluator: this.evaluator.dumpFor(this),
-            macro: this.macroValue.dumpForNode(this),
+            macro: this.macroValue?.dumpForNode(this),
             macroTime: this.macroTime?.dumpForNode(this),
             linkedMacro: [...this.linkedMacros].map(macro => macro.dumpLinkForNode(this)),
         }
