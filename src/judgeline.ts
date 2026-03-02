@@ -844,6 +844,7 @@ export class JudgeLine {
         if (this.extendedLayer.text) {
             eventNodeSequences.add(this.extendedLayer.text);
         }
+        eventNodeSequences.add(this.speedSequence); // 忘了这个，特此留念（
         return {
             group: judgeLineGroups.indexOf(this.group),
             id: this.id,
