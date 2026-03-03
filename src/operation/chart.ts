@@ -1,7 +1,7 @@
 import { Chart } from "../chart";
 import { Operation } from "./basic";
 
-type ChartPropName = "name" | "level" | "composer" | "illustrator" | "charter" | "offset"
+export type ChartPropName = "name" | "level" | "composer" | "illustrator" | "charter" | "offset"
 
 export class ChartPropChangeOperation<T extends ChartPropName> extends Operation {
     originalValue: Chart[T];

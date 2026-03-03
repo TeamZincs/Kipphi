@@ -122,11 +122,10 @@ export class Chart {
     /** 谱面持续时间（秒） */
     duration: number;
 
-    // 以分钟计
-    /** 谱面制作所用时间（分钟） */
-    chartingTime: number;
-    /** RPE格式的谱面制作时间 */
-    rpeChartingTime: number;
+    /** 谱面制作所用时间（以秒计） */
+    chartingSeconds: number;
+    /** RPE格式的谱面制作时间（以秒计） */
+    rpeChartingSeconds: number;
 
     
     /** 标记谱面是否已被修改 */
@@ -178,9 +177,9 @@ export class Chart {
         chart.charter = data.META.charter ?? "unknown";
         chart.illustrator = data.META.illustration ?? "unknown";
         chart.duration = duration;
-        chart.chartingTime = data.kpaChartTime
-        chart.rpeChartingTime = data.chartTime ? Math.round(data.chartTime / 60) : 0;
-        chart.chartingTime = 0;
+        chart.chartingSeconds = data.kpaChartTime ?? 0;
+        chart.rpeChartingSeconds = data.chartTime ?? 0;
+        chart.chartingSeconds = 0;
         chart.initCalculator(data.BPMList)
         chart.nnnList = new NNNList(chart.getEffectiveBeats())
         
@@ -223,10 +222,15 @@ export class Chart {
         chart.charter = data.info.charter ?? "unknown";
         chart.offset = data.offset;
         chart.judgeLineGroups = data.judgeLineGroups.map(group => new JudgeLineGroup(group));
-        chart.chartingTime = data.chartTime ?? 0;
-        chart.rpeChartingTime = data.rpeChartTime ?? 0;
         
-
+        const interpreteAsSecs = data.version && data.version >= 203;
+        if (interpreteAsSecs) {
+            chart.chartingSeconds = data.chartTime ?? 0;
+            chart.rpeChartingSeconds = data.rpeChartTime ?? 0;
+        } else {
+            chart.chartingSeconds = data.chartTime ? data.chartTime * 60 : 0;
+            chart.rpeChartingSeconds = data.rpeChartTime ? data.rpeChartTime * 60 : 0;
+        }
 
         chart.initCalculator(data.bpmList);
         chart.nnnList = new NNNList(chart.getEffectiveBeats());
@@ -377,8 +381,8 @@ export class Chart {
             offset: this.offset,
             orphanLines: orphanLines,
             judgeLineGroups: this.judgeLineGroups.map(g => g.name),
-            chartTime: this.chartingTime,
-            rpeChartTime: this.rpeChartingTime
+            chartTime: this.chartingSeconds,
+            rpeChartTime: this.rpeChartingSeconds
         };
     }
     
