@@ -244,10 +244,10 @@ export class UnionOperation<T extends Operation> extends Operation {
     }
     // 这样子写不够严密，如果要继承这个类，并且子操作需要谱面，就要重写这个方法的签名
     do(chart?: Chart) {
-        this.operation.do(chart);
+        this.operation?.do(chart);
     }
     undo(chart?: Chart) {
-        this.operation.undo(chart);
+        this.operation?.undo(chart);
     }
 }
 

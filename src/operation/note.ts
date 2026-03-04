@@ -74,7 +74,7 @@ export class NoteRemoveOperation extends Operation {
         }
         // 移除假Note不改变物量
         // 这里，一般没有人会在修改一个isFake值之后删除它，因此一般不用懒操作
-        this.comboDelta = note.isFake ? 0 : 1;
+        this.comboDelta = note.isFake ? 0 : -1;
     }
     do() {
         const {note, noteNode} = this;
