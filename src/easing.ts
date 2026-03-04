@@ -93,6 +93,40 @@ const easeInOutElastic = toEaseInOut(easeInElastic, easeOutElastic);
 const easeInOutBounce = toEaseInOut(easeInBounce, easeOutBounce);
 
 
+export const easingFns = {
+    linear,
+    easeInSine,
+    easeOutSine,
+    easeInOutSine,
+    easeInQuad,
+    easeOutQuad,
+    easeInOutQuad,
+    easeInCubic,
+    easeOutCubic,
+    easeInOutCubic,
+    easeInQuart,
+    easeOutQuart,
+    easeInOutQuart,
+    easeInQuint,
+    easeOutQuint,
+    easeInOutQuint,
+    easeInExpo,
+    easeOutExpo,
+    easeInOutExpo,
+    easeInCirc,
+    easeOutCirc,
+    easeInOutCirc,
+    easeInBack,
+    easeOutBack,
+    easeInOutBack,
+    easeInElastic,
+    easeOutElastic,
+    easeInOutElastic,
+    easeInBounce,
+    easeOutBounce,
+    easeInOutBounce
+}
+
 type FuncType = "linear" | "sine" | "quad" | "cubic" | "quart" | "quint" | "expo" | "circ" | "back" | "elastic" | "bounce"
 
 export const easingFnMap: {
