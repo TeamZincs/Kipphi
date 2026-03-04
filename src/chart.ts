@@ -528,7 +528,7 @@ export class Chart {
             case EasingType.normal:
                 return rpeEasingArray[data.identifier];
             case EasingType.segmented:
-                return new SegmentedEasing(this.createEasingFromData(data), data.left, data.right);
+                return new SegmentedEasing(this.createEasingFromData(data.inner), data.left, data.right);
             case EasingType.template:
                 return this.templateEasingLib.get(data.identifier);
             case EasingType.wrapper:
