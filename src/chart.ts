@@ -198,6 +198,7 @@ export class Chart {
             const father = data.father === -1 ? null : judgeLineList[data.father];
             if (father) {
                 father.children.add(line);
+                line.father = father;
             } else {
                 chart.orphanLines.push(line);
             }

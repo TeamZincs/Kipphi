@@ -253,7 +253,9 @@ export class JudgeLine {
             }
         }
         for (const child of data.children) {
-            line.children.add(JudgeLine.fromKPAJSON(version, chart, child.id, child, templates, timeCalculator));
+            const childLine = JudgeLine.fromKPAJSON(version, chart, child.id, child, templates, timeCalculator)
+            childLine.father = line;
+            line.children.add(childLine);
         }
         const unwrap = <VT extends EventValueESType>(sequence: EventNodeSequence<EventValueESType>, predicate: (value: unknown) => boolean, typeStr: keyof typeof EventValueType) => {
             const value = sequence.head.next.value
