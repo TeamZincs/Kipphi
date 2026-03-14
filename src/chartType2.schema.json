@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "title": "ChartDataKPA2",
-  "description": "KPA2格式谱面数据根对象\n\nRoot object of KPA2 format chart data",
+  "description": "KPA2 格式谱面数据根对象\n\nRoot object of KPA2 format chart data",
   "properties": {
     "$schema": {
       "type": "string",
@@ -45,39 +45,45 @@
           "description": "曲师名称\n\nComposer name"
         }
       },
-      "required": ["level", "name", "charter", "illustrator", "composer"]
+      "required": [
+        "level",
+        "name",
+        "charter",
+        "illustrator",
+        "composer"
+      ]
     },
     "ui": {
       "type": "object",
-      "description": "UI组件配置\n\nUI component configuration",
+      "description": "UI 组件配置\n\nUI component configuration",
       "properties": {
         "pause": {
           "type": "number",
-          "description": "暂停按钮绑定位置（null为不绑定）\n\nPause button binding position (null means not bound)"
+          "description": "暂停按钮绑定位置（null 为不绑定）\n\nPause button binding position (null means not bound)"
         },
         "combonumber": {
           "type": "number",
-          "description": "连击数字绑定位置（null为不绑定）\n\nCombo number binding position (null means not bound)"
+          "description": "连击数字绑定位置（null 为不绑定）\n\nCombo number binding position (null means not bound)"
         },
         "combo": {
           "type": "number",
-          "description": "连击标识绑定位置（null为不绑定）\n\nCombo label binding position (null means not bound)"
+          "description": "连击标识绑定位置（null 为不绑定）\n\nCombo label binding position (null means not bound)"
         },
         "score": {
           "type": "number",
-          "description": "分数显示绑定位置（null为不绑定）\n\nScore display binding position (null means not bound)"
+          "description": "分数显示绑定位置（null 为不绑定）\n\nScore display binding position (null means not bound)"
         },
         "bar": {
           "type": "number",
-          "description": "进度条绑定位置（null为不绑定）\n\nProgress bar binding position (null means not bound)"
+          "description": "进度条绑定位置（null 为不绑定）\n\nProgress bar binding position (null means not bound)"
         },
         "name": {
           "type": "number",
-          "description": "曲名显示绑定位置（null为不绑定）\n\nSong name display binding position (null means not bound)"
+          "description": "曲名显示绑定位置（null 为不绑定）\n\nSong name display binding position (null means not bound)"
         },
         "level": {
           "type": "number",
-          "description": "难度等级显示绑定位置（null为不绑定）\n\nDifficulty level display binding position (null means not bound)"
+          "description": "难度等级显示绑定位置（null 为不绑定）\n\nDifficulty level display binding position (null means not bound)"
         }
       }
     },
@@ -97,7 +103,10 @@
             "description": "缓动名称\n\nEasing name"
           }
         },
-        "required": ["content", "name"]
+        "required": [
+          "content",
+          "name"
+        ]
       }
     },
     "wrapperEasings": {
@@ -124,7 +133,12 @@
             "description": "缓动标识符\n\nEasing identifier"
           }
         },
-        "required": ["jsExpr", "start", "end", "id"]
+        "required": [
+          "jsExpr",
+          "start",
+          "end",
+          "id"
+        ]
       }
     },
     "eventNodeSequences": {
@@ -166,27 +180,116 @@
                   "description": "结束值\n\nEnd value"
                 },
                 "macroStart": {
+                  "oneOf": [
+                    {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "string",
+                          "description": "宏 ID\n\nMacro ID"
+                        },
+                        {
+                          "type": "number",
+                          "description": "原型编号\n\nProto number"
+                        }
+                      ],
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "description": "宏开始值（元组形式）\n\nMacro start value (tuple form)"
+                    },
+                    {
+                      "type": "string",
+                      "description": "宏开始值（字符串形式）\n\nMacro start value (string form)"
+                    }
+                  ],
                   "description": "宏开始值（如果使用宏计算起始值）\n\nMacro start value (if using macro to calculate start value)"
                 },
                 "macroEnd": {
+                  "oneOf": [
+                    {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "string",
+                          "description": "宏 ID\n\nMacro ID"
+                        },
+                        {
+                          "type": "number",
+                          "description": "原型编号\n\nProto number"
+                        }
+                      ],
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "description": "宏结束值（元组形式）\n\nMacro end value (tuple form)"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
                   "description": "宏结束值（如果使用宏计算结束值）\n\nMacro end value (if using macro to calculate end value)"
                 },
                 "macroStartTime": {
-                  "type": "array",
-                  "items": {
-                    "type": "number"
-                  },
-                  "minItems": 3,
-                  "maxItems": 3,
-                  "description": "宏开始时间[整数, 分子, 分母]（如果使用宏计算开始时间）\n\nMacro start time [integer, numerator, denominator] (if using macro to calculate start time)"
+                  "oneOf": [
+                    {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "string",
+                          "description": "宏 ID\n\nMacro ID"
+                        },
+                        {
+                          "type": "number",
+                          "description": "原型编号\n\nProto number"
+                        }
+                      ],
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "description": "宏开始时间（如果使用宏计算开始时间）\n\nMacro start time (if using macro to calculate start time)"
                 },
-                "linkedMacro": {
-                  "type": "number",
-                  "description": "关联的宏索引（用于时间宏）\n\nLinked macro index (for time macros)"
+                "startLinkedMacro": {
+                  "type": "array",
+                  "description": "起始时间关联的宏链接列表\n\nLinked macro list for start time",
+                  "items": {
+                    "type": "array",
+                    "items": [
+                      {
+                        "type": "string",
+                        "pattern": "^(value|time):.+$",
+                        "description": "宏类型和 ID（格式：value:id 或 time:id）\n\nMacro type and ID (format: value:id or time:id)"
+                      },
+                      {
+                        "type": "number",
+                        "description": "节点 ID\n\nNode ID"
+                      }
+                    ],
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
                 },
                 "endLinkedMacro": {
-                  "type": "number",
-                  "description": "结束时间关联的宏索引（用于时间宏）\n\nEnd time linked macro index (for time macros)"
+                  "type": "array",
+                  "description": "结束时间关联的宏链接列表\n\nLinked macro list for end time",
+                  "items": {
+                    "type": "array",
+                    "items": [
+                      {
+                        "type": "string",
+                        "pattern": "^(value|time):.+$",
+                        "description": "宏类型和 ID（格式：value:id 或 time:id）\n\nMacro type and ID (format: value:id or time:id)"
+                      },
+                      {
+                        "type": "number",
+                        "description": "节点 ID\n\nNode ID"
+                      }
+                    ],
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
                 },
                 "evaluator": {
                   "type": "object",
@@ -197,13 +300,19 @@
                       "properties": {
                         "type": {
                           "type": "number",
-                          "enum": [0],
-                          "description": "求值器类型(eased)\n\nEvaluator type (eased)"
+                          "enum": [
+                            0
+                          ],
+                          "description": "求值器类型 (eased)\n\nEvaluator type (eased)"
                         },
                         "interpretedAs": {
                           "type": "number",
-                          "enum": [0, 1, 2, 3],
-                          "description": "文本缓动解释方式(0: normal, 1: text, 2: path, 3: bezier)，仅用于文本类型事件\n\nText easing interpretation method (0: normal, 1: text, 2: path, 3: bezier), only used for text type events"
+                          "enum": [
+                            0,
+                            1,
+                            2
+                          ],
+                          "description": "文本缓动解释方式 (0: str, 1: int, 2: float)，仅用于文本类型事件\n\nText easing interpretation method (0: str, 1: int, 2: float), only used for text type events"
                         },
                         "easing": {
                           "type": "object",
@@ -214,53 +323,70 @@
                               "properties": {
                                 "type": {
                                   "type": "number",
-                                  "enum": [0],
-                                  "description": "缓动类型(normal)\n\nEasing type (normal)"
+                                  "enum": [
+                                    0
+                                  ],
+                                  "description": "缓动类型 (normal)\n\nEasing type (normal)"
                                 },
                                 "identifier": {
                                   "type": "number",
                                   "description": "标识符\n\nIdentifier"
                                 }
                               },
-                              "required": ["type", "identifier"]
+                              "required": [
+                                "type",
+                                "identifier"
+                              ]
                             },
                             {
                               "type": "object",
                               "properties": {
                                 "type": {
                                   "type": "number",
-                                  "enum": [1],
-                                  "description": "缓动类型(template)\n\nEasing type (template)"
-                                },
-                                "identifier": {
-                                  "type": "string",
-                                  "description": "标识符\n\nIdentifier"
-                                }
-                              },
-                              "required": ["type", "identifier"]
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "type": {
-                                  "type": "number",
-                                  "enum": [2],
-                                  "description": "缓动类型(wrapper)\n\nEasing type (wrapper)"
+                                  "enum": [
+                                    1
+                                  ],
+                                  "description": "缓动类型 (template)\n\nEasing type (template)"
                                 },
                                 "identifier": {
                                   "type": "string",
                                   "description": "标识符\n\nIdentifier"
                                 }
                               },
-                              "required": ["type", "identifier"]
+                              "required": [
+                                "type",
+                                "identifier"
+                              ]
                             },
                             {
                               "type": "object",
                               "properties": {
                                 "type": {
                                   "type": "number",
-                                  "enum": [3],
-                                  "description": "缓动类型(bezier)\n\nEasing type (bezier)"
+                                  "enum": [
+                                    4
+                                  ],
+                                  "description": "缓动类型 (wrapper)\n\nEasing type (wrapper)"
+                                },
+                                "identifier": {
+                                  "type": "string",
+                                  "description": "标识符\n\nIdentifier"
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "identifier"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "number",
+                                  "enum": [
+                                    2
+                                  ],
+                                  "description": "缓动类型 (bezier)\n\nEasing type (bezier)"
                                 },
                                 "bezier": {
                                   "type": "array",
@@ -269,18 +395,23 @@
                                   },
                                   "minItems": 4,
                                   "maxItems": 4,
-                                  "description": "贝塞尔控制点坐标[x1, y1, x2, y2]\n\nBezier control point coordinates [x1, y1, x2, y2]"
+                                  "description": "贝塞尔控制点坐标 [x1, y1, x2, y2]\n\nBezier control point coordinates [x1, y1, x2, y2]"
                                 }
                               },
-                              "required": ["type", "bezier"]
+                              "required": [
+                                "type",
+                                "bezier"
+                              ]
                             },
                             {
                               "type": "object",
                               "properties": {
                                 "type": {
                                   "type": "number",
-                                  "enum": [4],
-                                  "description": "缓动类型(segmented)\n\nEasing type (segmented)"
+                                  "enum": [
+                                    3
+                                  ],
+                                  "description": "缓动类型 (segmented)\n\nEasing type (segmented)"
                                 },
                                 "left": {
                                   "type": "number",
@@ -291,23 +422,33 @@
                                   "description": "右边界\n\nRight boundary"
                                 },
                                 "inner": {
-                                  "type": "object",
+                                  "$ref": "#/properties/eventNodeSequences/items/properties/events/items/properties/evaluator/oneOf/0/properties/easing",
                                   "description": "内部缓动数据\n\nInner easing data"
                                 }
                               },
-                              "required": ["type", "left", "right", "inner"]
+                              "required": [
+                                "type",
+                                "left",
+                                "right",
+                                "inner"
+                              ]
                             }
                           ]
                         }
                       },
-                      "required": ["type", "easing"]
+                      "required": [
+                        "type",
+                        "easing"
+                      ]
                     },
                     {
                       "type": "object",
                       "properties": {
                         "type": {
                           "type": "number",
-                          "enum": [1],
+                          "enum": [
+                            1
+                          ],
                           "description": "求值器类型(expressionbased)\n\nEvaluator type (expression-based)"
                         },
                         "jsExpr": {
@@ -315,14 +456,19 @@
                           "description": "JavaScript表达式\n\nJavaScript expression"
                         }
                       },
-                      "required": ["type", "jsExpr"]
+                      "required": [
+                        "type",
+                        "jsExpr"
+                      ]
                     },
                     {
                       "type": "object",
                       "properties": {
                         "type": {
                           "type": "number",
-                          "enum": [2],
+                          "enum": [
+                            2
+                          ],
                           "description": "求值器类型(macro)\n\nEvaluator type (macro)"
                         },
                         "name": {
@@ -334,7 +480,11 @@
                           "description": "编译后的JavaScript表达式\n\nCompiled JavaScript expression"
                         }
                       },
-                      "required": ["type", "name", "compiled"]
+                      "required": [
+                        "type",
+                        "name",
+                        "compiled"
+                      ]
                     }
                   ]
                 }
@@ -354,30 +504,119 @@
           },
           "type": {
             "type": "number",
-            "enum": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            "enum": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
             "description": "事件类型(moveX, moveY, rotate, alpha, speed, easing, bpm, scaleX, scaleY, text, color)\n\nEvent type (moveX, moveY, rotate, alpha, speed, easing, bpm, scaleX, scaleY, text, color)"
           },
           "final": {
             "type": "object",
-            "description": "序列结束值\n\nSequence final value",
+            "description": "序列最终起始节点数据\n\nFinal event start node data",
             "properties": {
-              "time": {
+              "startTime": {
                 "type": "array",
                 "items": {
                   "type": "number"
                 },
                 "minItems": 3,
                 "maxItems": 3,
-                "description": "结束时间[整数, 分子, 分母]\n\nEnd time [integer, numerator, denominator]"
+                "description": "开始时间 [整数，分子，分母]\n\nStart time [integer, numerator, denominator]"
               },
-              "value": {
-                "description": "结束值\n\nEnd value"
+              "start": {
+                "description": "起始值\n\nStart value"
+              },
+              "evaluator": {
+                "$ref": "#/properties/eventNodeSequences/items/properties/events/items/properties/evaluator",
+                "description": "求值器\n\nEvaluator"
+              },
+              "macro": {
+                "oneOf": [
+                  {
+                    "type": "array",
+                    "items": [
+                      {
+                        "type": "string",
+                        "description": "宏 ID\n\nMacro ID"
+                      },
+                      {
+                        "type": "number",
+                        "description": "原型编号\n\nProto number"
+                      }
+                    ],
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "起始值绑定的宏的 ID\n\nMacro ID for start value"
+              },
+              "macroTime": {
+                "oneOf": [
+                  {
+                    "type": "array",
+                    "items": [
+                      {
+                        "type": "string",
+                        "description": "宏 ID\n\nMacro ID"
+                      },
+                      {
+                        "type": "number",
+                        "description": "原型编号\n\nProto number"
+                      }
+                    ],
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "起始时间绑定的宏的 ID\n\nMacro ID for start time"
+              },
+              "linkedMacro": {
+                "type": "array",
+                "description": "将该事件的起始节点关联到一个宏的某个参数\n\nLink the start node of this event to a macro parameter",
+                "items": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "string",
+                      "pattern": "^(value|time):.+$"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "minItems": 2,
+                  "maxItems": 2
+                }
               }
             },
-            "required": ["time", "value"]
+            "required": [
+              "startTime",
+              "start",
+              "evaluator"
+            ]
           }
         },
-        "required": ["events", "id", "type", "final"]
+        "required": [
+          "events",
+          "id",
+          "type",
+          "final"
+        ]
       }
     },
     "orphanLines": {
@@ -427,7 +666,11 @@
                           "properties": {
                             "above": {
                               "type": "number",
-                              "enum": [0, 1, 2],
+                              "enum": [
+                                0,
+                                1,
+                                2
+                              ],
                               "description": "音符位置(0:下方, 1:上方, 2:特殊下方)\n\nNote position (0: below, 1: above, 2: special below)"
                             },
                             "alpha": {
@@ -445,7 +688,10 @@
                             },
                             "isFake": {
                               "type": "number",
-                              "enum": [0, 1],
+                              "enum": [
+                                0,
+                                1
+                              ],
                               "description": "是否为假音符(0:否, 1:是)\n\nWhether it is a fake note (0: no, 1: yes)"
                             },
                             "positionX": {
@@ -471,7 +717,12 @@
                             },
                             "type": {
                               "type": "number",
-                              "enum": [1, 2, 3, 4],
+                              "enum": [
+                                1,
+                                2,
+                                3,
+                                4
+                              ],
                               "description": "音符类型(1:Tap, 2:Hold, 3:Flick, 4:Drag)\n\nNote type (1: Tap, 2: Hold, 3: Flick, 4: Drag)"
                             },
                             "visibleTime": {
@@ -546,11 +797,18 @@
                         "description": "节点中Note开始时间[整数, 分子, 分母]\n\nNote start time in node [integer, numerator, denominator]"
                       }
                     },
-                    "required": ["notes", "startTime"]
+                    "required": [
+                      "notes",
+                      "startTime"
+                    ]
                   }
                 }
               },
-              "required": ["speed", "medianYOffset", "noteNodes"]
+              "required": [
+                "speed",
+                "medianYOffset",
+                "noteNodes"
+              ]
             }
           },
           "hnLists": {
@@ -589,11 +847,18 @@
                         "description": "节点中Hold的开始时间[整数, 分子, 分母]\n\nHold start time in node [integer, numerator, denominator]"
                       }
                     },
-                    "required": ["notes", "startTime"]
+                    "required": [
+                      "notes",
+                      "startTime"
+                    ]
                   }
                 }
               },
-              "required": ["speed", "medianYOffset", "noteNodes"]
+              "required": [
+                "speed",
+                "medianYOffset",
+                "noteNodes"
+              ]
             }
           },
           "name": {
@@ -627,7 +892,12 @@
                   "description": "透明度事件序列ID\n\nOpacity event sequence ID"
                 }
               },
-              "required": ["moveX", "moveY", "rotate", "alpha"]
+              "required": [
+                "moveX",
+                "moveY",
+                "rotate",
+                "alpha"
+              ]
             }
           },
           "speedEventNodeSeq": {
@@ -676,7 +946,10 @@
                 "description": "颜色事件序列ID\n\nColor event sequence ID"
               }
             },
-            "required": ["scaleXEvents", "scaleYEvents"]
+            "required": [
+              "scaleXEvents",
+              "scaleYEvents"
+            ]
           },
           "zOrder": {
             "type": "number",
@@ -718,7 +991,10 @@
             "description": "开始时间[整数, 分子, 分母]\n\nStart time [integer, numerator, denominator]"
           }
         },
-        "required": ["bpm", "startTime"]
+        "required": [
+          "bpm",
+          "startTime"
+        ]
       }
     },
     "judgeLineGroups": {
@@ -744,25 +1020,19 @@
         "type": "object",
         "description": "宏评估器\n\nMacro evaluator",
         "properties": {
-          "name": {
+          "macro": {
             "type": "string",
             "description": "宏名称\n\nMacro name"
           },
-          "jsExpr": {
+          "id": {
             "type": "string",
-            "description": "JavaScript表达式\n\nJavaScript expression"
-          },
-          "compiled": {
-            "type": "string",
-            "description": "编译后的JavaScript表达式\n\nCompiled JavaScript expression"
-          },
-          "type": {
-            "type": "number",
-            "enum": [0, 1],
-            "description": "宏类型(0: time, 1: value)\n\nMacro type (0: time, 1: value)"
+            "description": "缓动标识符\n\nEasing identifier"
           }
         },
-        "required": ["name", "jsExpr", "compiled", "type"]
+        "required": [
+          "macro",
+          "id"
+        ]
       }
     },
     "timeMacros": {
@@ -773,19 +1043,22 @@
         "description": "时间宏\n\nTime macro",
         "properties": {
           "id": {
-            "type": "number",
+            "type": "string",
             "description": "宏唯一标识符\n\nMacro unique identifier"
           },
-          "jsExpr": {
+          "macro": {
             "type": "string",
-            "description": "JavaScript表达式\n\nJavaScript expression"
+            "description": "宏名称\n\nMacro name"
           },
-          "compiled": {
-            "type": "string",
-            "description": "编译后的JavaScript表达式\n\nCompiled JavaScript expression"
+          "parametric": {
+            "type": "boolean",
+            "description": "是否使用参数方程\n\nWhether to use parametric equation"
           }
         },
-        "required": ["id", "jsExpr", "compiled"]
+        "required": [
+          "id",
+          "macro"
+        ]
       }
     },
     "valueMacros": {
@@ -796,30 +1069,36 @@
         "description": "值宏\n\nValue macro",
         "properties": {
           "id": {
-            "type": "number",
+            "type": "string",
             "description": "宏唯一标识符\n\nMacro unique identifier"
           },
-          "jsExpr": {
+          "macro": {
             "type": "string",
-            "description": "JavaScript表达式\n\nJavaScript expression"
+            "description": "宏名称\n\nMacro name"
           },
-          "compiled": {
-            "type": "string",
-            "description": "编译后的JavaScript表达式\n\nCompiled JavaScript expression"
+          "parametric": {
+            "type": "boolean",
+            "description": "是否使用参数方程\n\nWhether to use parametric equation"
           }
         },
-        "required": ["id", "jsExpr", "compiled"]
+        "required": [
+          "id",
+          "macro"
+        ]
       }
     }
   },
   "required": [
     "version",
+    "$schema",
     "offset",
     "duration",
     "info",
-    "ui",
     "templateEasings",
     "wrapperEasings",
+    "macroEvaluators",
+    "timeMacros",
+    "valueMacros",
     "eventNodeSequences",
     "orphanLines",
     "bpmList",
