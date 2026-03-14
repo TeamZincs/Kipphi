@@ -13,4 +13,5 @@ export * from "./chart";
 export * from "./jumparray";
 export * as Op from "./operation/index";
 export * from "./version";
-export { default as Environment } from "./env";
+export { default as Environment, KPAError } from "./env";
+export { RPEChartCompiler } from "./rpeChartCompiler";
