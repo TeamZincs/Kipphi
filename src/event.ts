@@ -655,23 +655,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             if (lastEnd.type === NodeType.HEAD) {
                 EventNode.connect(lastEnd, start)
             // 如果上一个是钩定事件，那么一块捋平
-            } else if (
-                   lastEnd.value === lastEnd.previous.value
-                && lastEnd.previous.evaluator instanceof EasedEvaluator
-            ) {
-                lastEnd.time = start.time
-                EventNode.connect(lastEnd, start)
-            } else if (TC.eq(lastEnd.time, start.time)) {
-                const val = lastEnd.value;
-                const midStart = new EventStartNode(lastEnd.time, val);
-                const midEnd = new EventEndNode(start.time, val);
-                midStart.evaluator = lastEnd.previous.evaluator;
-                EventNode.connect(lastEnd, midStart);
-                EventNode.connect(midStart, midEnd);
-                EventNode.connect(midEnd, start);
-                listLength++;
             } else {
-                
                 EventNode.connect(lastEnd, start)
             }
             
