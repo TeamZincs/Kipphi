@@ -147,9 +147,10 @@ export class OperationList extends EventTarget {
             this.dispatchEvent(new OperationErrorEvent(operation, e as Error))
             return
         }
+        this.undoneOperations = [];
+        this.operations.push(operation);
         this.dispatchEvent(new OperationEvent("do", operation));
         this.processFlags(operation);
-        this.operations.push(operation);
     }
     processFlags(operation: Operation) {
 
