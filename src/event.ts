@@ -649,16 +649,28 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
                 err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}] and the previous`).warn()
             }
             if (!TC.lt(event.startTime, event.endTime)) {
-                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}]`).warn()
+                if (TC.eq(event.startTime, event.endTime)) {
+                    // 零长事件直接忽略，并认为已经修复
+                    err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}]`).fix();
+                    continue;
+                } else {
+                    err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}]`).warn()
+                }
             }
-            lastEndTime = event.endTime;
             if (lastEnd.type === NodeType.HEAD) {
                 EventNode.connect(lastEnd, start)
-            // 如果上一个是钩定事件，那么一块捋平
+            } else if (TC.gt(event.startTime, lastEndTime)) {
+                err.EVENT_NODE_NOT_DENSE(`${pos}.events[${index}]`).warn();
+                const mid = new EventStartNode(lastEndTime, start.value);
+                const midEnd = new EventEndNode(event.startTime, end.value);
+                EventNode.connect(lastEnd, mid);
+                EventNode.connect(mid, midEnd);
+                EventNode.connect(midEnd, start);
             } else {
                 EventNode.connect(lastEnd, start)
             }
             
+            lastEndTime = event.endTime;
             lastEnd = end;
         }
         const last = lastEnd;
@@ -931,6 +943,29 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         }
         dest.initJump();
         return dest;
+    }
+    checkErrors() {
+        let currentNode: EventStartNode<VT> = this.head.next;
+        if (TC.ne(currentNode.time, [0, 0, 1])) {
+            err.EVENT_NODE_NOT_DENSE(`${this.id}, ${currentNode.time}`).fix();
+            currentNode.time = [0, 0, 1];
+        }
+        const endNode = currentNode.next;
+        if (endNode.type === NodeType.TAIL) {
+            return;
+        }
+
+        let lastEnd: EventEndNode<VT> = endNode;
+        while (true) {
+            const endNode = currentNode.next;
+            if (endNode.type === NodeType.TAIL) {
+                break;
+            }
+            if (TC.ne(lastEnd.time, currentNode.time)) {
+                err.EVENT_NODE_NOT_DENSE(`${this.id}, ${currentNode.time}`).warn();
+            }
+            currentNode = currentNode.next.next;
+        }
     }
 }
 

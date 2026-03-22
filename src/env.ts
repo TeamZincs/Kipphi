@@ -53,6 +53,7 @@ export enum ERROR_IDS {
     SEQUENCE_NODE_TIME_OCCUPIED =                   ENS        | OCCPIED       | 1,
     INVALID_EVENT_NODE_SEQUENCE_TYPE =              ENS        | INVALID_DATA  | 0,
     EVENT_NODE_TIME_NOT_INCREMENTAL =               ENS        | INVALID_DATA  | 1,
+    EVENT_NODE_NOT_DENSE =                          ENS        | INVALID_DATA  | 2,
     PARENT_SEQUENCE_NOT_FOUND =                     ENS        | INVALID_USAGE | 1,
     NEEDS_AT_LEAST_ONE_ENS =                        ENS        | INVALID_USAGE | 2,
     SEQUENCE_TYPE_NOT_CONSISTENT =                  ENS        | INVALID_USAGE | 3,
@@ -175,9 +176,37 @@ export const ERRORS = {
         `Parametric Macro requires key. At ${pos}`,
     MACRO_NOT_PARAMETRIC: (macroId: string, pos) =>
         `Macro '${macroId}' is not parametric. At ${pos}`,
+    EVENT_NODE_NOT_DENSE: (pos: string) =>
+        `EventNode is not dense. At ${pos}`,
 } satisfies Record<keyof typeof ERROR_IDS, (...args: any[]) => string>
 
+type EnumKeys<E extends Record<string, string | number>> = E[keyof E];
+
+// 工具类型：检查 T 的键是否恰好等于枚举的值集合
+type AssertExactEnumKeys<T, E extends Record<string, string | number>> =
+  // 1. 收集 T 的键（作为字符串字面量类型）
+  (keyof T) extends (keyof E)            // 不能有多余键
+    ? (keyof E) extends (keyof T)        // 不能缺键
+      ? T                                   // 通过检查
+      : { error: any/*error: "Interface is missing some enum keys"*/ }
+    : { error: "Interface has extra keys not in enum" };
+
+// 用类型别名做“编译期断言”
+type _CheckMap = AssertExactEnumKeys<ErrorMap, typeof ERROR_IDS>;
+interface _Error extends _CheckMap {
+    error: "";
+}
+
+
+interface ErrorMap extends Record<keyof typeof ERROR_IDS, Array<any>>{
+    EVENT_NODE_NOT_DENSE: [EventNode];
+}
+
+type ArgsOf<ET extends ERROR_IDS> = ET extends keyof ErrorMap ? ErrorMap[ET] : never;
+
 export class KPAError<ET extends ERROR_IDS> extends Error {
+    fixed = false;
+    args: ArgsOf<ET> | [];
     constructor(message: string, public id: ET) {
         super(message);
     }
@@ -186,8 +215,15 @@ export class KPAError<ET extends ERROR_IDS> extends Error {
      * 
      * 此时可以调用该方法，该方法会输出错误并把它保存到KPAError的一个`buffer`静态属性下。
      */
-    warn() {
+    warn(...args: ArgsOf<ET> | []) {
         console.warn(this.stack);
+        this.args = args;
+        KPAError.buffer.push(this);
+    }
+    fix(...args: ArgsOf<ET> | []) {
+        console.warn("[Auto Fixed]" + this.stack);
+        this.fixed = true;
+        this.args = args;
         KPAError.buffer.push(this);
     }
     static buffer: KPAError<ERROR_IDS>[] = [];
