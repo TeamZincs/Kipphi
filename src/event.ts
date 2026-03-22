@@ -505,7 +505,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         return type === EventType.speed                               ? 10  :
                type === EventType.scaleX || type === EventType.scaleY ? 1.0 :
                type === EventType.text                                ? ""  :
-               type === EventType.color                               ? [0, 0, 0] :
+               type === EventType.color                               ? [255, 255, 255] :
                0
     }
     /**
