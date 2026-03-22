@@ -63,6 +63,15 @@ export class BPMEndNode extends EventEndNode {
     override previous: BPMStartNode;
     /** 下一个BPM起始节点 */
     override next: BPMStartNode;
+
+    // @ts-expect-error 强加一个getter
+    get value(): number {
+        return this.previous.value;
+    }
+    set value(value: number) {
+        if (!this.previous) { return; }
+        this.previous.value = value;
+    }
     
     /**
      * 创建一个新的BPM结束节点
