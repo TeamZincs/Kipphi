@@ -81,6 +81,7 @@ export enum ERROR_IDS {
     
 
     INVALID_NOTE_PROP_TYPE =                        NOTE       | INVALID_TYPE  | 0,
+    HOLD_HAS_NO_DURATION =                          NOTE       | INVALID_DATA  | 0,
 
 
     INVALID_TIME_TUPLE =                            TC         | INVALID_DATA  | 0,
@@ -178,6 +179,8 @@ export const ERRORS = {
         `Macro '${macroId}' is not parametric. At ${pos}`,
     EVENT_NODE_NOT_DENSE: (pos: string) =>
         `EventNode is not dense. At ${pos}`,
+    HOLD_HAS_NO_DURATION: () =>
+        `Hold should have a duration.`,
 } satisfies Record<keyof typeof ERROR_IDS, (...args: any[]) => string>
 
 type EnumKeys<E extends Record<string, string | number>> = E[keyof E];

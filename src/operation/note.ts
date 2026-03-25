@@ -140,6 +140,11 @@ export class NoteAddOperation extends Operation {
         super()
         this.note = note;
         this.isHold = note.type === NoteType.hold;
+        if (this.isHold) {
+            if (TC.lt(note.endTime, note.startTime)) {
+                throw err.HOLD_HAS_NO_DURATION();
+            }
+        }
         this.noteNode = node;
         // 一般来说，操作是对于在谱里面的NoteNode，谱外面的不需要操作
         this.comboDelta = note.isFake ? 0 : +1;
