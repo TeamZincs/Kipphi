@@ -152,6 +152,16 @@ export class OperationList extends EventTarget {
         this.dispatchEvent(new OperationEvent("do", operation));
         this.processFlags(operation);
     }
+    tryDo(returnOperation: () => Operation) {
+        let op: Operation;
+        try {
+            op = returnOperation();
+        } catch (e) {
+            this.dispatchEvent(new OperationErrorEvent(op, e as Error))
+            return
+        }
+        this.do(op);
+    } 
     processFlags(operation: Operation) {
 
         if (operation.updatesEditor) {
