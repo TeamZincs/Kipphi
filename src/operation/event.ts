@@ -81,12 +81,20 @@ export class EventNodePairInsertOperation <VT extends EventValueESType> extends 
         }
         this.updatesFP = updatesFP && targetPrevious.isSpeed();
     }
-    do() {
+    do(chart: Chart) {
         const [endNode, startNode] = EventNode.insert(this.node, this.tarPrev);
         this.node.parentSeq.updateJump(endNode, startNode)
+        if (this.updatesFP) {
+            // updatesFP的校验确保了序列为速度序列
+            (this.sequence as SpeedENS).updateFloorPositionAfter(this.tarPrev as EventStartNode, chart.timeCalculator) 
+        }
     }
-    undo() {
+    undo(chart: Chart) {
         this.sequence.updateJump(...EventNode.removeNodePair(...EventNode.getEndStart(this.node)))
+        if (this.updatesFP) {
+            // updatesFP的校验确保了序列为速度序列
+            (this.sequence as SpeedENS).updateFloorPositionAfter(this.tarPrev as EventStartNode, chart.timeCalculator) 
+        }
     }
 }
 
