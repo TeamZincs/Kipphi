@@ -78,11 +78,6 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
      * @deprecated
      */
     static getEasing(data: EventDataKPA<EventValueESType>, templates: TemplateEasingLib, notSegmented = false): Easing {
-        const left = data.easingLeft;
-        const right = data.easingRight;
-        if (!notSegmented && (left && right) && (left !== 0.0 || right !== 1.0)) {
-            return new SegmentedEasing(EventNode.getEasing(data, templates, true), left, right)
-        }
         if (data.bezier) {
             const bp = data.bezierPoints
             const easing = new BezierEasing([bp[0], bp[1]], [bp[2], bp[3]]);
