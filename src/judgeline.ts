@@ -572,7 +572,7 @@ export class JudgeLine {
 
         
         const computeTime = (speed: number, currentPos: number, fore: number) => 
-            timeCalculator.secondsToBeats(currentPos / (speed * 120) + timeCalculator.toSeconds(fore));
+            speed * currentPos <= 0 ? fore : timeCalculator.secondsToBeats(currentPos / (speed * 120) + timeCalculator.toSeconds(fore));
         
         // 遍历所有事件节点直到结尾
         while (true) {
@@ -584,27 +584,65 @@ export class JudgeLine {
                 const thisPosY = startNode.floorPosition - currentJudgeLineFloorPos;
                 const thisSpeed = startNode.value;
                 
-                const inf = thisSpeed > 0 ? Infinity : (thisSpeed < 0 ? -Infinity : thisPosY);
                 
                 if (range[0] === undefined) {
-                    if (thisPosY < startY && startY <= inf || thisPosY >= endY && endY > inf) {
+                    /*
+                    有交集
+                    ******* +INF ******
+
+                    ------ endY -------
+                    |
+                    |
+                    |
+                    ----- thisPosY ----
+
+                    */
+                    if (thisSpeed > 0 && endY > thisPosY) {
                         range[0] = computeTime(
                             thisSpeed,
-                            (thisPosY < inf ? startY : endY) - thisPosY,
+                            startY - thisPosY,
                             thisTime)
-                    } else if (thisSpeed === 0) {
-                        range[0] = 0;
+                    /*
+                    有交集
+                    ----- thisPosY ----
+                    |
+                    |
+                    |
+                    ------ startY -------
+
+                    ******* -INF ******
+                    */
+                    } else if (thisSpeed < 0 && startY < thisPosY) {
+                        range[0] = computeTime(
+                            thisSpeed,
+                            endY - thisPosY,
+                            thisTime)
+                    } else if (thisSpeed === 0 && startY < thisPosY && thisPosY < endY) {
+                        range[0] = thisTime;
                     }
                 }
                 
                 if (range[0] !== undefined) {
-                    if (thisPosY < endY && endY <= inf || thisPosY >= startY && startY > inf) {
+                    /*
+                    ********** +INF **********
+
+                    ---------- endY ----------
+
+                    -------- thisPosY --------
+                    */
+                    if (thisSpeed > 0 && endY > thisPosY) {
                         range[1] = computeTime(
                             thisSpeed,
-                            (thisPosY > inf ? startY : endY) - thisPosY,
+                            endY - thisPosY,
+                            thisTime);
+                        result.push(range);
+                    } else if (thisSpeed < 0 && startY < thisPosY) {
+                        range[1] = computeTime(
+                            thisSpeed,
+                            startY - thisPosY,
                             thisTime)
                         result.push(range)
-                    } else if (thisSpeed === 0) {
+                    } else if (thisSpeed === 0 && startY < thisPosY && thisPosY < endY) {
                         range[1] = Infinity;
                         result.push(range)
                     }
@@ -619,7 +657,7 @@ export class JudgeLine {
             const nextPosY = nextStart.floorPosition - currentJudgeLineFloorPos;
             
             let thisSpeed = startNode.value;
-            let nextSpeed = nextStart.value;
+            let nextSpeed = endNode.value;
             
             if (Math.abs(thisSpeed) < 1e-8) {
                 thisSpeed = 0;
@@ -638,21 +676,14 @@ export class JudgeLine {
                 
                 // 处理第一段(开始到零点)
                 if (range[0] === undefined) {
-                    if (thisPosY < startY && startY <= zeroPosY || thisPosY > endY && endY >= zeroPosY) {
-                        range[0] = thisSpeed !== zeroSpeed ? thisTime : computeTime(
-                            thisSpeed,
-                            (thisPosY < zeroPosY ? startY : endY) - thisPosY, thisTime
-                        );
-                    } else if (startY <= thisPosY && thisPosY <= endY) {
+                    if (thisSpeed > 0 && endY >= thisPosY || thisSpeed < 0 && startY <= thisPosY) {
                         range[0] = thisTime;
                     }
                 }
                 
                 if (range[0] !== undefined) {
-                    if (thisPosY < endY && endY <= zeroPosY || thisPosY > startY && startY >= zeroPosY) {
-                        range[1] = thisSpeed !== zeroSpeed ? zeroTime : computeTime(
-                            thisSpeed,
-                            (thisPosY > zeroPosY ? startY : endY) - thisPosY, thisTime)
+                    if (thisSpeed > 0 && endY <= zeroPosY || thisSpeed < 0 && startY >= zeroPosY) {
+                        range[1] = zeroTime;
                         result.push(range);
                         if (lineMonotonicity !== Monotonicity.swinging) {
                             // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
@@ -664,20 +695,14 @@ export class JudgeLine {
                 
                 // 处理第二段(零点到结束)
                 if (range[0] === undefined) {
-                    if (zeroPosY < startY && startY <= nextPosY || zeroPosY > endY && endY >= nextPosY) {
-                        range[0] = zeroSpeed !== nextSpeed ? zeroTime : computeTime(
-                            nextSpeed,
-                            (zeroPosY < nextPosY ? startY : endY) - zeroPosY, zeroTime)
-                    } else if (startY <= zeroPosY && zeroPosY <= endY) {
+                    if (nextSpeed > 0 && endY >= zeroPosY || nextSpeed < 0 && startY <= zeroPosY) {
                         range[0] = zeroTime;
                     }
                 }
                 
                 if (range[0] !== undefined) {
-                    if (zeroPosY < endY && endY <= nextPosY || zeroPosY > startY && startY >= nextPosY) {
-                        range[1] = zeroSpeed !== nextSpeed ? nextTime : computeTime(
-                            nextSpeed,
-                            (zeroPosY > nextPosY ? startY : endY) - zeroPosY, zeroTime)
+                    if (nextSpeed > 0 && endY <= nextPosY || nextSpeed < 0 && startY >= nextPosY) {
+                        range[1] = nextTime
                         result.push(range)
                         if (lineMonotonicity !== Monotonicity.swinging) {
                             // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
@@ -688,18 +713,25 @@ export class JudgeLine {
                 }
             } else {
                 // 正常情况处理
+                if (this.id ===24)console.log(thisSpeed, startY, endY, thisPosY, nextPosY, currentJudgeLineFloorPos);
                 if (range[0] === undefined) {
-                    if (thisPosY < startY && startY <= nextPosY || thisPosY > endY && endY >= nextPosY) {
+                    if (thisSpeed > 0 && endY >= thisPosY || thisSpeed < 0 && startY <= thisPosY) {
+                        if (this.id === 24) {
+                            debugger;
+                        }
                         range[0] = thisSpeed !== nextSpeed ? thisTime : computeTime(
                             thisSpeed,
-                            (thisPosY < nextPosY ? startY : endY) - thisPosY, thisTime)
-                    } else if (startY <= thisPosY && thisPosY <= endY) {
+                            (thisSpeed > 0 ? startY : endY) - thisPosY, thisTime)
+                    } else if (thisSpeed === 0 && startY <= thisPosY && thisPosY <= endY) {
                         range[0] = thisTime;
                     }
+                    // else if (startY <= thisPosY && thisPosY <= endY) {
+                    //     range[0] = thisTime;
+                    // }
                 }
                 
                 if (range[0] !== undefined) {
-                    if (thisPosY < endY && endY <= nextPosY || thisPosY > startY && startY >= nextPosY) {
+                    if (thisSpeed > 0 && endY <= nextPosY || thisSpeed < 0 && startY >= thisPosY) {
                         range[1] = thisSpeed !== nextSpeed ? nextTime : computeTime(
                             thisSpeed,
                             (thisPosY > nextPosY ? startY : endY) - thisPosY, thisTime)
