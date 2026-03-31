@@ -169,7 +169,7 @@ export class Chart {
      */
     static fromRPEJSON(data: ChartDataRPE, duration: number) {
         const chart = new Chart();
-        chart.judgeLineGroups = data.judgeLineGroup.map(group => new JudgeLineGroup(group));
+        chart.judgeLineGroups = (data.judgeLineGroup || ["Default"]).map(group => new JudgeLineGroup(group));
         chart.name = data.META.name;
         chart.level = data.META.level;
         chart.offset = data.META.offset;
