@@ -110,7 +110,12 @@ type BNOrHead = BPMNode | BPMNodeLike<NodeType.HEAD>;
 /**
  * BPM序列类，管理BPM变化序列
  * 拥有与事件类似的逻辑，每对节点之间代表一个BPM相同的片段
- * 片段之间BPM可以发生改变
+ * 片段之间BPM可以发生改变。
+ * 
+ * @example
+ * const bpmList = [{ startTime: [0, 0, 0], bpm: 120 }];
+ * const bpmSequence = new BPMSequence(bpmList, 180);
+ * // JumpArray 在构造器中自动初始化。
  */
 export class BPMSequence extends EventNodeSequence {
     /** 头部节点 */
@@ -141,7 +146,7 @@ export class BPMSequence extends EventNodeSequence {
             BPMStartNode.connect(curPos, startNode);
             curPos = endNode;
         }
-        const last = new BPMStartNode(next.startTime, next.bpm)
+        const last = new BPMStartNode(next.startTime, next.bpm);
         BPMStartNode.connect(curPos, last);
         BPMStartNode.connect(last, this.tail);
         this.initJump();
@@ -160,7 +165,9 @@ export class BPMSequence extends EventNodeSequence {
     }
     
     /**
-     * 更新秒跳转数组
+     * 更新秒跳转数组。
+     * 
+     * 缓存每个节点的秒数发生在这里。
      */
     updateSecondJump(): void {
         let integral = 0;
@@ -179,7 +186,7 @@ export class BPMSequence extends EventNodeSequence {
             node = endNode.next;
         }
         node.cachedStartIntegral = integral;
-        if (this.effectiveBeats  === 0) {
+        if (this.effectiveBeats === 0) {
             return;
         }
         const originalListLength = this.listLength;
@@ -188,7 +195,7 @@ export class BPMSequence extends EventNodeSequence {
             this.tail,
             originalListLength,
             this.duration,
-            (node: AnyBN) => {
+            (node: BPMStartNode | BPMNodeLike<NodeType.TAIL> | BPMNodeLike<NodeType.HEAD>) => {
                 if (node.type === NodeType.TAIL) {
                     return [null, null];
                 }
@@ -259,8 +266,9 @@ export class BPMSequence extends EventNodeSequence {
     
     /**
      * 根据拍数获取节点
+     * 
      * @param beats 拍数
-     * @param usePrev 是否使用前一个节点
+     * @param usePrev 是否使用前一个节点。假设有两个BPM片段，0-2拍，2-无穷，`getNodeAt(2, true)` 会返回第一个片段的开始节点
      * @returns 对应的BPM起始节点
      */
     getNodeAt(beats: number, usePrev?: boolean): BPMStartNode {
@@ -270,6 +278,15 @@ export class BPMSequence extends EventNodeSequence {
 
 /**
  * 时间计算器类，用于处理拍数与秒数之间的转换
+ * 
+ * @example
+ * const bpmList = = [
+ *     { bpm: 120, startTime: [0, 0, 1] }
+ * ];
+ * const tc = new TimeCalculator();
+ * tc.bpmList = bpmList;
+ * tc.duration = 131; // 这两者都是必需的。
+ * tc.initSequence();
  */
 export class TimeCalculator {
     /** BPM片段数据列表 */
@@ -289,6 +306,9 @@ export class TimeCalculator {
      * 初始化BPM序列
      */
     initSequence() {
+        if (!this.bpmList || !this.duration) {
+            throw new Error("TimeCalculator: bpmList and duration must be set before initSequence");
+        }
         const bpmList = this.bpmList;
         // @ts-expect-error 不在构造器中初始化的只读属性
         this.bpmSequence = new BPMSequence(bpmList, this.duration);
