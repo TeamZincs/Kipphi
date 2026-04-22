@@ -6,7 +6,6 @@
     "module": "es2020",
     "moduleDetection": "force",
     "allowJs": true,
-    "outFile": "../dist/index.d.ts",
 
     "emitDeclarationOnly": true,
     "declaration": true,
@@ -18,6 +17,7 @@
     "noUncheckedIndexedAccess": true,
 
     // Some stricter flags (disabled by default)
+    "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
