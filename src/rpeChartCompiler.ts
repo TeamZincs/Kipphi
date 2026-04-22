@@ -139,10 +139,11 @@ export class RPEChartCompiler {
                 [0, 0, 0, 0],
             easingLeft: isSegmented ? easing.left : 0.0,
             easingRight: isSegmented ? easing.right : 1.0,
-            // @ts-expect-error 缓动为贝塞尔型时可以为null
-            easingType: easing instanceof NormalEasing ?
+            easingType: isSegmented ? (
+                easing.easing instanceof NormalEasing ? easing.easing.rpeId ?? 1 : null
+            ) : (easing instanceof NormalEasing ?
                     easing.rpeId ?? 1 :
-                    null,
+                    null),
             end,
             endTime: endNode.time,
             linkgroup: 0, // 假设默认值为 0
