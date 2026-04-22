@@ -28,6 +28,7 @@ import { EVENT_MACROS } from "./macro";
  */
 export abstract class Evaluator<T extends EventValueESType> {
     abstract eval(event: NonLastStartNode<T>, beats: number): T;
+    abstract eval(event: NonLastStartNode<T>, seconds: number, timeCalculator: TimeCalculator): T;
     abstract dumpFor(node: EventStartNode<T>): EvaluatorDataKPA2<T>;
 }
 
@@ -38,17 +39,28 @@ export abstract class EasedEvaluator<T extends EventValueESType> extends Evaluat
         super();
         this.easing = easing;
     }
-    override eval(startNode: NonLastStartNode<T>, beats: number): T {
+    override eval(startNode: NonLastStartNode<T>, beats: number): T;
+    override eval(startNode: NonLastStartNode<T>, seconds: number, timeCalculator: TimeCalculator): T;
+    override eval(startNode: NonLastStartNode<T>, beatsOrSeconds: number, timeCalculator?: TimeCalculator): T {
         const next = startNode.next;
-        const timeDelta = TC.getDelta(next.time, startNode.time)
-        const current = beats - TC.toBeats(startNode.time)
         const nextValue = startNode.next.value;
         const value = startNode.value;
         if (nextValue === value) {
             return value;
         }
-        // 其他类型，包括普通缓动和非钩定模板缓动
-        return this.convert(value, nextValue, this.easing.getValue(current / timeDelta));
+        if (timeCalculator) {
+            // 注意这个和下面那个API设计得不一样
+            const startSecs = timeCalculator.toSeconds(TC.toBeats(startNode.time));
+            const endSecs = timeCalculator.toSeconds(TC.toBeats(next.time));
+            const current = beatsOrSeconds - startSecs;
+            const timeDelta = endSecs - startSecs;
+            return this.convert(value, nextValue, this.easing.getValue(current / timeDelta));
+        } else {
+            const timeDelta = TC.getDelta(next.time, startNode.time)
+            const current = beatsOrSeconds - TC.toBeats(startNode.time)
+            // 其他类型，包括普通缓动和非钩定模板缓动
+            return this.convert(value, nextValue, this.easing.getValue(current / timeDelta));
+        }
     }
     abstract convert(start: T, end: T, progress: number): T;
     /**
@@ -218,8 +230,10 @@ export class MacroEvaluator<T extends EventValueESType> extends Evaluator<T> {
         node.evaluator = this;
         this.consumers.set(node, this.compile(node, chart));
     }
-    eval(event: NonLastStartNode<T>, beats: number): T {
-        return this.consumers.get(event)!.eval(event, beats);
+    override eval(startNode: NonLastStartNode<T>, beats: number): T;
+    override eval(startNode: NonLastStartNode<T>, seconds: number, timeCalculator: TimeCalculator): T;
+    eval(event: NonLastStartNode<T>, beats: number, timeCalculator?: TimeCalculator): T {
+        return this.consumers.get(event)!.eval(event, beats, timeCalculator);
     }
     dumpFor(node: EventStartNode<T>): MacroEvaluatorDataKPA2 {
         return {
@@ -242,11 +256,21 @@ export class ExpressionEvaluator<T extends EventValueESType> extends Evaluator<T
         super();
         this.func = new Function("t", "return " + jsExpr) as (t: number) => T;
     }
-    override eval(startNode: NonLastStartNode<T>, beats: number): T {
+    override eval(startNode: NonLastStartNode<T>, beats: number): T;
+    override eval(startNode: NonLastStartNode<T>, seconds: number, timeCalculator: TimeCalculator): T;
+    override eval(startNode: NonLastStartNode<T>, beatsOrSecs: number, timeCalculator?: TimeCalculator): T {
+        if (timeCalculator) {
+            const startSecs = timeCalculator.toSeconds(TC.toBeats(startNode.time));
+            const endSecs = timeCalculator.toSeconds(TC.toBeats(startNode.next.time));
+            const current = beatsOrSecs - startSecs;
+            const timeDelta = endSecs - startSecs;
+            return this.func(current / timeDelta);
+        } else {    
         const next = startNode.next;
         const timeDelta = TC.getDelta(next.time, startNode.time)
-        const current = beats - TC.toBeats(startNode.time)
+            const current = beatsOrSecs - TC.toBeats(startNode.time)
         return this.func(current / timeDelta);
+        }
     }
     override dumpFor(): ExpressionEvaluatorDataKPA2 {
         return {

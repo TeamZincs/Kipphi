@@ -341,14 +341,16 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
             macroTime: this.macroTime?.dumpForNode(this),
             linkedMacro: [...this.linkedMacros].map(macro => macro.dumpLinkForNode(this)),
         }
-    } 
-    getValueAt(beats: number): VT {
+    }
+    getValueAt(seconds: number, timeCalculator: TimeCalculator): VT;
+    getValueAt(beats: number): VT;
+    getValueAt(beatsOrSecs: number, timeCalculator?: TimeCalculator): VT {
         // 除了尾部的开始节点，其他都有下个节点
         // 钩定型缓动也有
         if (this.next.type === NodeType.TAIL) {
             return this.value;
         }
-        return this.evaluator.eval(this as NonLastStartNode<VT>, beats);
+        return this.evaluator.eval(this as NonLastStartNode<VT>, beatsOrSecs, timeCalculator);
     }
     getSpeedValueAt(this: EventStartNode<number>, beats: number) {
         if (this.next.type === NodeType.TAIL) {
@@ -793,6 +795,9 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
     getValueAt(beats: number, usePrev: boolean = false): VT {
         return this.getNodeAt(beats, usePrev).getValueAt(beats);
     }
+    getValueAtBySecs(beats: number, seconds: number, timeCalculator: TimeCalculator, usePrev: boolean = false) {
+        return this.getNodeAt(beats, usePrev).getValueAt(seconds, timeCalculator);
+    }
     getFloorPositionAt(this: EventNodeSequence<number>, beats: number, timeCalculator: TimeCalculator) {
         const node: EventStartNode<number> = this.getNodeAt(beats);
         const value = node.getLocalFloorPos(beats, timeCalculator) + node.floorPosition;
@@ -821,7 +826,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             const prevStart = node.previous.previous;
             currentFP = prevStart.floorPosition + prevStart.getFullLocalFloorPos(tc);
         } else {
-            currentFP = 0;
+            node.floorPosition = currentFP = 0;
         }
         while (true) {
             const canBeEnd = node.next;

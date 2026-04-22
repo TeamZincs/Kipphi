@@ -781,6 +781,19 @@ export class JudgeLine {
         }
         return current
     }
+    getStackedValueBySeconds(type: keyof EventLayer, beats: number, seconds: number, timeCalculator: TimeCalculator, usePrev: boolean = false) {
+        
+        const length = this.eventLayers.length;
+        let current = 0;
+        for (let index = 0; index < length; index++) {
+            const layer = this.eventLayers[index];
+            if (!layer || !layer[type]) {
+                break;
+            }
+            current += layer[type].getValueAtBySecs(beats, seconds, timeCalculator, usePrev);
+        }
+        return current
+    }
     /**
      * 获取指定时间点的FloorPosition。
      * 
