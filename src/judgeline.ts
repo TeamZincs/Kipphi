@@ -186,17 +186,18 @@ export class JudgeLine {
             line.speedSequence = speedSequences[0]
             chart.registerEventNodeSequence(EventType.speed, `#${id}.speed`, speedSequences[0]);
         }
+        
+        if (data.extended?.scaleXEvents) {
+            line.extendedLayer.scaleX = createExtendedSequence(EventType.scaleX, data.extended.scaleXEvents);
+        } else {
+            line.extendedLayer.scaleX = chart.createEventNodeSequence(EventType.scaleX, `#${id}.ex.scaleX`);
+        }
+        if (data.extended?.scaleYEvents) {
+            line.extendedLayer.scaleY = createExtendedSequence(EventType.scaleY, data.extended.scaleYEvents);
+        } else {
+            line.extendedLayer.scaleY = chart.createEventNodeSequence(EventType.scaleY, `#${id}.ex.scaleY`);
+        }
         if (data.extended) {
-            if (data.extended.scaleXEvents) {
-                line.extendedLayer.scaleX = createExtendedSequence(EventType.scaleX, data.extended.scaleXEvents);
-            } else {
-                line.extendedLayer.scaleX = chart.createEventNodeSequence(EventType.scaleX, `#${id}.ex.scaleX`);
-            }
-            if (data.extended.scaleYEvents) {
-                line.extendedLayer.scaleY = createExtendedSequence(EventType.scaleY, data.extended.scaleYEvents);
-            } else {
-                line.extendedLayer.scaleY = chart.createEventNodeSequence(EventType.scaleY, `#${id}.ex.scaleY`);
-            }
             if (data.extended.textEvents) {
                 line.extendedLayer.text = createExtendedSequence(EventType.text, data.extended.textEvents);
             }
@@ -574,6 +575,7 @@ export class JudgeLine {
         const computeTime = (speed: number, currentPos: number, fore: number) => 
             speed * currentPos <= 0 ? fore : timeCalculator.secondsToBeats(currentPos / (speed * 120) + timeCalculator.toSeconds(fore));
         
+                        
         // 遍历所有事件节点直到结尾
         while (true) {
             const thisTime = TC.toBeats(startNode.time);
@@ -617,7 +619,7 @@ export class JudgeLine {
                             thisSpeed,
                             endY - thisPosY,
                             thisTime)
-                    } else if (thisSpeed === 0 && startY < thisPosY && thisPosY < endY) {
+                    } else if (thisSpeed === 0 && startY <= thisPosY && thisPosY <= endY) {
                         range[0] = thisTime;
                     }
                 }
@@ -642,7 +644,7 @@ export class JudgeLine {
                             startY - thisPosY,
                             thisTime)
                         result.push(range)
-                    } else if (thisSpeed === 0 && startY < thisPosY && thisPosY < endY) {
+                    } else if (thisSpeed === 0) {
                         range[1] = Infinity;
                         result.push(range)
                     }
@@ -713,15 +715,15 @@ export class JudgeLine {
                 }
             } else {
                 // 正常情况处理
-                if (this.id ===24)console.log(thisSpeed, startY, endY, thisPosY, nextPosY, currentJudgeLineFloorPos);
                 if (range[0] === undefined) {
-                    if (thisSpeed > 0 && endY >= thisPosY || thisSpeed < 0 && startY <= thisPosY) {
-                        if (this.id === 24) {
-                            debugger;
-                        }
+                    if (thisSpeed > 0 && endY >= thisPosY && startY < nextPosY) {
                         range[0] = thisSpeed !== nextSpeed ? thisTime : computeTime(
                             thisSpeed,
-                            (thisSpeed > 0 ? startY : endY) - thisPosY, thisTime)
+                            startY - thisPosY, thisTime)
+                    } else if (thisSpeed < 0 && startY <= thisPosY && endY > nextPosY) {
+                        range[0] = thisSpeed !== nextSpeed ? thisTime : computeTime(
+                            thisSpeed,
+                            endY - thisPosY, thisTime)
                     } else if (thisSpeed === 0 && startY <= thisPosY && thisPosY <= endY) {
                         range[0] = thisTime;
                     }
@@ -731,10 +733,20 @@ export class JudgeLine {
                 }
                 
                 if (range[0] !== undefined) {
-                    if (thisSpeed > 0 && endY <= nextPosY || thisSpeed < 0 && startY >= thisPosY) {
+                    if (thisSpeed > 0 && endY <= nextPosY) {
                         range[1] = thisSpeed !== nextSpeed ? nextTime : computeTime(
                             thisSpeed,
-                            (thisPosY > nextPosY ? startY : endY) - thisPosY, thisTime)
+                            endY - thisPosY, thisTime)
+                        result.push(range);
+                        if (lineMonotonicity !== Monotonicity.swinging) {
+                            // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
+                            return result;
+                        }
+                        range = [undefined, undefined];
+                    } else if (thisSpeed < 0 && startY >= thisPosY) {
+                        range[1] = thisSpeed !== nextSpeed ? nextTime : computeTime(
+                            thisSpeed,
+                            startY - thisPosY, thisTime)
                         result.push(range);
                         if (lineMonotonicity !== Monotonicity.swinging) {
                             // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
