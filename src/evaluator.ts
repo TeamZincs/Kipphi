@@ -13,6 +13,7 @@ import { EasingType, EvaluatorType, EventValueType, EventValueTypeOfType, Interp
 import type { JudgeLine } from "./judgeline";
 import { Chart } from "./chart";
 import { EVENT_MACROS } from "./macro";
+import { type TimeCalculator } from "./bpm";
 
 
 /// #declaration:global
@@ -171,11 +172,11 @@ export class TextEasedEvaluator extends EasedEvaluator<string> {
         if (interpretedAs === InterpreteAs.float) {
             const start = parseFloat(value);
             const delta = parseFloat(nextValue as string) - start;
-            return start + progress * delta + "";
+            return (start + progress * delta).toFixed(3) + "";
         } else if (interpretedAs === InterpreteAs.int) {
             const start = parseInt(value);
             const delta = parseInt(nextValue as string) - start;
-            return start + Math.round(progress * delta) + "";
+            return start + Math.floor(progress * delta) + "";
         } else 
             if (value.startsWith(nextValue as string)) {
                 const startLen = (nextValue as string).length;
@@ -266,10 +267,10 @@ export class ExpressionEvaluator<T extends EventValueESType> extends Evaluator<T
             const timeDelta = endSecs - startSecs;
             return this.func(current / timeDelta);
         } else {    
-        const next = startNode.next;
-        const timeDelta = TC.getDelta(next.time, startNode.time)
+            const next = startNode.next;
+            const timeDelta = TC.getDelta(next.time, startNode.time)
             const current = beatsOrSecs - TC.toBeats(startNode.time)
-        return this.func(current / timeDelta);
+            return this.func(current / timeDelta);
         }
     }
     override dumpFor(): ExpressionEvaluatorDataKPA2 {
