@@ -102,15 +102,12 @@ export class Note {
         // 当然也有可能是KPA数据但是就是没有给
         this.visibleBeats = data.visibleBeats;
 
-        this.tint = data.tint ? rgb2hex(data.tint) : undefined;
+        const color = data.tint ?? (data as NoteDataRPE).color;
+
+        this.tint = color ? rgb2hex(color) : undefined;
         this.tintHitEffects = data.tintHitEffects ? rgb2hex(data.tintHitEffects) : undefined;
-        this.judgeSize = data.judgeSize ?? this.size;
-        /*
-        this.previous = null;
-        this.next = null;
-        this.previousSibling = null;
-        this.nextSibling = null;
-        */
+        // @ts-expect-error KPA用judgeSize，RPE用judgeArea，PZP用judgeSize
+        this.judgeSize = data.judgeSize ?? data.judgeArea ?? this.size;
     }
     static fromKPAJSON(data: NoteDataKPA, timeCalculator: TimeCalculator) {
         const note = new Note(data);
@@ -172,7 +169,8 @@ export class Note {
             yOffset: this.yOffset / this.speed,
             speed: this.speed,
             tint: this.tint !== undefined ? hex2rgb(this.tint) : undefined,
-            tintHitEffects: this.tint !== undefined ? hex2rgb(this.tintHitEffects) : undefined
+            tintHitEffects: this.tint !== undefined ? hex2rgb(this.tintHitEffects) : undefined,
+            judgeArea: this.judgeSize
         }
     }
     dumpKPA(): NoteDataKPA {
@@ -375,7 +373,7 @@ export class NNList {
     }
     /** 此方法永远用于最新KPAJSON */
     static fromKPAJSON<T extends boolean>(isHold: T, effectiveBeats: number, data: NNListDataKPA, nnnList: NNNList, timeCalculator: TimeCalculator): T extends true ? HNList : NNList {
-        const list: T extends true ? HNList : NNList = isHold ? new HNList(data.speed, data.medianYOffset, effectiveBeats) : new NNList(data.speed, data.medianYOffset, effectiveBeats)
+        const list: T extends true ? HNList : NNList = isHold ? new HNList(data.speed, data.medianYOffset, effectiveBeats) : new NNList(data.speed, data.medianYOffset, effectiveBeats) as any;
         const nnlength = data.noteNodes.length
         let cur: NNOrHead = list.head;
         for (let i = 0; i < nnlength; i++) {

@@ -84,11 +84,27 @@ export interface NoteDataRPE {
      * Sets the Z index for the hit effects of the note. Defaults to 7.
      */
     zIndexHitEffects?: number;
-    /** Sets the tint for the hit effects of the note. Defaults to null. */
+    /**
+     * Sets the tint for the hit effects of the note. Defaults to null.
+     * 
+     * @alias color
+     */
     tint?: RGB;
+    /**
+     * @see {@linkcode tint}
+     */
+    color?: RGB;
     tintHitEffects?: RGB;
     
-    /** Determines the width of the judgment area of the note. Defaults to size. */
+    
+    /**
+     * Determines the width of the judgment area of the note. Defaults to size.
+     * @alias judgeSize
+     */
+    judgeArea?: number;
+    /**
+     * @see {@linkcode judgeArea}
+     */
     judgeSize?: number;
 }
 
@@ -113,7 +129,11 @@ export interface NoteDataKPA {
     type: NoteType;
     /** 音符可视时间（打击前多少秒开始显现，默认99999.0） */
     visibleTime?: number;
-    /** y值偏移，使音符被打击时的位置偏离判定线 */
+    /**
+     * y值偏移，使音符被打击时的位置偏离判定线
+     * 
+     * @deprecated 使用{@linkcode absoluteYOffset}代替。
+     */
     yOffset: number;
 
     // 下面是PhiZone Player扩展的内容
@@ -123,11 +143,12 @@ export interface NoteDataKPA {
      * Sets the Z index for the hit effects of the note. Defaults to 7.
      */
     zIndexHitEffects?: number;
-    /** Sets the tint for the hit effects of the note. Defaults to null. */
+    /**
+     * Sets the tint for the hit effects of the note. Defaults to null.
+     */
     tint?: RGB;
     tintHitEffects?: RGB;
     
-    /** Determines the width of the judgment area of the note. Defaults to size. */
     judgeSize?: number;
     visibleBeats?: number;
     absoluteYOffset: number;

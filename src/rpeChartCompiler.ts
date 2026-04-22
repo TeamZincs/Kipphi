@@ -25,7 +25,7 @@ export class RPEChartCompiler {
     constructor(public chart: Chart) {}
 
     compileChart(): ChartDataRPE {
-        console.time("compileChart")
+        // console.time("compileChart")
         const chart = this.chart;
         const judgeLineGroups = chart.judgeLineGroups.map(group => group.name);
         const judgeLineList = chart.judgeLines.map(line => this.compileJudgeLine(line));
@@ -72,7 +72,7 @@ export class RPEChartCompiler {
         }
 
 
-        console.timeEnd("compileChart");
+        // console.timeEnd("compileChart");
         return {
             BPMList,
             META,
@@ -80,8 +80,8 @@ export class RPEChartCompiler {
             judgeLineGroup: judgeLineGroups,
             multiLineString: '',
             multiScale: 1.0,
-            chartTime: chart.rpeChartingTime * 60,
-            kpaChartTime: chart.chartingTime,
+            chartTime: chart.rpeChartingSeconds,
+            kpaChartTime: chart.chartingSeconds,
         };
     }
 
