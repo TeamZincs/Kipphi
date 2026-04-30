@@ -339,6 +339,20 @@ export class TemplateEasing extends Easing {
     get headValue(): number {
         return this.eventNodeSequence.head.next.value;
     }
+    segmentedValueGetter(easingLeft: number, easingRight: number) {
+        // 由于模板缓动是可变的，所以不能在分段缓动构造时预先计算几个变化量
+        return (t: number) => {
+            
+            const leftValue = this.getValue(easingLeft);
+            const rightValue =  this.getValue(easingRight);
+            const timeDelta = easingRight - easingLeft;
+            const delta = rightValue - leftValue;
+            if (delta === 0) {
+                return 0;
+            }
+            return (this.getValue(easingLeft + timeDelta * t) - leftValue) / delta
+        };
+    }
 }
 
 export class WrapperEasing extends Easing {
