@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ES2021"],
+    "lib": ["ES2021", "DOM"],
     "target": "ES2016",
     "module": "es2020",
     "moduleDetection": "force",
