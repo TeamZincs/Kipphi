@@ -1,8 +1,8 @@
 import { type TemplateEasingBodyData, type EasingDataKPA2, EasingType, EventType, type SegmentedEasingData, type NormalEasingData, type BezierEasingData, type TemplateEasingData, WrapperEasingData, WrapperEasingBodyData } from "./chartTypes";
 import { type EventNodeSequence } from "./event";
-import { type TupleCoord } from "./util";
+import { NodeType, type TupleCoord } from "./util";
 import Environment, { err } from "./env";
-import { type ExpressionEvaluator } from "./evaluator";
+import { type EasedEvaluator, type ExpressionEvaluator } from "./evaluator";
 
 
 /// #declaration:global
@@ -318,6 +318,9 @@ export class TemplateEasing extends Easing {
         this.name = name;
     }
     getValue(t: number) {
+        if (t === 1) {
+            return 1;
+        }
         const seq = this.eventNodeSequence;
         const delta = this.valueDelta;
         if (delta === 0) {
@@ -339,6 +342,7 @@ export class TemplateEasing extends Easing {
     get headValue(): number {
         return this.eventNodeSequence.head.next.value;
     }
+    
     segmentedValueGetter(easingLeft: number, easingRight: number) {
         // 由于模板缓动是可变的，所以不能在分段缓动构造时预先计算几个变化量
         return (t: number) => {
@@ -352,6 +356,17 @@ export class TemplateEasing extends Easing {
             }
             return (this.getValue(easingLeft + timeDelta * t) - leftValue) / delta
         };
+    }
+    
+    static checkCircularReference(seq: EventNodeSequence, template: TemplateEasing) {
+        const seq2 = template.eventNodeSequence;
+        if (seq === seq2) {
+            return true;
+        }
+        if (seq2.hasReferenceTo(seq)) {
+            return true;
+        }
+        return false;
     }
 }
 

@@ -294,6 +294,15 @@ export class Chart {
             }
             chart.templateEasingLib.implement(easingData.name, sequence as EventNodeSequence<number>);
         }
+        for (let i = 0; i < len; i++) {
+            const easingData = templateEasings[i];
+            const sequence = chart.sequenceMap.get(easingData.content) as EventNodeSequence;
+            // 遍历该序列检查循环依赖
+            if (sequence.hasReferenceTo(sequence)) {
+                throw err.TEMPLATE_EASING_CIRCULAR_REFERENCE(easingData.name);
+            }
+        }
+
         chart.templateEasingLib.check()
         for (const lineData of data.orphanLines) {
             const line: JudgeLine = JudgeLine.fromKPAJSON(data.version, chart, lineData.id, lineData, chart.templateEasingLib, chart.timeCalculator)

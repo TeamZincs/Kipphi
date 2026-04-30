@@ -967,6 +967,23 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             currentNode = currentNode.next.next;
         }
     }
+    hasReferenceTo(this: EventNodeSequence<number>, seq: EventNodeSequence<number>) {
+        
+        let node = this.head.next;
+        while (true) {
+            const endNode = node.next;
+            if (endNode.type === NodeType.TAIL) {
+                break;
+            }
+            const evaluator = node.evaluator;
+            if (evaluator instanceof EasedEvaluator && evaluator.easing instanceof TemplateEasing) {
+                if (TemplateEasing.checkCircularReference(seq, evaluator.easing as TemplateEasing)) {
+                    return true;
+                }
+            }
+            node = endNode.next;
+        }
+    }
 }
 
 export type SpeedENS = EventNodeSequence<number> & { type: EventType.speed };

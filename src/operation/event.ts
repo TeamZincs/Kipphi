@@ -224,6 +224,13 @@ export class EventNodeEvaluatorChangeOperation <VT extends EventValueESType> ext
     constructor(public node: EventStartNode<VT>, public value: Evaluator<VT>) {
         super();
         this.originalValue = this.node.evaluator
+        const seq = node.parentSeq;
+        if (seq.type === EventType.easing && value instanceof EasedEvaluator && value.easing instanceof TemplateEasing) {
+            const circular = TemplateEasing.checkCircularReference(seq as EventNodeSequence<number>, value.easing);
+            if (circular) {
+                throw err.TEMPLATE_EASING_CIRCULAR_REFERENCE(value.easing.name);
+            }
+        }
     }
     do() {
         this.node.evaluator = this.value
