@@ -22,13 +22,41 @@ type EasedStartNode<VT extends EventValueESType> = EventStartNode<VT> & { evalua
 export class RPEChartCompiler {
     sequenceMap: Map<EventNodeSequence<any>, EventNodeSequence<any>> = new Map();
     interpolationStep: TimeT = [0, 1, 16];
-    constructor(public chart: Chart) {}
+    deletesEmptyLines: boolean = true;
+    constructor(public chart: Chart) {
+
+    }
 
     compileChart(): ChartDataRPE {
         // console.time("compileChart")
         const chart = this.chart;
         const judgeLineGroups = chart.judgeLineGroups.map(group => group.name);
-        const judgeLineList = chart.judgeLines.map(line => this.compileJudgeLine(line));
+        const filter = this.deletesEmptyLines ? (line: JudgeLine) => {
+            return line.nnLists.size > 0
+                || line.hnLists.size > 0
+                || line.eventLayers.length > 0
+                || (["moveX", "moveY", "rotate", "alpha"] as const).some((evType) => {
+                    const seq = line.eventLayers[0][evType];
+                    let node = seq.head.next;
+                    for (let i = 0; i < 2; i++) {
+                        const endNode = node.next;
+                        if (node.value !== 0) {
+                            return true;
+                        }
+                        if (endNode.type === NodeType.TAIL) {
+                            return false;
+                        }
+                        if (endNode.value !== 0) {
+                            return true;
+                        }
+                        node = endNode.next;
+                    }
+                    return true; // 有超过两个的节点
+                })
+        } : () => true
+        const judgeLineList = chart.judgeLines
+            .filter(filter)
+            .map(line => this.compileJudgeLine(line));
         const BPMList = chart.timeCalculator.dump();
         const META: MetaData = {
             RPEVersion: 1,
@@ -88,7 +116,7 @@ export class RPEChartCompiler {
     compileJudgeLine(judgeLine: JudgeLine): JudgeLineDataRPE {
         const chart = this.chart;
         const notes = this.compileNNLists([...judgeLine.nnLists.values()], [...judgeLine.hnLists.values()]);
-        
+
         return {
             notes: notes,
             Group: chart.judgeLineGroups.indexOf(judgeLine.group),
