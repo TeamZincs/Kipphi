@@ -4,7 +4,8 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "bun run build/build"
+    "build": "bun run build/build",
+    "release": "py ignore/release.py"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",

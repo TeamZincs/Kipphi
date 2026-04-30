@@ -21,6 +21,7 @@ export default defineConfig([
     rules: {
       "@typescript-eslint/no-unused-vars": "off",
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-declaration-merging": "warn",
       "no-unused-vars": "off",
       "prefer-const": "warn"
     },

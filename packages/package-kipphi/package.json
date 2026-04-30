@@ -1,7 +1,7 @@
 {
     "name": "kipphi",
     "description": "Parse your Phigros Chart(.rpe.json or .kpa.json) into an editor-friendly format.",
-    "version": "2.1.2",
+    "version": "2.1.3-beta.1",
     "author": "Team Zincs (https://github.com/TeamZincs)",
     "license": "MIT",
     "repository": {
