@@ -168,8 +168,8 @@ export class Note {
             visibleTime: visibleTime,
             yOffset: this.yOffset / this.speed,
             speed: this.speed,
-            tint: this.tint !== undefined ? hex2rgb(this.tint) : undefined,
-            tintHitEffects: this.tint !== undefined ? hex2rgb(this.tintHitEffects) : undefined,
+            tint: this.tint !== undefined && this.tint !== 0xffffff ? hex2rgb(this.tint) : undefined,
+            tintHitEffects: this.tintHitEffects !== undefined && this.tintHitEffects !== 0xffffff ? hex2rgb(this.tintHitEffects) : undefined,
             judgeArea: this.judgeSize
         }
     }
@@ -189,8 +189,8 @@ export class Note {
             /** 但是有历史包袱，所以加字段 */
             absoluteYOffset: this.yOffset,
             speed: this.speed,
-            tint: this.tint !== undefined ? hex2rgb(this.tint) : undefined,
-            tintHitEffects: this.tint !== undefined ? hex2rgb(this.tintHitEffects) : undefined,
+            tint: this.tint !== undefined && this.tint !== 0xffffff ? hex2rgb(this.tint) : undefined,
+            tintHitEffects: this.tintHitEffects !== undefined && this.tintHitEffects !== 0xffffff ? hex2rgb(this.tintHitEffects) : undefined,
             judgeSize: this.judgeSize && this.judgeSize !== 1.0 ? this.judgeSize : undefined,
         }
     }
