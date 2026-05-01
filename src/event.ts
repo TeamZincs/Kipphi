@@ -640,6 +640,12 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         for (let index = 0; index < length; index++) {
             const event = data[index];
             const [start, end] = chart.createEventFromData<VT>(event, valueType, `${pos}.events[${index}]`);
+
+            // 收集被截的模板缓动
+            const evaluator = start.evaluator;
+            if (evaluator instanceof EasedEvaluator && evaluator.easing instanceof SegmentedEasing && evaluator.easing.easing instanceof TemplateEasing) {
+                chart.segmentedTemplates.set(evaluator.easing as any, [pos, start.time]);
+            }
             // 从前面复制了，复用性减一
             // KPA2没有更改RPE的按事件存储的机制。
             if (TC.lt(event.startTime, lastEndTime)) { // event.startTime < lastEndTime
@@ -956,15 +962,33 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         }
 
         let lastEnd: EventEndNode<VT> = endNode;
+        currentNode = endNode.next;
         while (true) {
+            const evaluator = currentNode.evaluator;
+            if (this.type === EventType.easing && evaluator instanceof EasedEvaluator && evaluator.easing instanceof TemplateEasing) {
+                if (TemplateEasing.checkCircularReference(this as EventNodeSequence, evaluator.easing)) {
+                    err.TEMPLATE_EASING_CIRCULAR_REFERENCE(this.id).warn();
+                }
+            }
+            if (evaluator instanceof EasedEvaluator && evaluator.easing instanceof SegmentedEasing) {
+                const easing = evaluator.easing;
+                const inner = easing.easing;
+                if (inner.getValue(easing.left) === inner.getValue(easing.right)) {
+                    err.EASING_DELTA_CANNOT_BE_ZERO(this.id, currentNode.time).warn();
+                }
+            }
             const endNode = currentNode.next;
             if (endNode.type === NodeType.TAIL) {
                 break;
+            }
+            if (!TC.gt(endNode.time, currentNode.time)) {
+                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${this.id}, ${currentNode.time}`).warn();
             }
             if (TC.ne(lastEnd.time, currentNode.time)) {
                 err.EVENT_NODE_NOT_DENSE(`${this.id}, ${currentNode.time}`).warn();
             }
             currentNode = currentNode.next.next;
+            lastEnd = endNode;
         }
     }
     hasReferenceTo(this: EventNodeSequence<number>, seq: EventNodeSequence<number>) {

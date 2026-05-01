@@ -74,6 +74,7 @@ export enum ERROR_IDS {
     NODES_NOT_BELONG_TO_SAME_SEQUENCE =             EASING     | INVALID_USAGE | 2,
     NODES_HAS_ZERO_DELTA =                          EASING     | INVALID_USAGE | 3,
     TEMPLATE_EASING_CIRCULAR_REFERENCE =            EASING     | INVALID_USAGE | 4,
+    EASING_DELTA_CANNOT_BE_ZERO =                   EASING     | INVALID_USAGE | 5,
 
     CANNOT_DIVIDE_EXPRESSION_EVALUATOR =            EVALUATOR  | INVALID_USAGE | 0,
     MISSING_MACRO_EVALUATOR_KEY =                   EVALUATOR  | INVALID_DATA  | 0,
@@ -184,6 +185,8 @@ export const ERRORS = {
         `Hold should have a duration.`,
     TEMPLATE_EASING_CIRCULAR_REFERENCE: (temEasName: string) =>
         `Template Easing '${temEasName}' has circular reference`,
+    EASING_DELTA_CANNOT_BE_ZERO: (seqName: string, time: TimeT) =>
+        `Easing delta cannot be zero. (at ${seqName}, ${toTimeString(time)}`,
 } satisfies Record<keyof typeof ERROR_IDS, (...args: any[]) => string>
 
 type EnumKeys<E extends Record<string, string | number>> = E[keyof E];

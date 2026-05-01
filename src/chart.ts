@@ -10,6 +10,7 @@ import {
     NormalEasing,
     rpeEasingArray,
     SegmentedEasing,
+    TemplateEasing,
     TemplateEasingLib,
 } from "./easing";
 
@@ -149,6 +150,11 @@ export class Chart {
     /** 难度等级显示绑定的判定线 */
     levelAttach:       JudgeLine | null = null;
 
+    /** 仅用于构造时检查 
+     * @internal
+     */
+    segmentedTemplates: Map<(SegmentedEasing & { easing: TemplateEasing}), [string, TimeT]> = new Map();
+
     constructor() {}
     
     /**
@@ -286,6 +292,9 @@ export class Chart {
         for (let i = 0; i < len; i++) {
             const easingData = templateEasings[i];
             const sequence = chart.sequenceMap.get(easingData.content);
+            if (!sequence) {
+                continue; // 后面check的时候会错误处理
+            }
             if (sequence.type !== EventType.easing) {
                 throw err.CANNOT_IMPLEMENT_TEMEAS_WITH_NON_EASING_ENS(easingData.name);
             }
@@ -303,7 +312,10 @@ export class Chart {
             }
         }
 
-        chart.templateEasingLib.check()
+        chart.templateEasingLib.check();
+
+        chart.checkSegmentedTemplates();
+
         for (const lineData of data.orphanLines) {
             const line: JudgeLine = JudgeLine.fromKPAJSON(data.version, chart, lineData.id, lineData, chart.templateEasingLib, chart.timeCalculator)
             chart.orphanLines.push(line)
@@ -727,6 +739,25 @@ export class Chart {
         
     }
     */
+    checkErrors() {
+        KPAError.flush();
+        for (const [_, seq] of this.sequenceMap) {
+            seq.checkErrors();
+        }
+    }
+    /**
+     * 用于构造谱面时检查
+     */
+    protected checkSegmentedTemplates() {
+        for (const [easing, [pos, time]] of this.segmentedTemplates) {
+            const inner = easing.easing;
+            if (inner.getValue(easing.left) === inner.getValue(easing.right)) {
+                err.EASING_DELTA_CANNOT_BE_ZERO(pos, time).warn();
+            }
+        }
+        this.segmentedTemplates.clear();
+        // 查完就清除，不再需要
+    }
 }
 
 /**
