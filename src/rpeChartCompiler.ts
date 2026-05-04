@@ -4,7 +4,7 @@ import { type TimeT, type ChartDataRPE, type MetaData, type JudgeLineDataRPE, ty
 import { SegmentedEasing, BezierEasing, NormalEasing, fixedEasing, TemplateEasing, Easing } from "./easing";
 import { err } from "./env";
 import { EasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorConstructorOfType, type EasedEvaluatorOfType } from "./evaluator";
-import { EventEndNode, EventNode, EventNodeSequence, EventStartNode, type EventNodeLike } from "./event";
+import { EventEndNode, EventNode, EventNodeSequence, EventStartNode, SpeedENS, type EventNodeLike } from "./event";
 import type { JudgeLine } from "./judgeline";
 import type { NNList, HNList, NNOrHead } from "./note";
 import TC from "./time";
@@ -31,11 +31,23 @@ export class RPEChartCompiler {
         // console.time("compileChart")
         const chart = this.chart;
         const judgeLineGroups = chart.judgeLineGroups.map(group => group.name);
+        const hasNotes = (nnList: NNList) => {
+            let node = nnList.head.next;
+            while (true) {
+                if (node.type === NodeType.TAIL) {
+                    return false;
+                }
+                if (node.notes.length > 0) {
+                    return true;
+                }
+                node = node.next;
+            }
+        }
         const filter = this.deletesEmptyLines ? (line: JudgeLine) => {
-            return line.nnLists.size > 0
-                || line.hnLists.size > 0
+            return [...line.nnLists].some(([_, l]) => hasNotes(l))
+                || [...line.hnLists].some(([_, l]) => hasNotes(l))
                 || line.eventLayers.length > 0
-                || (["moveX", "moveY", "rotate", "alpha"] as const).some((evType) => {
+                  && (["moveX", "moveY", "rotate", "alpha"] as const).some((evType) => {
                     const seq = line.eventLayers[0][evType];
                     let node = seq.head.next;
                     for (let i = 0; i < 2; i++) {
