@@ -117,7 +117,11 @@ extends UnionOperation<LazyOperation<typeof EventNodePairInsertOperation<VT>> | 
     }
 }
 
-
+export class EventNodePairAutoInsertOperation<VT extends EventValueESType> extends EventNodePairInsertOperation<VT> {
+    constructor(node: EventStartNode<VT>, parentSeq: EventNodeSequence<VT>, updatesFP = true) {
+        super(node, parentSeq.getNodeAt(TC.toBeats(node.time)), updatesFP);
+    }
+}
 
 export class EventNodeValueChangeOperation <VT extends EventValueESType> extends Operation {
     updatesEditor = true
@@ -362,6 +366,10 @@ export class EncapsuleOperation extends ComplexOperation<[MultiNodeDeleteOperati
         // 直接do，这个不需要做成可撤销的
         // @ts-expect-error 这里序列类型确定，为easing，不需要传入谱面
         new MultiNodeAddOperation(nodeArray, sequence).do();
+        // 上面这个操作不能顶替原来的第一个startnode，所以手动来一遍
+        const first = sequence.head.next;
+        first.evaluator = nodeArray[0].evaluator;
+        first.value = nodeArray[0].value;
 
         return new EncapsuleOperation(oldArray, easing); 
     }

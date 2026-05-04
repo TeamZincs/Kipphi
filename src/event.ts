@@ -391,7 +391,7 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
         return super.clone(offset) as EventStartNode<VT>;
     };
     clonePair(offset: TimeT): EventStartNode<VT> {
-        const endNode = this.previous.type !== NodeType.HEAD ? this.previous.clone(offset) : new EventEndNode(this.time, this.value);
+        const endNode = this.previous.type !== NodeType.HEAD ? this.previous.clone(offset) : null;
         const startNode = this.clone(offset);
         EventNode.connect(endNode, startNode);
         return startNode;
