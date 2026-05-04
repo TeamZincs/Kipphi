@@ -367,8 +367,8 @@ export class RPEChartCompiler {
                     srcStart = srcSeq.head.next!.value;
                     srcEnd = srcSeq.tail.previous!.value;
                     leftDividedNodeSrc = srcSeq.head.next!;
-                    rightDividedNodeSrc = srcSeq.tail.previous!;
-                    toStopAt = rightDividedNodeSrc;
+                    rightDividedNodeSrc = srcSeq.tail.previous!.previous.previous!;
+                    toStopAt = srcSeq.tail.previous!;
                     srcStartTime = srcSeq.head.next!.time;
                     srcTimeDelta = TC.sub(srcSeq.tail.previous!.time, srcStartTime);
                 }
@@ -450,7 +450,7 @@ export class RPEChartCompiler {
                         throw err.CANNOT_DIVIDE_EXPRESSION_EVALUATOR(seq.id);
                     } else {
                         // 否则就是带缓动求值器
-                        first.evaluator = evaluator.deriveWithEasing(
+                        prev.evaluator = evaluator.deriveWithEasing(
                             new SegmentedEasing((rightDividedNodeSrc.evaluator as NumericEasedEvaluator).easing, 0.0, newRight)
                         ) as unknown as Evaluator<VT>;
                         // TypeScript Compiler我*你娘啊
@@ -460,7 +460,7 @@ export class RPEChartCompiler {
                     if (rightDividedNodeSrc.evaluator instanceof ExpressionEvaluator) {
                         throw err.CANNOT_DIVIDE_EXPRESSION_EVALUATOR(seq.id);
                     } else {
-                        first.evaluator = evaluator.deriveWithEasing(
+                        prev.evaluator = evaluator.deriveWithEasing(
                             (rightDividedNodeSrc.evaluator as NumericEasedEvaluator).easing
                         ) as unknown as Evaluator<VT>;
                     }
