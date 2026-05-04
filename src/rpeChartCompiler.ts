@@ -128,7 +128,7 @@ export class RPEChartCompiler {
                 moveYEvents: layer.moveY ? this.dumpEventNodeSequence(layer.moveY) : undefined,
                 rotateEvents: layer.rotate ? this.dumpEventNodeSequence(layer.rotate) : undefined,
                 alphaEvents: layer.alpha ? this.dumpEventNodeSequence(layer.alpha) : undefined,
-                speedEvents: index === 0 ? this.dumpEventNodeSequence(judgeLine.speedSequence) : undefined
+                speedEvents: index === 0 ? this.dumpSpeedENS(judgeLine.speedSequence) : undefined
             })),
             extended: {
                 scaleXEvents: judgeLine.extendedLayer.scaleX ? this.dumpEventNodeSequence(judgeLine.extendedLayer.scaleX) : undefined,
@@ -248,6 +248,32 @@ export class RPEChartCompiler {
         nodes.push(this.compileEasedEvent(newStart as EasedStartNode<VT>, getValue));
 
         return nodes
+    }
+    dumpSpeedENS(seq: SpeedENS): EventDataRPELike<number>[] {
+        const ret: EventDataRPELike<number>[] = [];
+        let node = seq.head.next;
+        while (true) {
+            const end = node.next;
+            if (end.type === NodeType.TAIL) {
+                break;
+            }
+            ret.push({
+                start: node.value,
+                end: end.value,
+                startTime: node.time,
+                endTime: end.time,
+                linkgroup: 0
+            } as EventDataRPELike<number>);
+            node = end.next;
+        }
+        ret.push({
+            start: node.value,
+            end: node.value,
+            startTime: node.time,
+            endTime: TC.vadd(node.time, [1, 0, 1]),
+            linkgroup: 0
+        } as EventDataRPELike<number>);
+        return ret;
     }
 
     compileNNLists(nnLists: NNList[], hnLists: HNList[]): NoteDataRPE[] {
