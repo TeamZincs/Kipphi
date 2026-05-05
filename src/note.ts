@@ -307,7 +307,12 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
         }
     }
     remove(note: Note) {
-        this.notes.splice(this.notes.indexOf(note), 1)
+        const index = this.notes.indexOf(note);
+        if (index === -1) {
+            console.warn("Note not found in this node!")
+            return;
+        }
+        this.notes.splice(index, 1)
         note.parentNode = null
     }
     static disconnect(note1: NNOrHead, note2: NNOrTail) {
