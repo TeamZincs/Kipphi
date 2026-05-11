@@ -518,6 +518,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
      */
     static fromRPEJSON<T extends EventType, VT extends EventValueESType = number>(type: T, data: EventDataRPELike<VT>[], chart: Chart, pos: string, endValue?: number) {
         const {templateEasingLib: templates} = chart
+        data.sort((a, b) => TC.cmp(a.startTime, b.startTime));
         const length = data.length;
         // const isSpeed = type === EventType.Speed;
         // console.log(isSpeed)

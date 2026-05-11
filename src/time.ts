@@ -25,6 +25,16 @@ export default class TC {
     static lt(beaT1:TimeT, beaT2: TimeT): boolean {
         return beaT1[0] < beaT2[0] || beaT1[0] === beaT2[0] && beaT1[1] * beaT2[2] < beaT1[2] * beaT2[1]
     }
+    static cmp(beaT1: TimeT, beaT2: TimeT): number {
+        if (beaT1[0] > beaT2[0]) {
+            return 1;
+        } else if (beaT1[0] < beaT2[0]) {
+            return -1;
+        } else {
+            return beaT1[1] * beaT2[2] > beaT1[2] * beaT2[1] ? 1 : -1;
+        }
+        return 0;
+    }
     /** @returns beaT1 != beaT2 */
     static ne(beaT1:TimeT, beaT2: TimeT): boolean {
         return beaT1[0] !== beaT2[0] || beaT1[1] * beaT2[2] !== beaT1[2] * beaT2[1]
