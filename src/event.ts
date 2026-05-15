@@ -541,16 +541,16 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         // 读取事件列表
         for (let index = 0; index < length; index++) {
             const event = data[index];
-            if (TC.lt(event.startTime, lastEndTime)) { // event.startTime < lastEndTime
-                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}] and the previous`).warn()
-            }
-            if (!TC.lt(event.startTime, event.endTime)) {
-                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}]`).warn()
-            }
-            lastEndTime = event.endTime;
             const [start, end] = (type === EventType.text
                                 ? EventNode.fromTextEvent(event as EventDataRPELike<string>, templates)
                                 : EventNode.fromEvent(event as EventDataRPELike<number | RGB>, chart)) as unknown as [EventStartNode<VT>, EventEndNode<VT>];
+            if (TC.lt(event.startTime, lastEndTime)) { // event.startTime < lastEndTime
+                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}] and the previous`).warn(start)
+            }
+            if (!TC.lt(event.startTime, event.endTime)) {
+                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}]`).warn(start)
+            }
+            lastEndTime = event.endTime;
             // 刚开始时，上个节点是头
             if (lastEnd.type === NodeType.HEAD) {
                 EventNode.connect(lastEnd, start)
@@ -650,21 +650,21 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             // 从前面复制了，复用性减一
             // KPA2没有更改RPE的按事件存储的机制。
             if (TC.lt(event.startTime, lastEndTime)) { // event.startTime < lastEndTime
-                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}] and the previous`).warn()
+                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}] and the previous`).warn(start)
             }
             if (!TC.lt(event.startTime, event.endTime)) {
                 if (TC.eq(event.startTime, event.endTime)) {
                     // 零长事件直接忽略，并认为已经修复
-                    err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}]`).fix();
+                    err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}]`).fix(start);
                     continue;
                 } else {
-                    err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}]`).warn()
+                    err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${index}]`).warn(start)
                 }
             }
             if (lastEnd.type === NodeType.HEAD) {
                 EventNode.connect(lastEnd, start)
             } else if (TC.gt(event.startTime, lastEndTime)) {
-                err.EVENT_NODE_NOT_DENSE(`${pos}.events[${index}]`).warn();
+                err.EVENT_NODE_NOT_DENSE(`${pos}.events[${index}]`).warn(start);
                 const mid = new EventStartNode(lastEndTime, start.value);
                 const midEnd = new EventEndNode(event.startTime, end.value);
                 EventNode.connect(lastEnd, mid);
@@ -954,7 +954,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
     checkErrors() {
         let currentNode: EventStartNode<VT> = this.head.next;
         if (TC.ne(currentNode.time, [0, 0, 1])) {
-            err.EVENT_NODE_NOT_DENSE(`${this.id}, ${currentNode.time}`).fix();
+            err.EVENT_NODE_NOT_DENSE(`${this.id}, ${currentNode.time}`).fix(currentNode);
             currentNode.time = [0, 0, 1];
         }
         const endNode = currentNode.next;
@@ -983,10 +983,10 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
                 break;
             }
             if (!TC.gt(endNode.time, currentNode.time)) {
-                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${this.id}, ${currentNode.time}`).warn();
+                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${this.id}, ${currentNode.time}`).warn(currentNode);
             }
             if (TC.ne(lastEnd.time, currentNode.time)) {
-                err.EVENT_NODE_NOT_DENSE(`${this.id}, ${currentNode.time}`).warn();
+                err.EVENT_NODE_NOT_DENSE(`${this.id}, ${currentNode.time}`).warn(currentNode);
             }
             currentNode = currentNode.next.next;
             lastEnd = endNode;

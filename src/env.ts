@@ -13,7 +13,7 @@
 
 
 // 就挺神奇的！明明typeof后面跟值，这里却可以写成类型导入
-import { type TimeT, type EventValueType } from "./chartTypes";
+import { type TimeT, type EventValueType, EventValueESType } from "./chartTypes";
 import { EventNode } from "./event";
 import { toTimeString } from "./util";
 
@@ -206,16 +206,23 @@ interface _Error extends _CheckMap {
     error: "";
 }
 
+type GetEnumKey<TEnum extends Record<string, any>, TValue extends TEnum[keyof TEnum]> = {
+  [K in keyof TEnum]: TEnum[K] extends TValue ? K : never
+}[keyof TEnum];
 
-interface ErrorMap extends Record<keyof typeof ERROR_IDS, Array<any>>{
-    EVENT_NODE_NOT_DENSE: [EventNode];
+type ERROR_NAMES = keyof typeof ERROR_IDS;
+
+interface ErrorMap extends Record<ERROR_NAMES, Array<any>>{
+    EVENT_NODE_NOT_DENSE: [EventNode<EventValueESType>];
+    EVENT_NODE_TIME_NOT_INCREMENTAL: [EventNode<EventValueESType>];
+    
 }
 
-type ArgsOf<ET extends ERROR_IDS> = ET extends keyof ErrorMap ? ErrorMap[ET] : never;
+type ArgsOf<ET extends ERROR_IDS> = GetEnumKey<typeof ERROR_IDS, ET> extends keyof ErrorMap ? ErrorMap[GetEnumKey<typeof ERROR_IDS, ET>] : [];
 
 export class KPAError<ET extends ERROR_IDS> extends Error {
     fixed = false;
-    args: ArgsOf<ET> | [];
+    args: ArgsOf<ET>;
     constructor(message: string, public id: ET) {
         super(message);
     }
@@ -224,16 +231,16 @@ export class KPAError<ET extends ERROR_IDS> extends Error {
      * 
      * 此时可以调用该方法，该方法会输出错误并把它保存到KPAError的一个`buffer`静态属性下。
      */
-    warn(...args: ArgsOf<ET> | []) {
+    warn(...args: ArgsOf<ET>) {
         console.warn(this.stack);
         this.args = args;
-        KPAError.buffer.push(this);
+        KPAError.buffer.push(this as any);
     }
-    fix(...args: ArgsOf<ET> | []) {
+    fix(...args: ArgsOf<ET>) {
         console.warn("[Auto Fixed]" + this.stack);
         this.fixed = true;
         this.args = args;
-        KPAError.buffer.push(this);
+        KPAError.buffer.push(this as any);
     }
     static buffer: KPAError<ERROR_IDS>[] = [];
     static flush() {
@@ -241,9 +248,10 @@ export class KPAError<ET extends ERROR_IDS> extends Error {
     }
 }
 
+
 export const err = new Proxy(ERRORS, {
     get(target, name) {
-        return (...args: any[]) => new KPAError(target[name](...args) + `(KP${ERROR_IDS[name].toString(16)})`, ERROR_IDS[name]);
+        return (...args: any[]) => new KPAError<typeof ERROR_IDS[keyof typeof ERROR_IDS]>(target[name](...args) + `(KP${ERROR_IDS[name].toString(16)})`, ERROR_IDS[name]);
     }
 }) as unknown as { [key in keyof typeof ERRORS]: (...args: Parameters<typeof ERRORS[key]>) => KPAError<typeof ERROR_IDS[key]>};
 
