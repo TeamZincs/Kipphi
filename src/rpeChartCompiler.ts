@@ -65,18 +65,20 @@ export class RPEChartCompiler {
                     }
                     return true; // 有超过两个的节点
                 })
+                || line.children.size > 0;
         } : () => true
         const judgeLineList = chart.judgeLines
-            .filter(filter)
-            .map(line => this.compileJudgeLine(line));
+            .filter(filter);
+        const judgeLineDataList = judgeLineList
+            .map(line => this.compileJudgeLine(line, judgeLineList));
         const BPMList = chart.timeCalculator.dump();
         const META: MetaData = {
-            RPEVersion: 1,
+            RPEVersion: 170,
             background: 'illustration.png',
             charter: chart.charter,
             composer: chart.composer,
             illustration: chart.illustrator,
-            id: Math.random().toString().slice(2, 10),
+            id: Math.random().toString().slice(2, 18),
             level: chart.level,
             name: chart.name,
             offset: chart.offset,
@@ -88,11 +90,11 @@ export class RPEChartCompiler {
             if (!target) {
                 continue;
             }
-            const lineData = judgeLineList[target.id];
+            const lineData = judgeLineDataList[judgeLineList.indexOf(target)];
             // RPEJSON里面一条线只能绑一个UI，KPAJSON可以绑多个
             // 所以如果绑了多个，自动给它们创建子线
             if (lineData.attachUI) {
-                judgeLineList.push({
+                judgeLineDataList.push({
                     Group: 0,
                     Name: "Auto created for " + uiName,
                     Texture: "line.png",
@@ -100,7 +102,7 @@ export class RPEChartCompiler {
                     notes: [],
                     bpmfactor: 1.0,
                     eventLayers: [],
-                    father: target.id,
+                    father: judgeLineList.indexOf(target),
                     isCover: lineData.isCover,
                     numOfNotes: 0,
                     anchor: target.anchor,
@@ -116,7 +118,7 @@ export class RPEChartCompiler {
         return {
             BPMList,
             META,
-            judgeLineList,
+            judgeLineList: judgeLineDataList,
             judgeLineGroup: judgeLineGroups,
             multiLineString: '',
             multiScale: 1.0,
@@ -125,15 +127,17 @@ export class RPEChartCompiler {
         };
     }
 
-    compileJudgeLine(judgeLine: JudgeLine): JudgeLineDataRPE {
+    compileJudgeLine(judgeLine: JudgeLine, lines: JudgeLine[]): JudgeLineDataRPE {
         const chart = this.chart;
         const notes = this.compileNNLists([...judgeLine.nnLists.values()], [...judgeLine.hnLists.values()]);
+
+        const father = judgeLine.father ? lines.indexOf(judgeLine.father) : -1;
 
         return {
             notes: notes,
             Group: chart.judgeLineGroups.indexOf(judgeLine.group),
             Name: judgeLine.name,
-            Texture: judgeLine.texture,
+            Texture: RPEChartCompiler.replaceFilename(judgeLine.texture),
             bpmfactor: 1.0,
             eventLayers: judgeLine.eventLayers.map((layer, index): EventLayerDataRPE => ({
                 moveXEvents: layer.moveX ? this.dumpEventNodeSequence(layer.moveX) : undefined,
@@ -148,7 +152,7 @@ export class RPEChartCompiler {
                 textEvents: judgeLine.extendedLayer.text ? this.dumpEventNodeSequence(judgeLine.extendedLayer.text) : undefined,
                 colorEvents: judgeLine.extendedLayer.color ? this.dumpEventNodeSequence(judgeLine.extendedLayer.color) : undefined
             },
-            father: judgeLine.father?.id ?? -1,
+            father: father,
             isCover: judgeLine.cover ? 1 : 0,
             numOfNotes: notes.length,
             anchor: judgeLine.anchor,
@@ -520,6 +524,18 @@ export class RPEChartCompiler {
         EventNode.connect(currentPos, lastStart);
         EventNode.connect(lastStart, newSeq.tail)
         return newSeq;
+    }
+
+    static replaceFilename(filename: string) {
+        const arr = [];
+        for (const char of filename) {
+            if (char.charCodeAt(0) >= 128) {
+                arr.push(`u(${char.charCodeAt(0).toString(16)})`);
+            } else {
+                arr.push(char);
+            }
+        }
+        return arr.join("");
     }
 }
 // 现在是2025年10月18日，杨哲思已经改掉了此项目最史山的代码之一，但是还是一坨
