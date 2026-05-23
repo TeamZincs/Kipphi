@@ -20,6 +20,56 @@ export const checkType = (value: unknown, type: string | (string | typeof Functi
         && value.length === type.length
         && type.every((t, i) => checkType(value[i], t))
     } else if (typeof type === "string") {
+        if (type.startsWith("int")) {
+            if (typeof value !== "number" || !Number.isInteger(value)) {
+                return false;
+            }
+            const match = type.match(/^int(\(|\[)(\-?\d+),(\-?\d+|\+)(\)|\])$/);
+            if (!match) { return true; }
+            const [,leftBrac, left, right, rightBrac] = match
+            if (!leftBrac) { return true; }
+            const leftN = left === "-" ? -Infinity : Number(left);
+            const rightN = right === "+" ? +Infinity : Number(right);
+            if (value < leftN) {
+                return false;
+            }
+            if (leftBrac === "(" && value === leftN) {
+                return false;
+            }
+            
+            if (value > rightN) {
+                return false;
+            }
+            if (rightBrac === ")" && value === rightN) {
+                return false;
+            }
+            return true;
+        } else if (type.startsWith("number")) {
+            
+            if (typeof value !== "number") {
+                return false;
+            }
+            const match  = type.match(/^number(\(|\[)(\-?\d+),(\-?\d+|\+)(\)|\])$/)
+            if (!match) { return true; }
+            const [, leftBrac, left, right, rightBrac] = match
+            if (!leftBrac) { return true; }
+            const leftN = left === "-" ? -Infinity : Number(left);
+            const rightN = right === "+" ? +Infinity : Number(right);
+            if (value < leftN) {
+                return false;
+            }
+            if (leftBrac === "(" && value === leftN) {
+                return false;
+            }
+            
+            if (value > rightN) {
+                return false;
+            }
+            if (rightBrac === ")" && value === rightN) {
+                return false;
+            }
+            return true;
+        }
         return typeof value === type
     } else {
         return value instanceof type
@@ -34,9 +84,11 @@ export const hex2rgb = (hex: number): RGB => {
     return [hex >> 16, hex >> 8 & 0xFF, hex & 0xFF]
 }
 
-// 四位精度小数变分数
+// 5个2，4个3，3个5，7、11、13各一个
+const DENO = 324324000;
+
 export const numberToRatio = (num: number): [number, number] => {
-    return [Math.round(num * 10000), 10000]
+    return [Math.round(num * DENO), DENO]
 }
 
 

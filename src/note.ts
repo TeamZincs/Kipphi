@@ -8,6 +8,7 @@ import { JumpArray } from "./jumparray";
 import { type TimeCalculator } from "./bpm";
 import TC from "./time";
 import { hex2rgb, NodeType, rgb2hex } from "./util";
+import { Environment } from ".";
 
 /// #declaration:global
 
@@ -20,20 +21,20 @@ export type HEX = number;
 
 export const notePropTypes = {
     above: "boolean",
-    alpha: "number",
+    alpha: "int[0,255]",
     endTime: ["number", "number", "number"],
     isFake: "boolean",
     positionX: "number",
-    size: "number",
+    size: "number(0,+)",
     speed: "number",
     startTime: ["number", "number", "number"],
-    type: "number",
-    visibleTime: "number",
-    visibleBeats: "number",
+    type: "int[1,4]",
+    visibleTime: "number(0,+)",
+    visibleBeats: "number(0,+)",
     yOffset: "number",
-    tint: ["number", "number", "number"],
-    tintHitEffects: ["number", "number", "number"],
-    judgeSize: "number"
+    tint: ["int[0,255]", "int[0,255]", "int[0,255]"],
+    tintHitEffects: ["int[0,255]", "int[0,255]", "int[0,255]"],
+    judgeSize: "number(0,+)"
 }
 
 /**
@@ -315,6 +316,21 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
         this.notes.splice(index, 1)
         note.parentNode = null
     }
+    accepts(note: Note) {
+        if (this.isHold !== (note.type === NoteType.hold)) {
+            return false;
+        }
+        if (!TC.eq(note.startTime, this.startTime)) {
+            return false;
+        }
+        const parentSeq = this.parentSeq;
+        if (parentSeq) {
+            return Math.abs(parentSeq.medianYOffset - note.yOffset) <= Environment.NNLIST_Y_OFFSET_HALF_SPAN
+                && parentSeq.speed === note.speed;
+        } else {
+            return true;
+        }
+    }
     static disconnect(note1: NNOrHead, note2: NNOrTail) {
         if (note1) {
             note1.next = null;
@@ -459,7 +475,7 @@ export class NNList {
 
             return newNode
         } else {
-            return node;
+            return node as NoteNode;
         }
     }
     dumpKPA(): NNListDataKPA {
