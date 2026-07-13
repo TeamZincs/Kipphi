@@ -3,7 +3,7 @@ import { Chart } from "../chart";
 
 
 
-export type OpEventType = "do" | "undo" | "redo" | "error" | "needsupdate" | "maxcombochanged" | "noundo" | "noredo" | "firstmodified" | "needsreflow";
+export type OpEventType = "do" | "beforedo" | "undo" | "redo" | "error" | "needsupdate" | "maxcombochanged" | "noundo" | "noredo" | "firstmodified" | "needsreflow";
 
 // 最讲类型安全的一集（
 // 当然要有，不然的话编辑器那边检测的时候逆变会出问题
@@ -28,6 +28,7 @@ interface OpEventMap extends CheckFinalOverrides<DirectlyInstaciableEventMap> {
     "undo": OperationEvent;
     "redo": OperationEvent;
     "do": OperationEvent;
+    "beforedo": OperationEvent;
     "needsupdate": OperationEvent;
     "needsreflow": NeedsReflowEvent;
 }
@@ -52,7 +53,7 @@ export class NeedsReflowEvent extends OpEvent {
 }
 
 export class OperationEvent extends OpEvent {
-    constructor(t: "do" | "undo" | "redo" | "error" | "needsupdate", public operation: Operation) {
+    constructor(t: "do" | "undo" | "redo" | "error" | "needsupdate" | "beforedo", public operation: Operation) {
         super(t);
     }
 }
@@ -128,6 +129,11 @@ export class OperationList extends EventTarget {
         if (!this.chart.modified){
             this.chart.modified = true;
             this.dispatchEvent(OpEvent.create("firstmodified"))
+        }
+        const event = new OperationEvent("beforedo", operation);
+        this.dispatchEvent(event);
+        if (event.defaultPrevented) {
+            return;
         }
         // 如果上一个操作是同一个构造器的，那么试图修改上一个操作而不是立即推入新的操作
         if (this.operations.length !== 0) {

@@ -77,7 +77,7 @@ export class JudgeLineRenameOperation extends Operation {
     }
 }
 
-type JudgeLinePropName = "name" | "rotatesWithFather" | "anchor" | "texture" | "cover" | "zOrder";
+export type JudgeLinePropName = "name" | "rotatesWithFather" | "anchor" | "texture" | "cover" | "zOrder";
 
 export class JudgeLinePropChangeOperation<T extends JudgeLinePropName> extends Operation {
     updatesEditor = true;

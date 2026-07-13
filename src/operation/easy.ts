@@ -1,16 +1,19 @@
-import { Chart } from "../chart";
-import { EventType, EventValueESType, EventValueType, EventValueTypeOfType, InterpreteAs, NoteType, RGB, TimeT } from "../chartTypes";
+import { Chart, type JudgeLineGroup, type UIName } from "../chart";
+import { EventType, EventValueESType, EventValueType, EventValueTypeOfType, ExtendedEventTypeName, InterpreteAs, NoteDataKPA, NoteType, RGB, TimeT } from "../chartTypes";
 import { Easing, easingArray, rpeEasingArray } from "../easing";
-import { EasedEvaluator, Evaluator, ExpressionEvaluator } from "../evaluator";
+import { EasedEvaluator, EasedEvaluatorOfType, Evaluator } from "../evaluator";
 import { EventEndNode, EventNode, EventNodeLike, EventNodeSequence, EventStartNode } from "../event";
-import { HEX, Note, NoteNode } from "../note";
+import { JudgeLine, type EventLayer, type ExtendedLayer } from "../judgeline";
+import { HEX, NNList, Note, NoteNode, type AnyNN, notePropTypes } from "../note";
 import TC from "../time";
-import { NodeType, numberToRatio } from "../util";
+import { checkType, NodeType, numberToRatio } from "../util";
 import { type Operation } from "./basic";
+import { ChartPropChangeOperation, type ChartPropName } from "./chart";
 import { EventNodeEvaluatorChangeOperation, EventNodePairAutoInsertOperation, EventNodePairRemoveOperation, EventNodeTimeChangeOperation, EventNodeValueChangeOperation } from "./event";
-import { HoldEndTimeChangeOperation, NoteAddOperation, NoteDeleteOperation, NotePropChangeOperation, NotePropName, NoteTimeChangeOperation, NoteTypeChangeOperation } from "./note"
+import { JudgeLineDeleteOperation, JudgeLineENSChangeOperation, JudgeLineExtendENSChangeOperation, JudgeLineInheritanceChangeOperation, JudgeLinePropChangeOperation, type JudgeLinePropName, JudgeLineRegroupOperation, JudgeLineRenameOperation, UIAttachOperation, UIDetachOperation, JudgeLineDetachAllUIOperation } from "./line";
+import { HoldEndTimeChangeOperation, NNListAddBlankOperation, NNListTimeRangeDeleteOperation, NoteAddOperation, NoteDeleteOperation, NotePropChangeOperation, NotePropName, NoteTimeChangeOperation, NoteTypeChangeOperation } from "./note"
 
-type IntoOperable = EventNode<EventValueESType> | NoteNode | Note | EventNodeSequence<EventValueESType>;
+type IntoOperable = EventNode<EventValueESType> | NoteNode | Note | EventNodeSequence<EventValueESType> | JudgeLine | NNList | Chart;
 
 /**
  * 代表时间
@@ -35,7 +38,7 @@ type UTime = TimeT | number | string;
  */
 type UEvaluator = number | string | Evaluator<EventValueESType> | Easing;
 
-type ToOperable = (<T extends IntoOperable>(o: T) =>
+export type ToOperable = (<T extends IntoOperable>(o: T) =>
     T extends Note
         ? OperableNote
     : T extends EventNode<infer U>
@@ -44,6 +47,12 @@ type ToOperable = (<T extends IntoOperable>(o: T) =>
         ? OperableNoteNode
     : T extends EventNodeSequence<infer U>
         ? OperableEventNodeSequenceSlice<U>
+    : T extends JudgeLine
+        ? OperableJudgeLine
+    : T extends NNList
+        ? OperableNNListSlice
+    : T extends Chart
+        ? OperableChart
     : never) & { buffer: Operation[] };
 const userTimeToTuple = (time: UTime) => {
     if (typeof time === "string") {
@@ -51,7 +60,7 @@ const userTimeToTuple = (time: UTime) => {
         if (!match) {
             throw new Error(`Invalid time format: ${time}`);
         }
-        return userTimeToTuple(match.map(s => parseInt(s)) as TimeT);
+        return userTimeToTuple(match.slice(1, 4).map(s => parseInt(s)) as TimeT);
     } else if (typeof time === "number") {
         const integer = Math.floor(time);
         return TC.validateIp([integer, ...numberToRatio(time - integer)]);
@@ -88,18 +97,29 @@ const uEvaluatorToEvaluator = (uev: UEvaluator, valueType: EventValueType, chart
     }
 }
 
-class Operable {
-    constructor(protected buffer: Operation[], public chart: Chart) {}
+class Operable<T = unknown> {
+    static cache = new WeakMap<object, Operable>();
+    constructor(public target: T, protected buffer: Operation[], public chart: Chart, skipCache = false) {
+        if (!skipCache) {
+            const cached = Operable.cache.get(target as object);
+            if (cached !== undefined) {
+                return cached as any;
+            }
+            Operable.cache.set(target as object, this);
+        }
+    }
 }
 
 
-class OperableNote extends Operable {
+class OperableNote extends Operable<Note> {
     // @ts-expect-error 后面会赋值
     private _fields: {
         [x in NotePropName]: Note[x]
     } = {};
-    constructor(public target: Note, buffer: Operation[], chart: Chart) {
-        super(buffer, chart);
+    constructor(target: Note, buffer: Operation[], chart: Chart) {
+        const wasCached = Operable.cache.has(target as object);
+        super(target, buffer, chart);
+        if (wasCached) return this;
         if (target.parentNode === null) {
             throw new Error("Note has no parent node")
         }
@@ -177,15 +197,18 @@ for (const propName of ["above", "alpha", "positionX", "judgeSize", "isFake", "s
             if (this._fields[propName] === value) {
                 return;
             }
+            if (!checkType(value, notePropTypes[propName])) {
+                throw new Error(`Invalid value for ${propName}: ${value}. Expecting ${notePropTypes[propName]}`)
+            }
             this._fields[propName] = value;
             this.buffer.push(NotePropChangeOperation.lazy(this.target, propName, value));
         }
     });
 }
 
-class OperableNoteNode extends Operable {
-    constructor(public target: NoteNode, buffer: Operation[], chart: Chart) {
-        super(buffer, chart);
+class OperableNoteNode extends Operable<NoteNode> {
+    constructor(target: NoteNode, buffer: Operation[], chart: Chart) {
+        super(target, buffer, chart);
     }
     get notes() {
         return this.target.notes.map(note => new OperableNote(note, this.buffer, this.chart));
@@ -210,9 +233,10 @@ class OperableNoteNode extends Operable {
     }
 }
 
-class OperableEventNode<T extends EventValueESType> extends Operable {
-    constructor(public target: EventNode<T>, buffer: Operation[], chart: Chart) {
-        super(buffer, chart);
+class OperableEventNode<T extends EventValueESType> extends Operable<EventNode<T>> {
+    
+    constructor(target: EventNode<T>, buffer: Operation[], chart: Chart) {
+        super(target, buffer, chart);
     }
     get isStart() {
         return this.target instanceof EventStartNode;
@@ -232,28 +256,39 @@ class OperableEventNode<T extends EventValueESType> extends Operable {
     get end(): OperableEventNode<T> | EventNodeLike<NodeType.TAIL, T> {
         return this.isEnd ? this : this.next;
     }
-    get time() {
-        return this.target.time;
-    }
     get isFinal() {
         return this.isStart && this.target.next.type === NodeType.TAIL;
     }
+    private _time: TimeT;
+    get time() {
+        return this._time ?? this.target.time;
+    }
     set time(userTime: UTime) {
         const timeT = userTimeToTuple(userTime);
+        this._time = timeT;
         this.buffer.push(EventNodeTimeChangeOperation.lazy(this.target as any, timeT));
     }
+    private _value: T;
     get value() {
-        return this.target.value;
+        return this._value ?? this.target.value;
     }
     set value(userValue: T) {
+        this._value = userValue;
         this.buffer.push(EventNodeValueChangeOperation.lazy(this.target as any, userValue));
     }
+    private _evaluator: Evaluator<T>;
     get evaluator() {
-        return this.target.evaluator;
+        return this._evaluator ?? this.target.evaluator;
     }
-
-    set evaluator(evaluator: Evaluator<T>) {
-        this.buffer.push(EventNodeEvaluatorChangeOperation.lazy(this.target as any, evaluator));
+    set evaluator(evaluator: UEvaluator) {
+        const parent = this.target.parentSeq;
+        const e = uEvaluatorToEvaluator(
+            evaluator,
+            parent.type === EventType.text ? EventValueType.text : parent.type === EventType.color ? EventValueType.color : EventValueType.numeric,
+            this.chart,
+            InterpreteAs.str);
+        this._evaluator = e as any;
+        this.buffer.push(EventNodeEvaluatorChangeOperation.lazy(this.target as any, e));
     }
     get previous(): OperableEventNode<T> | EventNodeLike<NodeType.HEAD, T> {
         const prev = this.target.previous;
@@ -272,9 +307,9 @@ class OperableEventNode<T extends EventValueESType> extends Operable {
 }
 
 
-class OperableEventNodeSequenceSlice<T extends EventValueESType> extends Operable {
-    constructor(public target: EventNodeSequence<T>, buffer: Operation[], chart: Chart, public start?: number, public end?: number) {
-        super(buffer, chart);
+class OperableEventNodeSequenceSlice<T extends EventValueESType> extends Operable<EventNodeSequence<T>> {
+    constructor(target: EventNodeSequence<T>, buffer: Operation[], chart: Chart, public start?: number, public end?: number) {
+        super(target, buffer, chart, true);
     }
     *[Symbol.iterator]() {
         let node: EventStartNode<T>;
@@ -334,7 +369,279 @@ class OperableEventNodeSequenceSlice<T extends EventValueESType> extends Operabl
     }
 }
 
+type OperableJudgeLineProps = Pick<JudgeLine, "texture" | "cover" | "zOrder" | "anchor" | "rotatesWithFather">;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unsafe-declaration-merging
+interface OperableJudgeLine extends OperableJudgeLineProps {}
+class OperableJudgeLine extends Operable<JudgeLine> {
+    constructor(target: JudgeLine, buffer: Operation[], chart: Chart) {
+        super(target, buffer, chart);
+    }
+    get name() {
+        return this.target.name;
+    }
+    set name(value: string) {
+        if (this.target.name === value) return;
+        if (typeof name !== "string") {
+            throw new Error("name must be a string.");
+        }
+        this.buffer.push(JudgeLineRenameOperation.lazy(this.target, value));
+    }
+    get id() {
+        return this.target.id;
+    }
+    get father(): OperableJudgeLine | null {
+        return this.target.father ? new OperableJudgeLine(this.target.father, this.buffer, this.chart) : null;
+    }
+    set father(value: OperableJudgeLine | JudgeLine | null) {
+        const line = value instanceof OperableJudgeLine ? value.target : value;
+        this.buffer.push(JudgeLineInheritanceChangeOperation.lazy(this.chart, this.target, line));
+    }
+    get children(): ReadonlySet<OperableJudgeLine> {
+        return new Set([...this.target.children].map(child => new OperableJudgeLine(child, this.buffer, this.chart)));
+    }
+    get group() { return this.target.group; }
+    set group(value: JudgeLineGroup) {
+        if (this.target.group === value) return;
+        this.buffer.push(JudgeLineRegroupOperation.lazy(this.target, value));
+    }
+    get nnLists(): ReadonlyMap<string, OperableNNListSlice> {
+        return new Map([...this.target.nnLists].map(([k, v]) => [k, new OperableNNListSlice(v, this.buffer, this.chart)]));
+    }
+    get hnLists(): ReadonlyMap<string, OperableNNListSlice> {
+        return new Map([...this.target.hnLists].map(([k, v]) => [k, new OperableNNListSlice(v, this.buffer, this.chart)]));
+    }
+    notes(start: number, end: number): Generator<OperableNote>;
+    notes(): Generator<OperableNote>;
+    *notes(start?: number, end?: number) {
+        for (const note of this.target.notes(start, end)) {
+            yield new OperableNote(note, this.buffer, this.chart);
+        }
+    }
+    getNNList(speed: number, yOffset: number, isHold: boolean) {
+        const list = this.target.getNNList(speed, yOffset, isHold, true);
+        return new OperableNNListSlice(list, this.buffer, this.chart);
+    }
+    get eventLayers(): (EventLayer & { [K in keyof EventLayer]?: OperableEventNodeSequenceSlice<number> })[] {
+        return this.target.eventLayers.map(layer => {
+            const result: any = {};
+            for (const key in layer) {
+                const seq = layer[key as keyof EventLayer];
+                if (seq) {
+                    result[key] = new OperableEventNodeSequenceSlice(seq as EventNodeSequence<EventValueESType>, this.buffer, this.chart);
+                }
+            }
+            return result;
+        });
+    }
+    get extendedLayer(): { [K in keyof ExtendedLayer]?: OperableEventNodeSequenceSlice<EventValueESType> } {
+        const result: any = {};
+        const ext = this.target.extendedLayer;
+        for (const key in ext) {
+            const seq = ext[key as keyof ExtendedLayer];
+            if (seq) {
+                result[key] = new OperableEventNodeSequenceSlice(seq as EventNodeSequence<EventValueESType>, this.buffer, this.chart);
+            }
+        }
+        return result;
+    }
+    get speedSequence(): OperableEventNodeSequenceSlice<number> | undefined {
+        return this.target.speedSequence ? new OperableEventNodeSequenceSlice(this.target.speedSequence as EventNodeSequence<number>, this.buffer, this.chart) : undefined;
+    }
+    setENS(layerId: number, typeStr: keyof EventLayer, value: EventNodeSequence) {
+        this.buffer.push(JudgeLineENSChangeOperation.lazy(this.target, layerId, typeStr, value));
+    }
+    setExtendedENS<T extends ExtendedEventTypeName>(typeStr: T, value: EventNodeSequence | null) {
+        this.buffer.push(JudgeLineExtendENSChangeOperation.lazy(this.target, typeStr, value as any));
+    }
+    attachUI(ui: UIName) {
+        if (!UI_NAMES.includes(ui)) {
+            throw new Error(`Invalid UI name: ${ui}. Must be one of: ${UI_NAMES.join(", ")}`);
+        }
+        this.buffer.push(UIAttachOperation.lazy(this.chart, this.target, ui));
+    }
+    detachUI(ui: UIName) {
+        if (!UI_NAMES.includes(ui)) {
+            throw new Error(`Invalid UI name: ${ui}. Must be one of: ${UI_NAMES.join(", ")}`);
+        }
+        this.buffer.push(UIDetachOperation.lazy(this.chart, ui));
+    }
+    detachAllUI() {
+        this.buffer.push(JudgeLineDetachAllUIOperation.lazy(this.chart, this.target));
+    }
+    del() {
+        this.buffer.push(JudgeLineDeleteOperation.lazy(this.chart, this.target));
+    }
+    /** 新增一个音符。 */
+    newNote(params: Partial<Pick<NoteDataKPA, Exclude<keyof NoteDataKPA, "type" | "startTime" | "endTime" | "positionX">>>
+        & { type: NoteType, startTime: UTime, endTime?: UTime, positionX: number }) {
+        const startTime = userTimeToTuple(params.startTime);
+        const endTime = params.endTime && userTimeToTuple(params.endTime)
+        if (params.type === NoteType.hold && !params.endTime) {
+            throw new Error("Hold notes must have an endTime");
+        } else if (params.type !== NoteType.hold && endTime && TC.ne(endTime, startTime)) {
+            throw new Error("Non-hold notes must have the same startTime and endTime");
+        }
+        const data: NoteDataKPA = {
+            type: params.type,
+            startTime: startTime,
+            endTime: endTime || startTime,
+            positionX: params.positionX,
+            size: params.size ?? 1.0,
+            judgeSize: params.judgeSize ?? 1.0,
+            speed: params.speed ?? 1.0,
+            alpha: params.alpha ?? 1.0,
+            isFake: params.isFake ?? 0,
+            above: params.above ?? 1,
+            visibleTime: params.visibleTime ?? 99999.0,
+            absoluteYOffset: params.absoluteYOffset ?? 0,
+            yOffset: params.yOffset,
+            tintHitEffects: params.tintHitEffects ?? null,
+            tint: params.tint ?? null,
+            // zIndex: params.zIndex ?? null,
+            // zIndexHitEffects: params.zIndexHitEffects ?? null,
+            visibleBeats: params.visibleBeats ?? 0
+        };
+        const note = new Note(data);
+        note.computeVisibleBeats(this.chart.timeCalculator);
+
+        this.buffer.push(
+            NoteAddOperation.lazy(
+                note,
+                this.target.getNNList(
+                    note.speed, 
+                    note.yOffset, 
+                    note.type === NoteType.hold, 
+                    true)
+                .getNodeOf(note.startTime)
+            ));
+        return this;
+    }
+}
+
+const judgeLinePropTypes: { [K in "texture" | "cover" | "zOrder" | "anchor" | "rotatesWithFather"]: string | (string | typeof Function)[] | typeof Function } = {
+    texture: "string",
+    cover: "boolean",
+    zOrder: "number",
+    anchor: ["number", "number"],
+    rotatesWithFather: "boolean",
+};
+
+const jlProps: ("texture" | "cover" | "zOrder" | "anchor" | "rotatesWithFather")[] = ["texture", "cover", "zOrder", "anchor", "rotatesWithFather"];
+for (const prop of jlProps) {
+    Object.defineProperty(OperableJudgeLine.prototype, prop, {
+        get(this: OperableJudgeLine) { return this.target[prop]; },
+        set(this: OperableJudgeLine, value: JudgeLine[typeof prop]) {
+            if (this.target[prop] === value) return;
+            if (!checkType(value, judgeLinePropTypes[prop])) {
+                throw new Error(`Invalid value for ${prop}: ${value}. Expecting ${judgeLinePropTypes[prop]}`);
+            }
+            this.buffer.push(JudgeLinePropChangeOperation.lazy(this.target, prop as JudgeLinePropName, value));
+        },
+        configurable: true,
+        enumerable: true,
+    });
+}
+
+class OperableNNListSlice extends Operable<NNList> {
+    constructor(target: NNList, buffer: Operation[], chart: Chart, public start?: number, public end?: number) {
+        super(target, buffer, chart, true);
+    }
+    get speed() { return this.target.speed; }
+    get medianYOffset() { return this.target.medianYOffset; }
+    get id() { return this.target.id; }
+    get effectiveBeats() { return this.target.effectiveBeats; }
+    get parentLine(): OperableJudgeLine {
+        return new OperableJudgeLine(this.target.parentLine, this.buffer, this.chart);
+    }
+    /** Iterate over NoteNodes in this slice as OperableNoteNodes */
+    *[Symbol.iterator]() {
+        let node: AnyNN;
+        if (this.start !== undefined) {
+            const nnOrTail = this.target.getNodeAt(this.start);
+            if (nnOrTail.type === NodeType.TAIL) return;
+            node = nnOrTail as AnyNN;
+        } else {
+            node = this.target.head.next;
+        }
+        while (node.type !== NodeType.TAIL) {
+            yield new OperableNoteNode(node as NoteNode, this.buffer, this.chart);
+            if (this.end !== undefined && TC.toBeats((node as NoteNode).startTime) >= this.end) {
+                break;
+            }
+            node = node.next;
+        }
+    }
+    /** Get the NoteNode at a given time */
+    getNodeOf(time: UTime): OperableNoteNode {
+        const timeT = userTimeToTuple(time);
+        return new OperableNoteNode(this.target.getNodeOf(timeT), this.buffer, this.chart);
+    }
+    /** Create a sub-slice of this NNList */
+    slice(start: number, end: number) {
+        return new OperableNNListSlice(this.target, this.buffer, this.chart, start, end);
+    }
+    /** Delete notes in a time range */
+    deleteTimeRange(start: UTime, end: UTime, updatesJump: boolean = true) {
+        const startT = userTimeToTuple(start);
+        const endT = userTimeToTuple(end);
+        this.buffer.push(NNListTimeRangeDeleteOperation.lazy(this.target, [startT, endT], updatesJump));
+    }
+    /** Insert a blank time range, shifting notes after pos */
+    insertBlank(pos: UTime, length: UTime) {
+        const posT = userTimeToTuple(pos);
+        const lengthT = userTimeToTuple(length);
+        this.buffer.push(new NNListAddBlankOperation(this.target, posT, lengthT));
+    }
+}
+
+type OperableChartProps = Pick<Chart, ChartPropName>;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unsafe-declaration-merging
+interface OperableChart extends OperableChartProps {}
+class OperableChart extends Operable<Chart> {
+    constructor(target: Chart, buffer: Operation[], chart: Chart) {
+        super(target, buffer, chart);
+    }
+    get judgeLines(): OperableJudgeLine[] {
+        return this.target.judgeLines.map(line => new OperableJudgeLine(line, this.buffer, this.chart));
+    }
+    get orphanLines(): OperableJudgeLine[] {
+        return this.target.orphanLines.map(line => new OperableJudgeLine(line, this.buffer, this.chart));
+    }
+    getJudgeLineById(id: number): OperableJudgeLine | undefined {
+        const line = this.target.judgeLines[id];
+        return line ? new OperableJudgeLine(line, this.buffer, this.chart) : undefined;
+    }
+}
+
+const chartPropTypes: { [K in ChartPropName]: string | (string | typeof Function)[] | typeof Function } = {
+    name: "string",
+    level: "string",
+    composer: "string",
+    illustrator: "string",
+    charter: "string",
+    offset: "number",
+};
+
+const UI_NAMES: readonly UIName[] = ["combo", "combonumber", "score", "pause", "bar", "name", "level"];
+
+const chartProps: ChartPropName[] = ["name", "level", "composer", "illustrator", "charter", "offset"];
+for (const prop of chartProps) {
+    Object.defineProperty(OperableChart.prototype, prop, {
+        get(this: OperableChart) { return this.target[prop]; },
+        set(this: OperableChart, value: Chart[typeof prop]) {
+            if (this.target[prop] === value) return;
+            if (!checkType(value, chartPropTypes[prop])) {
+                throw new Error(`Invalid value for ${prop}: ${value}. Expecting ${chartPropTypes[prop]}`);
+            }
+            this.buffer.push(ChartPropChangeOperation.lazy(this.target, prop, value));
+        },
+        configurable: true,
+        enumerable: true,
+    });
+}
+
 export function useToOperable(chart: Chart): ToOperable {
+    Operable.cache = new WeakMap();
     const toOperable = (o: IntoOperable) => {
         if (typeof o !== "object") {
             throw new Error("o must be an object");
@@ -351,6 +658,12 @@ export function useToOperable(chart: Chart): ToOperable {
             return new OperableEventNodeSequenceSlice(o, buffer, chart);
         } else if (o instanceof NoteNode) {
             return new OperableNoteNode(o, buffer, chart);
+        } else if (o instanceof JudgeLine) {
+            return new OperableJudgeLine(o, buffer, chart);
+        } else if (o instanceof NNList) {
+            return new OperableNNListSlice(o, buffer, chart);
+        } else if (o instanceof Chart) {
+            return new OperableChart(o, buffer, chart);
         } else {
             throw new Error("Unsupported object");
         }
