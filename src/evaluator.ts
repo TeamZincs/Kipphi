@@ -171,23 +171,23 @@ export class TextEasedEvaluator extends EasedEvaluator<string> {
         const interpretedAs = this.interpretedAs;
         if (interpretedAs === InterpreteAs.float) {
             const start = parseFloat(value);
-            const delta = parseFloat(nextValue as string) - start;
+            const delta = parseFloat(nextValue) - start;
             return (start + progress * delta).toFixed(3) + "";
         } else if (interpretedAs === InterpreteAs.int) {
             const start = parseInt(value);
-            const delta = parseInt(nextValue as string) - start;
+            const delta = parseInt(nextValue) - start;
             return start + Math.floor(progress * delta) + "";
         } else 
-            if (value.startsWith(nextValue as string)) {
-                const startLen = (nextValue as string).length;
-                const deltaLen = value.length - startLen;
+            if (value.startsWith(nextValue)) {
+                const startLen = value.length;
+                const deltaLen = nextValue.length - startLen;
                 const len = startLen + Math.floor(deltaLen * progress);
                 return value.substring(0, len);
-            } else if ((nextValue as string).startsWith(value)) {
+            } else if ((nextValue).startsWith(value)) {
                 const startLen = value.length;
-                const deltaLen = (nextValue as string).length - startLen;
+                const deltaLen = (nextValue).length - startLen;
                 const len = startLen + Math.floor(deltaLen * progress);
-                return (nextValue as string).substring(0, len);
+                return (nextValue).substring(0, len);
             }
         else {
             return value;
