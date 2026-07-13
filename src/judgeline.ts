@@ -182,9 +182,13 @@ export class JudgeLine {
         if (speedSequences.length > 1) {
             line.speedSequence = EventNodeSequence.mergeSequences(speedSequences) as SpeedENS;
             line.speedSequence.updateFloorPositionAfter(line.speedSequence.head.next, timeCalculator);
-        } else {
+        } else if (speedSequences.length === 1) {
             line.speedSequence = speedSequences[0]
             chart.registerEventNodeSequence(EventType.speed, `#${id}.speed`, speedSequences[0]);
+        } else {
+            const sequence = EventNodeSequence.newSeq(EventType.speed, chart.effectiveBeats) as SpeedENS;
+            line.speedSequence = sequence;
+            chart.registerEventNodeSequence(EventType.speed, `#${id}.speed`, sequence);
         }
         
         if (data.extended?.scaleXEvents) {
