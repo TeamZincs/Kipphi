@@ -41,11 +41,19 @@ export class EventNodePairRemoveOperation extends Operation {
             // updatesFP的校验确保了序列为速度序列
             (this.sequence as SpeedENS).updateFloorPositionAfter(this.originalPrev, chart.timeCalculator) 
         }
+        
+        if (this.sequence.type === EventType.bpm) {
+            chart.updateAllFloorPositions();
+        }
     }
     undo(chart: Chart) {
         this.sequence.updateJump(...EventNode.insert(this.startNode, this.originalPrev))
         if (this.updatesFP) {
             (this.sequence as SpeedENS).updateFloorPositionAfter(this.originalPrev, chart.timeCalculator) 
+        }
+        
+        if (this.sequence.type === EventType.bpm) {
+            chart.updateAllFloorPositions();
         }
     }
 }
@@ -88,12 +96,18 @@ export class EventNodePairInsertOperation <VT extends EventValueESType> extends 
             // updatesFP的校验确保了序列为速度序列
             (this.sequence as SpeedENS).updateFloorPositionAfter(this.tarPrev as EventStartNode, chart.timeCalculator) 
         }
+        if (this.node.parentSeq.type === EventType.bpm) {
+            chart.updateAllFloorPositions();
+        }
     }
     undo(chart: Chart) {
         this.sequence.updateJump(...EventNode.removeNodePair(...EventNode.getEndStart(this.node)))
         if (this.updatesFP) {
             // updatesFP的校验确保了序列为速度序列
             (this.sequence as SpeedENS).updateFloorPositionAfter(this.tarPrev as EventStartNode, chart.timeCalculator) 
+        }
+        if (this.node.parentSeq.type === EventType.bpm) {
+            chart.updateAllFloorPositions();
         }
     }
 }
@@ -138,12 +152,18 @@ export class EventNodeValueChangeOperation <VT extends EventValueESType> extends
         this.node.value = this.value
         if (this.node.parentSeq.type === EventType.speed) {
             this.updateSpeedENS(chart);
+        } else if (this.node.parentSeq.type === EventType.bpm) {
+            chart.timeCalculator.bpmSequence.updateSecondJump();
+            chart.updateAllFloorPositions();
         }
     }
     undo(chart: Chart) {
         this.node.value = this.originalValue
         if (this.node.parentSeq.type === EventType.speed) {
             this.updateSpeedENS(chart);
+        } else if (this.node.parentSeq.type === EventType.bpm) {
+            chart.timeCalculator.bpmSequence.updateSecondJump();
+            chart.updateAllFloorPositions();
         }
     }
     updateSpeedENS(chart: Chart) {
@@ -159,6 +179,9 @@ export class EventNodeValueChangeOperation <VT extends EventValueESType> extends
                 
             if (this.node.parentSeq.type === EventType.speed) {
                 this.updateSpeedENS(chart);
+            } else if (this.node.parentSeq.type === EventType.bpm) {
+                chart.timeCalculator.bpmSequence.updateSecondJump();
+                chart.updateAllFloorPositions();
             }
             return true;
         }
@@ -202,21 +225,29 @@ export class EventNodeTimeChangeOperation extends Operation {
         this.originalValue = node.time
         console.log("操作：", this)
     }
-    do() { // 这里其实还要设计重新选址的问题
+    do(chart: Chart) { // 这里其实还要设计重新选址的问题
         this.startNode.time = this.endNode.time = this.value;
         if (this.newPrevious !== this.originalPrevious) {
             this.sequence.updateJump(...EventNode.removeNodePair(this.endNode, this.startNode))
             EventNode.insert(this.startNode, this.newPrevious)
         }
-        this.sequence.updateJump(EventNode.previousStartOfStart(this.endNode.previous), EventNode.nextStartOfStart(this.startNode))
+        this.sequence.updateJump(EventNode.previousStartOfStart(this.endNode.previous), EventNode.nextStartOfStart(this.startNode));
+        
+        if (this.sequence.type === EventType.bpm) {
+            chart.updateAllFloorPositions();
+        }
     }
-    undo() {
+    undo(chart: Chart) {
         this.endNode.time = this.startNode.time = this.originalValue;
         if (this.newPrevious !== this.originalPrevious) {
             this.sequence.updateJump(...EventNode.removeNodePair(this.endNode, this.startNode))
             EventNode.insert(this.startNode, this.originalPrevious)
         }
-        this.sequence.updateJump(this.endNode.previous, EventNode.nextStartOfStart(this.startNode))
+        this.sequence.updateJump(this.endNode.previous, EventNode.nextStartOfStart(this.startNode));
+        
+        if (this.sequence.type === EventType.bpm) {
+            chart.updateAllFloorPositions();
+        }
     }
 
 }

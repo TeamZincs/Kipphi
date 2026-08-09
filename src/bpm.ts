@@ -12,8 +12,6 @@ import TC from "./time";
  * 每个BPMStartNode代表一个BPM值的开始，直到下一个BPM节点
  */
 export class BPMStartNode extends EventStartNode {
-    /** 每拍的秒数(Seconds Per Beat) */
-    spb: number;
     /** 缓存的起始积分值，用于时间计算 */
     cachedStartIntegral?: number;
     /** 缓存的积分值，用于时间计算 */
@@ -30,7 +28,6 @@ export class BPMStartNode extends EventStartNode {
      */
     constructor(startTime: TimeT, bpm: number) {
         super(startTime, bpm);
-        this.spb = 60 / bpm;
     }
     
     /**
@@ -170,6 +167,7 @@ export class BPMSequence extends EventNodeSequence {
      * 缓存每个节点的秒数发生在这里。
      */
     updateSecondJump(): void {
+        console.log(111);
         let integral = 0;
         // 计算积分并缓存到BPMNode
         let node: BPMStartNode = this.head.next;
@@ -343,7 +341,7 @@ export class TimeCalculator {
     secondsToBeats(seconds: number) {
         const node = this.bpmSequence.getNodeBySeconds(seconds);
         // console.log("node:", node)
-        const beats = (seconds - node.cachedStartIntegral) / node.spb;
+        const beats = (seconds - node.cachedStartIntegral) * node.value / 60;
         return TC.toBeats(node.time) + beats
     }
     

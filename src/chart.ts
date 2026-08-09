@@ -767,6 +767,13 @@ export class Chart {
             seq.checkErrors();
         }
     }
+    updateAllFloorPositions() {
+        for (const [_, seq] of this.sequenceMap) {
+            if (seq.type === EventType.speed) {
+                (seq as SpeedENS).updateFloorPositionAfter(seq.head.next, this.timeCalculator);
+            }
+        }
+    }
     /**
      * 用于构造谱面时检查
      */
