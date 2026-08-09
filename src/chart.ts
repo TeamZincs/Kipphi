@@ -33,7 +33,8 @@ import {
 import {
     NNNList,
     type NNNOrTail,
-    NNNode
+    NNNode,
+    Note
 } from "./note";
 
 import {
@@ -62,11 +63,12 @@ import {
     MacroEvaluatorDataKPA2,
     FinalEventStartNodeDataKPA2,
     MacroData,
-    MacroLink
+    MacroLink,
+    NoteMacroLink
 } from "./chartTypes";
 import { ColorEasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorOfType } from "./evaluator";
 import { err, ERROR_IDS, KPAError }  from "./env";
-import { MacroLib, EventMacroTime, EventMacroValue, EventMacro } from "./macro";
+import { MacroLib, EventMacroTime, EventMacroValue, EventMacro, NoteMacro } from "./macro";
 
 /// #declaration:global
 
@@ -701,7 +703,7 @@ export class Chart {
         return node;
     }
     bindTimeMacro(node: EventStartNode<any>, macroData: MacroData, pos: string) {
-        const id = macroData[0];
+        const id = Array.isArray(macroData) ? macroData[0] : macroData;
         const macro = this.macroLib.timeMacros.get(id);
         if (typeof macro === "object" && macro instanceof EventMacroTime) {
             node.macroTime = macro;
@@ -712,10 +714,10 @@ export class Chart {
         return null;
     }
     bindValueMacro(node: EventNode<any>, macroData: MacroData, pos: string) {
-        const id = macroData[0];
+        const id = Array.isArray(macroData) ? macroData[0] : macroData;
         const macro = this.macroLib.valueMacros.get(id);
         if (typeof macro === "object" && macro instanceof EventMacroValue) {
-            node.macroValue = macro;
+            node.macro = macro;
             macro.bindNode(node, macroData, pos);
         } else {
             err.VALUE_MACRO_NOT_FOUND(id, pos).warn();
@@ -731,6 +733,26 @@ export class Chart {
             macro.linkProtoNode(node, linkData[1]);
         } else {
             err[`${prefix.toUpperCase() as 'TIME' | 'VALUE'}_MACRO_NOT_FOUND`](realName, pos).warn();
+        }
+        return null;
+    }
+    bindNoteMacro(note: Note, macroData: MacroData, pos: string) {
+        const id = Array.isArray(macroData) ? macroData[0] : macroData;
+        const macro = this.macroLib.noteMacros.get(id);
+        if (typeof macro === "object" && macro instanceof NoteMacro) {
+            note.macro = macro;
+            macro.bindNote(note, macroData, pos);
+        } else {
+            err.NOTE_MACRO_NOT_FOUND(id, pos).warn();
+        }
+        return null;
+    }
+    linkNoteMacro(note: Note, linkData: NoteMacroLink, pos: string) {
+        const macro = this.macroLib.noteMacros.get(linkData[0]);
+        if (typeof macro === "object" && macro instanceof NoteMacro) {
+            macro.linkProtoNote(note, linkData[1]);
+        } else {
+            err.NOTE_MACRO_NOT_FOUND(linkData[0], pos).warn();
         }
         return null;
     }

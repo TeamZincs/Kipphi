@@ -8,7 +8,7 @@ import { JumpArray } from "./jumparray";
 import { type TimeCalculator } from "./bpm";
 import TC from "./time";
 import { hex2rgb, NodeType, rgb2hex } from "./util";
-import { Environment } from ".";
+import { Environment, MacroLib, NoteMacro } from ".";
 
 /// #declaration:global
 
@@ -80,6 +80,9 @@ export class Note {
     tintHitEffects: HEX;
     judgeSize: number;
 
+    linkedMacros: Set<NoteMacro>;
+    macro: NoteMacro;
+
     // readonly chart: Chart;
     // readonly judgeLine: JudgeLine
     // posPrevious?: Note;
@@ -110,10 +113,14 @@ export class Note {
         // @ts-expect-error KPA用judgeSize，RPE用judgeArea，PZP用judgeSize
         this.judgeSize = data.judgeSize ?? data.judgeArea ?? this.size;
     }
-    static fromKPAJSON(data: NoteDataKPA, timeCalculator: TimeCalculator) {
+    static fromKPAJSON(data: NoteDataKPA, chart: Chart, pos: string) {
         const note = new Note(data);
+const timeCalculator = chart.timeCalculator;
         if (!note.visibleBeats) {
             note.computeVisibleBeats(timeCalculator);
+        }
+if (data.macro) {
+            chart.bindNoteMacro(note, data.macro, pos);
         }
         return note;
     }
@@ -193,6 +200,7 @@ export class Note {
             tint: this.tint !== undefined && this.tint !== 0xffffff ? hex2rgb(this.tint) : undefined,
             tintHitEffects: this.tintHitEffects !== undefined && this.tintHitEffects !== 0xffffff ? hex2rgb(this.tintHitEffects) : undefined,
             judgeSize: this.judgeSize && this.judgeSize !== 1.0 ? this.judgeSize : undefined,
+macro: this.macro?.dumpForNote(this)
         }
     }
 }
@@ -243,10 +251,10 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
         this.notes = [];
         this.id = NoteNode.count++;
     }
-    static fromKPAJSON(data: NoteNodeDataKPA, timeCalculator: TimeCalculator) {
+    static fromKPAJSON(data: NoteNodeDataKPA, chart: Chart, pos: string) {
         const node = new NoteNode(data.startTime);
         for (const noteData of data.notes) {
-            const note = Note.fromKPAJSON(noteData, timeCalculator);
+            const note = Note.fromKPAJSON(noteData, chart, pos);
             node.add(note);
         }
         return node
@@ -393,13 +401,13 @@ export class NNList {
         this.effectiveBeats = effectiveBeats
     }
     /** 此方法永远用于最新KPAJSON */
-    static fromKPAJSON<T extends boolean>(isHold: T, effectiveBeats: number, data: NNListDataKPA, nnnList: NNNList, timeCalculator: TimeCalculator): T extends true ? HNList : NNList {
+    static fromKPAJSON<T extends boolean>(isHold: T, effectiveBeats: number, data: NNListDataKPA, nnnList: NNNList, chart: Chart, pos: string): T extends true ? HNList : NNList {
         const list: T extends true ? HNList : NNList = isHold ? new HNList(data.speed, data.medianYOffset, effectiveBeats) : new NNList(data.speed, data.medianYOffset, effectiveBeats) as any;
         const nnlength = data.noteNodes.length
         let cur: NNOrHead = list.head;
         for (let i = 0; i < nnlength; i++) {
             const nnData = data.noteNodes[i];
-            const nn = NoteNode.fromKPAJSON(nnData, timeCalculator);
+            const nn = NoteNode.fromKPAJSON(nnData, chart, `${pos}[${i}]`);
             NoteNode.connect(cur, nn);
             cur = nn;
             nnnList.addNoteNode(nn);

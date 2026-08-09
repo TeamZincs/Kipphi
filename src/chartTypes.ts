@@ -152,6 +152,8 @@ export interface NoteDataKPA {
     judgeSize?: number;
     visibleBeats?: number;
     absoluteYOffset: number;
+    
+    macro?: MacroData;
 }
 
 /** 事件 */
@@ -269,7 +271,8 @@ export interface MacroEvaluatorDataKPA2 {
 export type EvaluatorDataKPA2<T> = EasedEvaluatorDataOfType<T> | ExpressionEvaluatorDataKPA2 | MacroEvaluatorDataKPA2;
 
 export type MacroData = [id: string, proto: number] | string;
-export type MacroLink = [macroTypeAndId: `${'value' | 'time'}:${string}`, nodeId: number]
+export type MacroLink = [macroTypeAndId: `${'value' | 'time'}:${string}`, nodeId: number];
+export type NoteMacroLink = [macroId: string, noteId: number];
 
 export interface EventDataKPA2<T = number> {
     /** 开始时间 */
@@ -544,6 +547,13 @@ export interface MacroValueBodyData {
     macro: string;
     parametric?: boolean;
 }
+
+export interface NoteMacroBodyData {
+    id: string;
+    macro: string;
+    parametric?: boolean;
+}
+
 export interface ChartDataKPA {
     version: number;
     offset: number;
@@ -599,6 +609,7 @@ export interface ChartDataKPA2 {
     macroEvaluators: MacroEvaluatorBodyData[];
     timeMacros: MacroTimeBodyData[];
     valueMacros: MacroValueBodyData[];
+    noteMacros: NoteMacroBodyData[];
     eventNodeSequences: EventNodeSequenceDataKPA2<unknown>[];
     orphanLines: JudgeLineDataKPA2[];
     bpmList: BPMSegmentData[];

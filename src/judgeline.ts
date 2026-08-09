@@ -246,7 +246,7 @@ export class JudgeLine {
                 const listData = listsData[name];
                 if (withNewEventStructure) {
                         
-                    const list = NNList.fromKPAJSON(isHold, chart.effectiveBeats, listData, nnnList, timeCalculator);
+                    const list = NNList.fromKPAJSON(isHold, chart.effectiveBeats, listData, nnnList, chart, `#${line.id}.${name}`);
                     list.parentLine = line;
                     list.id = name;
                     // isHold为真则lists为Map<string, HNList>，且list为HNList，能够匹配
@@ -593,15 +593,15 @@ export class JudgeLine {
             } else {
                 // 正常情况处理
                 if (range[0] === undefined) {
-                    if (thisSpeed > 0 && endY >= thisPosY && startY < nextPosY) {
+                    if ((thisSpeed > 0 || nextSpeed > 0) && endY >= thisPosY && startY < nextPosY) {
                         range[0] = thisSpeed !== nextSpeed ? thisTime : computeTime(
                             thisSpeed,
                             startY - thisPosY, thisTime)
-                    } else if (thisSpeed < 0 && startY <= thisPosY && endY > nextPosY) {
+                    } else if ((thisSpeed < 0 || nextSpeed < 0) && startY <= thisPosY && endY > nextPosY) {
                         range[0] = thisSpeed !== nextSpeed ? thisTime : computeTime(
                             thisSpeed,
                             endY - thisPosY, thisTime)
-                    } else if (thisSpeed === 0 && startY <= thisPosY && thisPosY <= endY) {
+                    } else if (startY <= thisPosY && thisPosY <= endY) {
                         range[0] = thisTime;
                     }
                     // else if (startY <= thisPosY && thisPosY <= endY) {
@@ -610,7 +610,7 @@ export class JudgeLine {
                 }
                 
                 if (range[0] !== undefined) {
-                    if (thisSpeed > 0 && endY <= nextPosY) {
+                    if ((thisSpeed > 0 || nextSpeed > 0) && endY <= nextPosY) {
                         range[1] = thisSpeed !== nextSpeed ? nextTime : computeTime(
                             thisSpeed,
                             endY - thisPosY, thisTime)
@@ -620,7 +620,7 @@ export class JudgeLine {
                             return result;
                         }
                         range = [undefined, undefined];
-                    } else if (thisSpeed < 0 && startY >= thisPosY) {
+                    } else if ((thisSpeed < 0 || nextSpeed < 0) && startY >= thisPosY) {
                         range[1] = thisSpeed !== nextSpeed ? nextTime : computeTime(
                             thisSpeed,
                             startY - thisPosY, thisTime)

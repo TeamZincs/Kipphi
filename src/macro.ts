@@ -1,5 +1,5 @@
 import type { Chart } from "./chart";
-import type { EventValueESType, MacroData, MacroEvaluatorBodyData, MacroLink, MacroTimeBodyData, MacroValueBodyData, RGB, TimeT } from "./chartTypes";
+import type { EventValueESType, MacroData, MacroEvaluatorBodyData, MacroLink, MacroTimeBodyData, MacroValueBodyData, NoteMacroBodyData, NoteMacroLink, NoteType, RGB, TimeT } from "./chartTypes";
 import { err, ERROR_IDS, KPAError } from "./env";
 import { MacroEvaluator } from "./evaluator";
 import type { EventNode, EventStartNode } from "./event";
@@ -14,8 +14,9 @@ const getLine = (node: EventStartNode<EventValueESType>, chart: Chart) => {
     }
     return chart.judgeLines[parseInt(canBeId[1])]
 }
-
-
+const getLineForNote = (note: Note) => {
+    return note.parentNode.parentSeq.parentLine
+}
 // 添加表达式宏，通过@表示。如@line.id表示判定线ID，会在构造函数中被替换为实际值
 export const EVENT_MACROS = {
     "line.id": (node: EventStartNode<EventValueESType>, chart: Chart) => getLine(node, chart)?.id,
@@ -27,7 +28,37 @@ export const EVENT_MACROS = {
     "seq.type": (node: EventStartNode<EventValueESType>) => node.parentSeq.type
 }
 
-export type Macroable = number | string | TimeT | RGB | boolean;
+export const NOTE_MACROS = {
+    "note.type": (note: Note) => note.type,
+    "note.size": (note: Note) => note.size,
+    "note.speed": (note: Note) => note.speed,
+    "note.alpha": (note: Note) => note.alpha,
+    "note.yOffset": (note: Note) => note.yOffset,
+    "note.positionX": (note: Note) => note.positionX,
+    "note.visibleBeats": (note: Note) => note.visibleBeats,
+    "note.above": (note: Note) => note.above,
+    "note.isFake": (note: Note) => note.isFake,
+    "note.startTime": (note: Note) => note.startTime,
+    "note.endTime": (note: Note) => note.endTime,
+    "line.id": (note: Note) => getLineForNote(note).id,
+    "line.name": (note: Note) => getLineForNote(note).name,
+    "line.group": (note: Note) => getLineForNote(note).group,
+}
+
+export interface MNote {
+    above?: boolean;
+    alpha?: number;
+    endTime?: TimeT;
+    isFake?: boolean;
+    positionX?: number;
+    size?: number;
+    speed?: number;
+    startTime?: TimeT;
+    type?: NoteType;
+    visibleBeats?: number;
+    yOffset?: number;
+}
+export type Macroable = number | string | TimeT | RGB | boolean | MNote;
 export type Macroee = EventNode<EventValueESType> | Note;
 
 export abstract class Macro<T extends Macroable, C extends Macroee, P extends Macroee> {
@@ -159,9 +190,100 @@ export class EventMacroTime extends EventMacro<TimeT> {
     }
 }
 
+export class NoteMacro extends Macro<MNote, Note, Note> {
+    eval(note: Note, chart: Chart): MNote {
+        let jsExpr = this.parametric ? this.macro.replace(/@proto\.(value|time)/, (k) => {
+            return JSON.stringify(this.protoNodes[this.consumers.get(note)!][k]) + " "
+        }): this.macro;
+        jsExpr =  this.macro.replace(/@([a-z]+\.[a-z])/, (k) => {
+            return JSON.stringify(NOTE_MACROS[k](note, chart)) + " "
+        });
+        return new Function("return " + jsExpr)() as MNote;
+    }
+    checkSyntax(): KPAError<ERROR_IDS.PROTO_PRESENT_IN_NONPARAMETRIC | ERROR_IDS.UNKNOWN_MACRO_EXPRESSION | ERROR_IDS.JAVASCRIPT_SYNTAX_ERROR> | null {
+        let jsExpr: string;
+        if (this.parametric) {
+            jsExpr = this.macro.replace(/@proto\.(above|alpha|endTime|isFake|positionX|size|speed|startTime|type|visibleBeats|yOffset)/, (k) => {
+                return '"aaa" '
+            });
+        } else {
+            if (/@proto/.test(this.macro)) {
+                return err.PROTO_PRESENT_IN_NONPARAMETRIC(this.id);
+            }
+        }
+        try {
+            jsExpr =  this.macro.replace(/@([a-z]+\.[a-z])/, (k) => {
+                if (!(k in EVENT_MACROS)) {
+                    throw err.UNKNOWN_MACRO_EXPRESSION(k, this.id);
+                }
+                return '"aaa" '
+            });
+        } catch (e) {
+            if (e instanceof KPAError) {
+                return e;
+            } else {
+                throw e;
+            }
+        }
+        try {
+            new Function("return " + jsExpr); // 仅检查语法，不执行
+        } catch (e) {
+            return err.JAVASCRIPT_SYNTAX_ERROR(e, this.id);
+        }
+    }
+    bindNote(note: Note, macroData: MacroData, pos?: string) {
+        if (this.parametric) {
+            if (typeof macroData === "string") {
+                throw err.PARAMETRIC_MACRO_REQUIRES_PROTO_KEY(pos)
+            }
+            this.consumers.set(note, macroData[1]);
+        } else {
+            if (Array.isArray(macroData)) {
+                throw err.MACRO_NOT_PARAMETRIC(this.id, pos);
+            }
+            this.consumers.set(note, -1);
+        }
+    }
+    linkProtoNote(note: Note, id: number): void {
+        this.protoNodes[id] = note;
+        note.linkedMacros.add(this);
+    }
+    dumpContent(): NoteMacroBodyData {
+        return {
+            id: this.id,
+            macro: this.macro,
+            parametric: this.parametric ? true : undefined
+        }
+    }
+    /**
+     * 为单个节点导出宏名称和参数（若有）
+     * @param node 
+     * @example
+     * return {
+     *     start: node.value,
+     *     end: node.next.value,
+     *     macroStart: node.valueMacro.dumpForNode(node),
+     *     macroEnd: node.valueMacro.dumpForNode(node.next),
+     *     ...
+     * } satisfies EvenDataKPA2
+     * 
+     */
+    dumpForNote(node: Note): MacroData {
+        if (this.parametric) {
+            return [this.id, this.consumers.get(node)!]
+        } else {
+            return this.id
+        }
+    }
+    dumpLinkForNote(note: Note): NoteMacroLink {
+        return [this.id, this.protoNodes.indexOf(note)]
+    }
+}
+
 export class MacroLib {
     timeMacros: Map<string, EventMacroTime> = new Map();
     valueMacros: Map<string, EventMacroValue> = new Map();
+    noteMacros: Map<string, NoteMacro> = new Map();
     macroEvaluators: Map<string, MacroEvaluator<EventValueESType>> = new Map();
     dumpTimeMacros(): MacroTimeBodyData[] {
         const arr: MacroTimeBodyData[] = [];
@@ -173,9 +295,24 @@ export class MacroLib {
     readTimeMacros(data: MacroTimeBodyData[]) {
         const len = data.length;
         for (let i = 0; i < len; i++) {
-            const datum = data[i];
+            const datum = data[i]!;
             const macro = new EventMacroTime(datum.macro, datum.id, datum.parametric);
             this.timeMacros.set(datum.id, macro);
+        }
+    }
+    dumpNoteMacros(): NoteMacroBodyData[] {
+        const arr: NoteMacroBodyData[] = [];
+        for (const [_, macro] of this.noteMacros) {
+            arr.push(macro.dumpContent());
+        }
+        return arr;
+    }
+    readNoteMacros(data: NoteMacroBodyData[]) {
+        const len = data.length;
+        for (let i = 0; i < len; i++) {
+            const datum = data[i]!;
+            const macro = new NoteMacro(datum.macro, datum.id, datum.parametric);
+            this.noteMacros.set(datum.id, macro);
         }
     }
 
@@ -189,7 +326,7 @@ export class MacroLib {
     readValueMacros(data: MacroValueBodyData[]) {
         const len = data.length;
         for (let i = 0; i < len; i++) {
-            const datum = data[i];
+            const datum = data[i]!;
             const macro = new EventMacroValue(datum.macro, datum.id, datum.parametric);
             this.valueMacros.set(datum.id, macro);
         }
