@@ -252,6 +252,13 @@ export class NoteTimeChangeOperation extends ComplexOperation<[
         }
         return false
     }
+    static byTime(note: Note, startTime: TimeT) {
+        if (!note.parentNode) {
+            throw new Error();
+        }
+        const node = note.parentNode.parentSeq.getNodeOf(startTime)
+        return new NoteTimeChangeOperation(note, node);
+    }
 }
 
 /**
@@ -316,6 +323,9 @@ extends ComplexOperation<[NotePropChangeOperation<"speed">, NoteRemoveOperation,
         const removal = new NoteRemoveOperation(note);
         const insert = new NoteAddOperation(note, node)
         super(valueChange, removal, insert);
+        if (value === 0 && note.yOffset !== 0) {
+            this.ineffective = true;
+        }
     }
 }
 
@@ -327,8 +337,11 @@ extends ComplexOperation<[NotePropChangeOperation<"yOffset">, NoteRemoveOperatio
         const tree = line.getNNList(note.speed, value, note.type === NoteType.hold, true)
         const node = tree.getNodeOf(note.startTime);
         const removal = new NoteRemoveOperation(note);
-        const insert = new NoteAddOperation(note, node)
+        const insert = new NoteAddOperation(note, node);
         super(valueChange, removal, insert);
+        if (note.speed === 0 && value !== 0) {
+            this.ineffective = true;
+        }
     }
 }
 

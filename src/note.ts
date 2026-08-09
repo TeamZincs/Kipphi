@@ -115,11 +115,11 @@ export class Note {
     }
     static fromKPAJSON(data: NoteDataKPA, chart: Chart, pos: string) {
         const note = new Note(data);
-const timeCalculator = chart.timeCalculator;
+        const timeCalculator = chart.timeCalculator;
         if (!note.visibleBeats) {
             note.computeVisibleBeats(timeCalculator);
         }
-if (data.macro) {
+        if (data.macro) {
             chart.bindNoteMacro(note, data.macro, pos);
         }
         return note;
@@ -160,7 +160,7 @@ if (data.macro) {
         let visibleTime: number;
         if (this.visibleBeats !== Infinity) {
             const beats = TC.toBeats(this.startTime);
-            this.visibleBeats = timeCalculator.segmentToSeconds(beats - this.visibleBeats, beats);
+            visibleTime = timeCalculator.segmentToSeconds(beats - this.visibleBeats, beats);
         } else {
             visibleTime = 99999.0
         }
@@ -174,7 +174,7 @@ if (data.macro) {
             startTime: this.startTime,
             type: this.type,
             visibleTime: visibleTime,
-            yOffset: this.yOffset / this.speed,
+            yOffset: this.speed === 0 ? 0 : this.yOffset / this.speed,
             speed: this.speed,
             tint: this.tint !== undefined && this.tint !== 0xffffff ? hex2rgb(this.tint) : undefined,
             tintHitEffects: this.tintHitEffects !== undefined && this.tintHitEffects !== 0xffffff ? hex2rgb(this.tintHitEffects) : undefined,
@@ -192,7 +192,7 @@ if (data.macro) {
             startTime: this.startTime,
             type: this.type,
             visibleBeats: this.visibleBeats === Infinity ? undefined : this.visibleBeats, // 无穷不要保存，节约空间
-            yOffset: this.yOffset / this.speed,
+            yOffset: this.speed === 0 ? 0 : this.yOffset / this.speed,
             /** 新KPAJSON认为YOffset就应该是个绝对的值，不受速度影响 */
             /** 但是有历史包袱，所以加字段 */
             absoluteYOffset: this.yOffset,
@@ -200,7 +200,7 @@ if (data.macro) {
             tint: this.tint !== undefined && this.tint !== 0xffffff ? hex2rgb(this.tint) : undefined,
             tintHitEffects: this.tintHitEffects !== undefined && this.tintHitEffects !== 0xffffff ? hex2rgb(this.tintHitEffects) : undefined,
             judgeSize: this.judgeSize && this.judgeSize !== 1.0 ? this.judgeSize : undefined,
-macro: this.macro?.dumpForNote(this)
+            macro: this.macro?.dumpForNote(this)
         }
     }
 }

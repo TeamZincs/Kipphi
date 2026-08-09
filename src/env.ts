@@ -84,12 +84,14 @@ export enum ERROR_IDS {
 
     INVALID_NOTE_PROP_TYPE =                        NOTE       | INVALID_TYPE  | 0,
     HOLD_HAS_NO_DURATION =                          NOTE       | INVALID_DATA  | 0,
+    SPEED_0_NOTE_CANNOT_HAVE_NON_0_Y_OFFSET =       NOTE       | INVALID_DATA  | 1,
 
 
     INVALID_TIME_TUPLE =                            TC         | INVALID_DATA  | 0,
 
     TIME_MACRO_NOT_FOUND =                          MACRO      | INVALID_DATA  | 0,
     VALUE_MACRO_NOT_FOUND =                         MACRO      | INVALID_DATA  | 1,
+    NOTE_MACRO_NOT_FOUND =                          MACRO      | INVALID_DATA  | 2,
     UNKNOWN_MACRO_EXPRESSION =                      MACRO      | INVALID_DATA  | 2,
     JAVASCRIPT_SYNTAX_ERROR =                       MACRO      | INVALID_DATA  | 3,
     PROTO_PRESENT_IN_NONPARAMETRIC =                MACRO      | INVALID_USAGE | 0,
@@ -169,6 +171,8 @@ export const ERRORS = {
         `Time Macro '${macroId}' not found. At ${pos}`,
     VALUE_MACRO_NOT_FOUND: (macroId: string, pos: string) =>
         `Value Macro '${macroId}' not found. At ${pos}`,
+    NOTE_MACRO_NOT_FOUND: (macroId: string, pos: string) =>
+        `Note Macro '${macroId}' not found. At ${pos}`,
     UNKNOWN_MACRO_EXPRESSION: (expression: string, macroId: string) =>
         `Unknown Macro Expression '${expression}'. At ${macroId}`,
     PROTO_PRESENT_IN_NONPARAMETRIC: (macroId: string) =>
@@ -187,6 +191,8 @@ export const ERRORS = {
         `Template Easing '${temEasName}' has circular reference`,
     EASING_DELTA_CANNOT_BE_ZERO: (seqName: string, time: TimeT) =>
         `Easing delta cannot be zero. (at ${seqName}, ${toTimeString(time)}`,
+    SPEED_0_NOTE_CANNOT_HAVE_NON_0_Y_OFFSET: () =>
+        `Speed=0 Note cannot have non-0 yOffset.`,
 } satisfies Record<keyof typeof ERROR_IDS, (...args: any[]) => string>
 
 type EnumKeys<E extends Record<string, string | number>> = E[keyof E];
