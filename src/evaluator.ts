@@ -33,6 +33,8 @@ export abstract class Evaluator<T extends EventValueESType> {
     abstract dumpFor(node: EventStartNode<T>): EvaluatorDataKPA2<T>;
 }
 
+const clamp = (left: number, right: number, val: number) =>
+    left > val ? left : right < val ? right : val;
 
 export abstract class EasedEvaluator<T extends EventValueESType> extends Evaluator<T> {
     readonly easing: Easing;
@@ -55,12 +57,12 @@ export abstract class EasedEvaluator<T extends EventValueESType> extends Evaluat
             const endSecs = timeCalculator.toSeconds(TC.toBeats(next.time));
             const current = beatsOrSeconds - startSecs;
             const timeDelta = endSecs - startSecs;
-            return this.convert(value, nextValue, this.easing.getValue(current / timeDelta));
+            return this.convert(value, nextValue, this.easing.getValue(clamp(0, 1, current / timeDelta)));
         } else {
             const timeDelta = TC.getDelta(next.time, startNode.time)
             const current = beatsOrSeconds - TC.toBeats(startNode.time)
             // 其他类型，包括普通缓动和非钩定模板缓动
-            return this.convert(value, nextValue, this.easing.getValue(current / timeDelta));
+            return this.convert(value, nextValue, this.easing.getValue(clamp(0, 1, current / timeDelta)));
         }
     }
     abstract convert(start: T, end: T, progress: number): T;
