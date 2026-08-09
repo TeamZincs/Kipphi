@@ -48,12 +48,11 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
     time: TimeT;
     value: VT;
     evaluator: Evaluator<VT>;
-    macroValue: EventMacroValue;
+    macro: EventMacroValue;
     linkedMacros: Set<EventMacro<Macroable>> = new Set();
     constructor(time: TimeT, value: VT) {
         super(NodeType.MIDDLE);
         this.time = TC.validateIp([...time]);
-        // @ts-expect-error 不清楚什么时候会是undefined，但是留着准没错((
         this.value = value ?? 0;
         if (typeof value === "number") {
             this.evaluator = NumericEasedEvaluator.default as unknown as Evaluator<VT>;
@@ -235,9 +234,9 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
     }
     static nextStartInJumpArray<VT extends EventValueESType>(node: EventStartNode<VT>): EventStartNode<VT> | EventNodeLike<NodeType.TAIL, VT> {
         if ((node.next as EventEndNode<VT>).next.isLastStart()) {
-            return node.next.next.next as EventNodeLike<NodeType.TAIL, VT>;
+            return node.next.next!.next as EventNodeLike<NodeType.TAIL, VT>;
         } else {
-            return node.next.next;
+            return node.next.next!;
         }
     }
     /**
@@ -253,6 +252,8 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
             return [<EventEndNode<VT>>node.previous, node]
         } else if (node instanceof EventEndNode) {
             return [node, node.next]
+        } else {
+            throw new Error("unreachable");
         }
     }
     static getStartEnd<VT extends EventValueESType>(node: EventStartNode<VT> | EventEndNode<VT>): [EventStartNode<VT>, EventEndNode<VT>] {
@@ -267,7 +268,7 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
     static setToNewOrderedArray<VT extends EventValueESType>(dest: TimeT, set: Set<EventStartNode<VT>>): [EventStartNode<VT>[], EventStartNode<VT>[]] {
         const nodes = [...set]
         nodes.sort((a, b) => TC.gt(a.time, b.time) ? 1 : -1);
-        const offset = TC.sub(dest, nodes[0].time)
+        const offset = TC.sub(dest, nodes[0]!.time)
         return [nodes, nodes.map(node => node.clonePair(offset))]
     }
     static belongToSequence(nodes: Set<EventStartNode>, sequence: EventNodeSequence): boolean {
@@ -286,10 +287,10 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
      */
     static isContinuous(nodes: EventStartNode[]) {
         const l = nodes.length;
-        let nextNode = nodes[0]
+        let nextNode = nodes[0]!;
         for (let i = 0; i < l - 1; i++) {
             const node = nextNode;
-            nextNode = nodes[i + 1];
+            nextNode = nodes[i + 1]!;
             if (node.next !== nextNode.previous) {
                 return false;
             }
@@ -324,8 +325,8 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
             startTime: this.time,
             endTime: endNode.time,
             evaluator: this.evaluator.dumpFor(this),
-            macroStart: this.macroValue?.dumpForNode(this),
-            macroEnd: this.macroValue?.dumpForNode(endNode),
+            macroStart: this.macro?.dumpForNode(this),
+            macroEnd: this.macro?.dumpForNode(endNode),
             macroStartTime: this.macroTime?.dumpForNode(this),
             // 没有macroEndTime
             startLinkedMacro: [...this.linkedMacros].map(macro => macro.dumpLinkForNode(this)),
@@ -337,7 +338,7 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
             start: this.value,
             startTime: this.time,
             evaluator: this.evaluator.dumpFor(this),
-            macro: this.macroValue?.dumpForNode(this),
+            macro: this.macro?.dumpForNode(this),
             macroTime: this.macroTime?.dumpForNode(this),
             linkedMacro: [...this.linkedMacros].map(macro => macro.dumpLinkForNode(this)),
         }
@@ -391,9 +392,12 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
         return super.clone(offset) as EventStartNode<VT>;
     };
     clonePair(offset: TimeT): EventStartNode<VT> {
-        const endNode = this.previous.type !== NodeType.HEAD ? this.previous.clone(offset) : null;
+        const previous = this.previous;
+        const isFirst = previous.type === NodeType.HEAD;
+        const endNode = isFirst ? null : (this.previous as EventEndNode<VT>).clone(offset);
         const startNode = this.clone(offset);
-        EventNode.connect(endNode, startNode);
+        if (!isFirst)
+            EventNode.connect(endNode as EventEndNode<VT>, startNode);
         return startNode;
     };
 }
@@ -540,7 +544,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
 
         // 读取事件列表
         for (let index = 0; index < length; index++) {
-            const event = data[index];
+            const event = data[index]!;
             const [start, end] = (type === EventType.text
                                 ? EventNode.fromTextEvent(event as EventDataRPELike<string>, templates)
                                 : EventNode.fromEvent(event as EventDataRPELike<number | RGB>, chart)) as unknown as [EventStartNode<VT>, EventEndNode<VT>];
@@ -590,7 +594,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         seq.listLength = listLength;
         seq.initJump();
         if (type === EventType.speed) {
-            (seq as SpeedENS).updateFloorPositionAfter((seq as SpeedENS).head.next, chart.timeCalculator)
+            (seq as SpeedENS).updateFloorPositionAfter((seq as SpeedENS).head.next!, chart.timeCalculator)
         }
         return seq;
     }
@@ -617,7 +621,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         const seq = new EventNodeSequence<VT>(
             type,
             type === EventType.easing
-                ? TC.toBeats(data[length - 1].endTime)
+                ? TC.toBeats(data[length - 1]!.endTime)
                 : chart.effectiveBeats);
         let listLength = length;
         let lastEnd: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT> = seq.head;
@@ -639,7 +643,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
 
         let lastEndTime: TimeT = [0, 0, 1];
         for (let index = 0; index < length; index++) {
-            const event = data[index];
+            const event = data[index]!;
             const [start, end] = chart.createEventFromData<VT>(event, valueType, `${pos}.events[${index}]`);
 
             // 收集被截的模板缓动
@@ -700,7 +704,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         seq.listLength = listLength;
         seq.initJump();
         if (type === EventType.speed) {
-            (seq as SpeedENS).updateFloorPositionAfter((seq as SpeedENS).head.next, chart.timeCalculator)
+            (seq as SpeedENS).updateFloorPositionAfter((seq as SpeedENS).head.next!, chart.timeCalculator)
         }
         return seq;
     }
@@ -907,15 +911,15 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             throw err.NEEDS_AT_LEAST_ONE_ENS();
         }
         const dest = EventNodeSequence.newSeq(EventType.speed, sequences[0].effectiveBeats);
-        dest.head.next.value = 0;
-        dest.id = sequences[0].id + "_merged";
+        dest.head.next!.value = 0;
+        dest.id = sequences[0]!.id + "_merged";
         for (const seq of sequences) {
             if (seq.type !== EventType.speed) {
                 throw err.SEQUENCE_TYPE_NOT_CONSISTENT("speed", EventType[seq.type]);
             }
             const nodesToChange: [EventStartNode | EventEndNode, number][] = [];
             const inserts: [toInsert: EventStartNode, targetBeats: number][] = [];
-            let endNode = seq.head.next.next;
+            let endNode = seq.head.next!.next;
             // 这里是背靠背遍历，不是面对面遍历
             // 我把节点关系都写这里了，通义灵码还不会看，乱给补全，罚他看114514遍
             while (endNode.type !== NodeType.TAIL) {
@@ -935,10 +939,10 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
                 }
                 endNode = startNode.next;
             }
-            dest.head.next.value += seq.head.next.value;
+            dest.head.next!.value += seq.head.next!.value;
             const len1 = nodesToChange.length;
             for (let i = 0; i < len1; i++) {
-                const tup = nodesToChange[i];
+                const tup = nodesToChange[i]!;
                 tup[0].value += tup[1];
             }
             const len2 = inserts.length;

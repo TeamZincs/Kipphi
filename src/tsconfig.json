@@ -18,6 +18,7 @@
 
     // Some stricter flags (disabled by default)
     "strict": false,
+    "strictNullChecks": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
