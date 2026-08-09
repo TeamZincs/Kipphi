@@ -23,6 +23,9 @@ export class JudgeLineInheritanceChangeOperation extends Operation {
     constructor(public chart: Chart, public judgeLine: JudgeLine, public value: JudgeLine | null) {
         super();
         this.originalValue = judgeLine.father;
+        if (this.originalValue === this.value) {
+            this.ineffective = true;
+        }
         // 这里只会让它静默失败，外面调用的时候能够在判断一次并抛错误才是最好的
         if (JudgeLine.checkinterdependency(judgeLine, value)) {
             this.ineffective = true;
