@@ -28,12 +28,15 @@ export class EventNodePairRemoveOperation extends Operation {
             this.ineffective = true;
             return;
         }
+        this.sequence = this.startNode.parentSeq;
+        if (!this.sequence) {
+            throw err.PARENT_SEQUENCE_NOT_FOUND(node.time);
+        }
         if (node.isSpeed()) {
-            updatesFP = updatesFP;
+            this.updatesFP = updatesFP;
         }
         [this.endNode, this.startNode] = EventNode.getEndStart(node)
-        this.sequence = this.startNode.parentSeq
-        this.originalPrev = (<EventEndNode>node.previous).previous
+        this.originalPrev = (<EventEndNode>node.previous).previous;
     }
     do(chart: Chart) {
         this.sequence.updateJump(...EventNode.removeNodePair(this.endNode, this.startNode))
@@ -91,12 +94,12 @@ export class EventNodePairInsertOperation <VT extends EventValueESType> extends 
     }
     do(chart: Chart) {
         const [endNode, startNode] = EventNode.insert(this.node, this.tarPrev);
-        this.node.parentSeq.updateJump(endNode, startNode)
+        this.sequence.updateJump(endNode, startNode)
         if (this.updatesFP) {
             // updatesFP的校验确保了序列为速度序列
             (this.sequence as SpeedENS).updateFloorPositionAfter(this.tarPrev as EventStartNode, chart.timeCalculator) 
         }
-        if (this.node.parentSeq.type === EventType.bpm) {
+        if (this.sequence.type === EventType.bpm) {
             chart.updateAllFloorPositions();
         }
     }
@@ -106,7 +109,7 @@ export class EventNodePairInsertOperation <VT extends EventValueESType> extends 
             // updatesFP的校验确保了序列为速度序列
             (this.sequence as SpeedENS).updateFloorPositionAfter(this.tarPrev as EventStartNode, chart.timeCalculator) 
         }
-        if (this.node.parentSeq.type === EventType.bpm) {
+        if (this.sequence.type === EventType.bpm) {
             chart.updateAllFloorPositions();
         }
     }
@@ -149,25 +152,31 @@ export class EventNodeValueChangeOperation <VT extends EventValueESType> extends
         this.originalValue = node.value
     }
     do(chart: Chart) {
-        this.node.value = this.value
+        this.node.value = this.value;
+        if (!this.node.parentSeq) {
+            return;
+        }
         if (this.node.parentSeq.type === EventType.speed) {
-            this.updateSpeedENS(chart);
+            this.updateSpeedENS(chart, this.node.parentSeq as SpeedENS);
         } else if (this.node.parentSeq.type === EventType.bpm) {
             chart.timeCalculator.bpmSequence.updateSecondJump();
             chart.updateAllFloorPositions();
         }
     }
     undo(chart: Chart) {
-        this.node.value = this.originalValue
+        this.node.value = this.originalValue;
+        if (!this.node.parentSeq) {
+            return;
+        }
         if (this.node.parentSeq.type === EventType.speed) {
-            this.updateSpeedENS(chart);
+            this.updateSpeedENS(chart, this.node.parentSeq as SpeedENS);
         } else if (this.node.parentSeq.type === EventType.bpm) {
             chart.timeCalculator.bpmSequence.updateSecondJump();
             chart.updateAllFloorPositions();
         }
     }
-    updateSpeedENS(chart: Chart) {
-        (this.node.parentSeq as SpeedENS).updateFloorPositionAfter(
+    updateSpeedENS(chart: Chart, seq: SpeedENS) {
+        seq.updateFloorPositionAfter(
             EventNode.getStartEnd(this.node as unknown as EventStartNode<number> | EventEndNode<number>)[0],
             chart.timeCalculator
         );
@@ -176,9 +185,12 @@ export class EventNodeValueChangeOperation <VT extends EventValueESType> extends
         if (operation.node === this.node) {
             this.value = operation.value;
             this.node.value = operation.value;
-                
+            
+            if (!this.node.parentSeq) {
+                return true;
+            }
             if (this.node.parentSeq.type === EventType.speed) {
-                this.updateSpeedENS(chart);
+                this.updateSpeedENS(chart, this.node.parentSeq as SpeedENS);
             } else if (this.node.parentSeq.type === EventType.bpm) {
                 chart.timeCalculator.bpmSequence.updateSecondJump();
                 chart.updateAllFloorPositions();
@@ -212,8 +224,11 @@ export class EventNodeTimeChangeOperation extends Operation {
             this.ineffective = true;
             return;
         }
-        [this.endNode, this.startNode] = EventNode.getEndStart(node)
-        const seq = this.sequence = node.parentSeq
+        [this.endNode, this.startNode] = EventNode.getEndStart(node);
+        const seq = this.sequence = node.parentSeq;
+        if (!seq) {
+            throw err.PARENT_SEQUENCE_NOT_FOUND(node.time);
+        }
         const mayBeThere = seq.getNodeAt(TC.toBeats(val))
         if (mayBeThere && TC.eq(mayBeThere.time, val)) { // 不是arrayEq，这里踩坑
             this.ineffective = true;
@@ -260,7 +275,7 @@ export class EventNodeEvaluatorChangeOperation <VT extends EventValueESType> ext
         super();
         this.originalValue = this.node.evaluator
         const seq = node.parentSeq;
-        if (seq.type === EventType.easing && value instanceof EasedEvaluator && value.easing instanceof TemplateEasing) {
+        if (seq && seq.type === EventType.easing && value instanceof EasedEvaluator && value.easing instanceof TemplateEasing) {
             const circular = TemplateEasing.checkCircularReference(seq as EventNodeSequence<number>, value.easing);
             if (circular) {
                 throw err.TEMPLATE_EASING_CIRCULAR_REFERENCE(value.easing.name);

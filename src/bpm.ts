@@ -3,6 +3,7 @@ import { EventEndNode, EventNodeLike, EventNodeSequence, EventStartNode, type An
 import { JumpArray } from "./jumparray";
 import { NodeType } from "./util";
 import TC from "./time";
+import { PhiraBpmSegment } from "./extraTypes";
 
 
 /// #declaration:global
@@ -252,6 +253,22 @@ export class BPMSequence extends EventNodeSequence {
             ret.push({
                 bpm: cur.value,
                 startTime: cur.time
+            })
+            const end = cur.next;
+            if (end.type === NodeType.TAIL) {
+                break;
+            }
+            cur = end.next;
+        } 
+        return ret;
+    }
+    dumpPhiraBPM(): PhiraBpmSegment[] {
+        let cur = this.head.next;
+        const ret: PhiraBpmSegment[] = [];
+        while (true) {
+            ret.push({
+                bpm: cur.value,
+                time: cur.time
             })
             const end = cur.next;
             if (end.type === NodeType.TAIL) {

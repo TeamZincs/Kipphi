@@ -1,6 +1,7 @@
 export * from "./time";
 export {default as TC} from "./time";
 export * from "./chartTypes";
+export * from "./extraTypes";
 export * from "./easing";
 export * from "./evaluator";
 export * from "./macro"
@@ -15,3 +16,4 @@ export * as Op from "./operation/index";
 export * from "./version";
 export { default as Environment, KPAError } from "./env";
 export { RPEChartCompiler } from "./rpeChartCompiler";
+export { ExtraJsonCompiler } from "./extra"

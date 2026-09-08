@@ -385,6 +385,7 @@ export class Chart {
             macroEvaluators: this.macroLib.dumpMacroEvaluators(),
             timeMacros: this.macroLib.dumpTimeMacros(),
             valueMacros: this.macroLib.dumpValueMacros(),
+            noteMacros: this.macroLib.dumpNoteMacros(),
             eventNodeSequences: eventNodeSequenceData,
             info: {
                 level: this.level,

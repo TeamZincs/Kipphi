@@ -603,6 +603,11 @@ export interface ChartDataKPA2 {
         bar?: number;
         name?: number;
         level?: number;
+    };
+    video: {
+        name: EventNodeSequenceDataKPA2<string>;
+        dim: EventNodeSequenceDataKPA2<number>;
+        alpha: EventNodeSequenceDataKPA2<number>;
     }
     templateEasings: TemplateEasingBodyData[];
     wrapperEasings: WrapperEasingBodyData[];
