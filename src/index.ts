@@ -9,6 +9,7 @@ export * from "./event";
 export * from "./note";
 export * from "./judgeline";
 export * from "./bpm";
+export * from "./video";
 export * from "./util";
 export * from "./chart";
 export * from "./jumparray";

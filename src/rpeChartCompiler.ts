@@ -7,12 +7,16 @@ import { EasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, 
 import { EventEndNode, EventNode, EventNodeSequence, EventStartNode, SpeedENS, type EventNodeLike } from "./event";
 import type { JudgeLine } from "./judgeline";
 import type { NNList, HNList, NNOrHead } from "./note";
+import type { PhiraAnimVar, PhiraAnimVarEvent } from "./extraTypes";
 import TC from "./time";
 import { NodeType, numberToRatio } from "./util";
 
 /// #declaration:global
 
 const getInnerEasing = (easing: Easing) => easing instanceof SegmentedEasing ? easing.easing : easing;
+
+/** 将拍数转换为时间三元组 */
+const beatsToTimeT = (beats: number): TimeT => TC.validateIp([0, ...numberToRatio(beats)]);
 
 type EasedStartNode<VT extends EventValueESType> = EventStartNode<VT> & { evaluator: EasedEvaluatorOfType<VT>};
 
@@ -264,6 +268,158 @@ export class RPEChartCompiler {
         nodes.push(this.compileEasedEvent(newStart as EasedStartNode<VT>, getValue));
 
         return nodes
+    }
+    /**
+     * 将数值事件节点序列的某个区间编译为Phira的动画变量
+     *
+     * Phira的动画变量与RPE事件共用同一套缓动编号，但不支持模板缓动
+     * （会先由{@linkcode substitute}展开）、表达式缓动与贝塞尔缓动
+     * （二者会被按{@linkcode interpolationStep}插值成折线）。
+     *
+     * 若区间内恒为同一个值，则返回裸数值而非动画数组。
+     *
+     * @param sequence 数值事件节点序列
+     * @param from 起始拍数（含）
+     * @param to 结束拍数（含）
+     * @returns 常量或动画事件数组
+     * @since 2.2.0
+     */
+    dumpAnimVar(sequence: EventNodeSequence<number>, from: number, to: number): PhiraAnimVar<number> {
+        const seq = this.substitute(sequence);
+        if (!(to > from)) {
+            return seq.getValueAt(from);
+        }
+        const events: PhiraAnimVarEvent<number>[] = [];
+        let node: EventStartNode<number> = seq.getNodeAt(from);
+        while (true) {
+            const end = node.next;
+            if (end.type === NodeType.TAIL) {
+                // 最后一个起始节点的值无限延伸
+                const startBeats = Math.max(TC.toBeats(node.time), from);
+                if (startBeats < to) {
+                    events.push({
+                        start: node.value,
+                        end: node.value,
+                        startTime: beatsToTimeT(startBeats),
+                        endTime: beatsToTimeT(to),
+                        easingType: 1,
+                        easingLeft: 0.0,
+                        easingRight: 1.0
+                    });
+                }
+                break;
+            }
+            const startBeats = TC.toBeats(node.time);
+            const endBeats = TC.toBeats(end.time);
+            if (startBeats >= to) {
+                break;
+            }
+            const segFrom = Math.max(startBeats, from);
+            const segTo = Math.min(endBeats, to);
+            if (segTo > segFrom) {
+                this.pushAnimVarSegment(
+                    events,
+                    node,
+                    startBeats,
+                    endBeats,
+                    segFrom,
+                    segTo,
+                    segFrom === startBeats ? node.value : node.getValueAt(segFrom),
+                    segTo === endBeats ? end.value : node.getValueAt(segTo)
+                );
+            }
+            if (endBeats >= to) {
+                break;
+            }
+            node = end.next;
+        }
+        if (!events.length) {
+            return seq.getValueAt(from);
+        }
+        // 区间内恒定时直接返回常量
+        const first = events[0]!.start;
+        for (const event of events) {
+            if (event.start !== first || event.end !== first) {
+                return events;
+            }
+        }
+        return first;
+    }
+    /**
+     * 向动画变量数组中压入一个区间。
+     *
+     * 区间可能只是原事件的一部分（当视频的边界截在事件中间时），
+     * 此时需要把缓动窗口按比例重新映射；若原事件本身就带
+     * easingLeft/easingRight，则是在其基础上再截一段。
+     *
+     * 表达式缓动与贝塞尔缓动无法用Phira的缓动编号表达，按步长插值成折线。
+     *
+     * @param startBeats 原事件起始拍数
+     * @param endBeats 原事件结束拍数
+     * @param from 截取后的起始拍数
+     * @param to 截取后的结束拍数
+     */
+    private pushAnimVarSegment(
+        events: PhiraAnimVarEvent<number>[],
+        node: EventStartNode<number>,
+        startBeats: number,
+        endBeats: number,
+        from: number,
+        to: number,
+        startValue: number,
+        endValue: number
+    ) {
+        const evaluator = node.evaluator;
+        const easing = evaluator instanceof EasedEvaluator ? evaluator.easing : null;
+        const innerEasing = easing ? getInnerEasing(easing) : null;
+        if (evaluator instanceof ExpressionEvaluator || innerEasing instanceof BezierEasing) {
+            const stepBeats = TC.toBeats(this.interpolationStep);
+            let cur = from;
+            let value = startValue;
+            while (cur < to) {
+                const next = Math.min(cur + stepBeats, to);
+                const nextValue = next >= to ? endValue : node.getValueAt(next);
+                events.push({
+                    start: value,
+                    end: nextValue,
+                    startTime: beatsToTimeT(cur),
+                    endTime: beatsToTimeT(next),
+                    easingType: 1,
+                    easingLeft: 0.0,
+                    easingRight: 1.0
+                });
+                cur = next;
+                value = nextValue;
+            }
+            return;
+        }
+        // 截取后的缓动窗口
+        // 设原事件跨度为[s, e]、原缓动窗口为[L, R]，由于SegmentedEasing会把
+        // 窗口内的取值归一化到0~1，原事件在进度p处取的是easing(L + p(R - L))。
+        // 截到[a, b]后，新进度p'对应的原进度为p = α + p'(β - α)，
+        // 其中α = (a - s)/(e - s)、β = (b - s)/(e - s)，
+        // 于是新窗口为L' = L + α(R - L)、R' = L + β(R - L)。
+        // 若原事件本来就带缓动窗口，这就是在已有基础上再截一段。
+        const windowLeft = easing instanceof SegmentedEasing ? easing.left : 0.0;
+        const windowRight = easing instanceof SegmentedEasing ? easing.right : 1.0;
+        const span = endBeats - startBeats;
+        const alpha = span > 0 ? (from - startBeats) / span : 0.0;
+        const beta = span > 0 ? (to - startBeats) / span : 1.0;
+        const easingLeft = windowLeft + alpha * (windowRight - windowLeft);
+        const easingRight = windowLeft + beta * (windowRight - windowLeft);
+        // 截出来的窗口内变化量为0时（例如fixed缓动被截在平台段），
+        // 退化为常量段，否则Phira会算出NaN
+        const flat = !!innerEasing
+            && innerEasing.getValue(easingLeft) === innerEasing.getValue(easingRight);
+        events.push({
+            start: startValue,
+            end: flat ? startValue : endValue,
+            startTime: beatsToTimeT(from),
+            endTime: beatsToTimeT(to),
+            easingType: !flat && innerEasing instanceof NormalEasing ? innerEasing.rpeId ?? 1 : 1,
+            easingLeft: flat ? 0.0 : easingLeft,
+            easingRight: flat ? 1.0 : easingRight
+        });
     }
     dumpSpeedENS(seq: SpeedENS): EventDataRPELike<number>[] {
         const ret: EventDataRPELike<number>[] = [];

@@ -1,11 +1,12 @@
 import type { Chart } from "../chart";
-import { EventType, type EventValueESType, type TimeT } from "../chartTypes";
+import { EventType, VideoScale, type EventValueESType, type TimeT } from "../chartTypes";
 import { TemplateEasing, TemplateEasingLib } from "../easing";
 import { err } from "../env";
 import { Evaluator, EasedEvaluator, NumericEasedEvaluator } from "../evaluator";
 import { EventEndNode, EventStartNode, EventNodeSequence, EventNode, SpeedENS, NonLastStartNode, EventNodeLike } from "../event";
 import TC from "../time";
 import { NodeType } from "../util";
+import { VideoEventStartNode } from "../video";
 import { ComplexOperation, LazyOperation, Operation, UnionOperation } from "./basic";
 
 /**
@@ -576,5 +577,23 @@ export class ENSAddBlankOperation extends MultiNodeOffsetOperation {
         super.undo();
         const ens = this.ens;
         ens.updateJump(ens.head, ens.tail);
+    }
+}
+
+export class VideoEventScaleChangeOperation extends Operation {
+    updatesEditor = true;
+    originalScale: VideoScale;
+    constructor(public node: VideoEventStartNode, public scale: VideoScale) {
+        super();
+        this.ineffective = node.scale === scale;
+        this.originalScale = node.scale;
+    }
+    
+    do() {
+        this.node.scale = this.scale;
+    }
+    
+    undo() {
+        this.node.scale = this.originalScale;
     }
 }

@@ -37,8 +37,10 @@ export interface PhiraVideo {
     path: string;
     time: TimeT;
     scale: "cropCenter" | "inside" | "fit";
-    alpha: number;
-    dim: number;
+    /** 不透明度，可以是常量或动画序列 */
+    alpha: PhiraAnimVar<number>;
+    /** 变暗程度，可以是常量或动画序列 */
+    dim: PhiraAnimVar<number>;
 }
 
 

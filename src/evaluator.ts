@@ -47,7 +47,7 @@ export class ConstEvaluator<T extends EventValueESType> extends Evaluator<T> {
     }
 }
 
-export const CONST_EVALUATOR = new ConstEvaluator();
+export const CONST_EVALUATOR: ConstEvaluator<any> = new ConstEvaluator();
 
 const clamp = (left: number, right: number, val: number) =>
     left > val ? left : right < val ? right : val;
