@@ -1,5 +1,5 @@
 import { Chart, JudgeLineGroup, BasicEventName, UIName } from "../chart";
-import { ExtendedEventTypeName, RGB } from "../chartTypes";
+import { EventType, ExtendedEventTypeName, RGB } from "../chartTypes";
 import { EventNodeSequence } from "../event";
 import { JudgeLine, ExtendedLayer } from "../judgeline";
 import { ComplexOperation, LazyOperation, Operation } from "./basic";
@@ -107,28 +107,33 @@ export class JudgeLineRegroupOperation extends Operation {
     }
     do() {
         this.judgeLine.group = this.value;
-        this.value.add(this.judgeLine);
-        this.originalValue.remove(this.judgeLine);
+        this.originalValue?.remove(this.judgeLine);
+        this.value?.add(this.judgeLine);
     }
     undo() {
         this.judgeLine.group = this.originalValue;
-        this.originalValue.add(this.judgeLine);
-        this.value.remove(this.judgeLine);
+        this.value?.remove(this.judgeLine);
+        this.originalValue?.add(this.judgeLine);
     }
 }
 
 export class JudgeLineCreateOperation extends Operation {
     reflows = JudgeLinesEditorLayoutType.grouped | JudgeLinesEditorLayoutType.tree | JudgeLinesEditorLayoutType.ordered;
+    //judgeLine: JudgeLine;
     // 之前把=写成了:半天不知道咋错了
     constructor(public chart: Chart, public judgeLine: JudgeLine) {
         super();
+        //this.judgeLine = new JudgeLine(chart);
     }
-    do() {
+    do(chart: Chart) {
         const id = this.chart.judgeLines.length;
         this.judgeLine.id = id;
         this.chart.judgeLines.push(this.judgeLine);
         this.chart.orphanLines.push(this.judgeLine);
         this.chart.judgeLineGroups[0].add(this.judgeLine);
+        this.judgeLine.extendedLayer.scaleX = chart.createEventNodeSequence(EventType.scaleX, `#${id}.ex.scaleX`);
+        this.judgeLine.extendedLayer.scaleY = chart.createEventNodeSequence(EventType.scaleY, `#${id}.ex.scaleY`);
+        debugger
     }
     undo() {
         this.chart.judgeLineGroups[0].remove(this.judgeLine);

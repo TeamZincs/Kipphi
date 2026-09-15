@@ -23,6 +23,16 @@ import {
 } from "./event";
 
 import {
+    VideoEventNodeSequence,
+} from "./video";
+
+import {
+    animVarToEventData,
+} from "./extra";
+
+import TC from "./time";
+
+import {
     NodeType
 } from "./util"
 
@@ -58,6 +68,7 @@ import {
     type EventNodeSequenceDataKPA2,
     type ChartDataKPA2,
     type EventDataKPA2,
+    type EventDataRPELike,
     InterpreteAs,
     MacroEvaluatorBodyData,
     MacroEvaluatorDataKPA2,
@@ -69,6 +80,7 @@ import {
 import { ColorEasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorOfType } from "./evaluator";
 import { err, ERROR_IDS, KPAError }  from "./env";
 import { MacroLib, EventMacroTime, EventMacroValue, EventMacro, NoteMacro } from "./macro";
+import type { PhiraExtraJson } from "./extraTypes";
 
 /// #declaration:global
 
@@ -80,6 +92,23 @@ export type BasicEventName = "moveX" | "moveY" | "rotate" | "alpha" | "speed";
 
 
 export type UIName = "combo"  | "combonumber" | "score" | "pause" | "bar" | "name" | "level"
+
+/**
+ * 谱面级视频通道
+ *
+ * 三个序列彼此独立：`name`是阶梯型的视频切换序列，
+ * `alpha`与`dim`则是全谱拉通的常规数值序列，取值均为0~1。
+ *
+ * @since 2.2.0
+ */
+export interface VideoChannel {
+    /** 视频路径序列 */
+    name: VideoEventNodeSequence;
+    /** 视频不透明度序列，取值0~1 */
+    alpha: EventNodeSequence<number>;
+    /** 视频变暗程度序列，取值0~1 */
+    dim: EventNodeSequence<number>;
+}
 
 /**
  * 表示一张谱面的核心数据结构
@@ -125,6 +154,18 @@ export class Chart {
     /** 谱面持续时间（秒） */
     duration: number;
 
+    /**
+     * 谱面级视频通道
+     *
+     * 三条序列彼此独立，均不进入{@linkcode sequenceMap}。
+     * @since 2.2.0
+     */
+    video: VideoChannel = {
+        name: VideoEventNodeSequence.newVideoSeq(0),
+        alpha: EventNodeSequence.newSeq(EventType.videoAlpha, 0),
+        dim: EventNodeSequence.newSeq(EventType.videoDim, 0)
+    };
+
     /** 谱面制作所用时间（以秒计） */
     chartingSeconds: number;
     /** RPE格式的谱面制作时间（以秒计） */
@@ -157,7 +198,11 @@ export class Chart {
      */
     segmentedTemplates: Map<(SegmentedEasing & { easing: TemplateEasing}), [string, TimeT]> = new Map();
 
-    constructor() {}
+    constructor() {
+        this.video.name.id = "@video.name";
+        this.video.alpha.id = "@video.alpha";
+        this.video.dim.id = "@video.dim";
+    }
     
     /**
      * 获取有效节拍数
@@ -173,9 +218,10 @@ export class Chart {
      * 从RPE格式的JSON数据创建谱面对象
      * @param data RPE格式的谱面数据
      * @param duration 谱面持续时间（秒）
+     * @param extraJson Phira的extra.json，传入时用它初始化视频通道
      * @returns 创建的Chart对象
      */
-    static fromRPEJSON(data: ChartDataRPE, duration: number) {
+    static fromRPEJSON(data: ChartDataRPE, duration: number, extraJson?: PhiraExtraJson) {
         const chart = new Chart();
         chart.judgeLineGroups = (data.judgeLineGroup || ["Default"]).map(group => new JudgeLineGroup(group));
         chart.name = data.META.name;
@@ -210,6 +256,9 @@ export class Chart {
             } else {
                 chart.orphanLines.push(line);
             }
+        }
+        if (extraJson) {
+            chart.initVideoFromExtraJson(extraJson, chart.getEffectiveBeats());
         }
         chart.countMaxCombo();
         return chart
@@ -274,6 +323,7 @@ export class Chart {
 
             chart.macroLib.readTimeMacros((data as ChartDataKPA2).timeMacros ?? []);
             chart.macroLib.readValueMacros((data as ChartDataKPA2).valueMacros ?? []);
+            chart.initVideo(data as ChartDataKPA2, chart.getEffectiveBeats());
         } else {
             
             const sequences = (data as ChartDataKPA).eventNodeSequences
@@ -347,6 +397,71 @@ export class Chart {
         this.timeCalculator.duration = this.duration;
         this.timeCalculator.initSequence()
     }
+
+    /**
+     * 初始化视频通道
+     *
+     * KPA1没有视频通道，此时保留构造时的默认空序列。
+     *
+     * @param data KPA2谱面数据
+     * @param effectiveBeats 谱面有效拍数
+     * @since 2.2.0
+     */
+    initVideo(data: ChartDataKPA2, effectiveBeats: number) {
+        const videoData = data.video;
+        const name = VideoEventNodeSequence.fromKPA2JSON(videoData?.name, effectiveBeats, "video.name");
+        const alpha = videoData?.alpha
+            ? EventNodeSequence.fromKPA2JSON<EventType.videoAlpha, number>(
+                EventType.videoAlpha, videoData.alpha.events, this, "video.alpha", videoData.alpha.final)
+            : EventNodeSequence.newSeq(EventType.videoAlpha, effectiveBeats);
+        const dim = videoData?.dim
+            ? EventNodeSequence.fromKPA2JSON<EventType.videoDim, number>(
+                EventType.videoDim, videoData.dim.events, this, "video.dim", videoData.dim.final)
+            : EventNodeSequence.newSeq(EventType.videoDim, effectiveBeats);
+        name.id  = videoData?.name?.id  ?? "@video.name";
+        alpha.id = videoData?.alpha?.id ?? "@video.alpha";
+        dim.id   = videoData?.dim?.id   ?? "@video.dim";
+        this.video = { name, alpha, dim };
+    }
+
+    /**
+     * 从Phira的extra.json初始化视频通道
+     *
+     * 每个视频各自的alpha与dim动画变量会按时间顺序拼接成两条全谱拉通的序列。
+     * 视频之间的空档由{@linkcode EventNodeSequence.fromRPEJSON}自动补成常量段。
+     *
+     * @param extraJson Phira的extra.json
+     * @param effectiveBeats 谱面有效拍数
+     * @since 2.2.0
+     */
+    initVideoFromExtraJson(extraJson: PhiraExtraJson, effectiveBeats: number) {
+        const videos = (extraJson.videos ?? []).slice();
+        videos.sort((a, b) => TC.cmp(a.time, b.time));
+        const alphaEvents: EventDataRPELike<number>[] = [];
+        const dimEvents: EventDataRPELike<number>[] = [];
+        const length = videos.length;
+        for (let i = 0; i < length; i++) {
+            const video = videos[i]!;
+            const next = videos[i + 1];
+            // 最后一个视频一直持续到谱面结束。这里给常量型动画变量一个占位区间即可，
+            // 因为序列末尾节点的值会无限延伸
+            const to = next ? next.time : TC.vadd(video.time, [1, 0, 1]);
+            // extra.json里这两个字段可能整个缺失，回落到各自的默认值
+            alphaEvents.push(...animVarToEventData(video.alpha ?? 1, video.time, to));
+            dimEvents.push(...animVarToEventData(video.dim ?? 0, video.time, to));
+        }
+        const name = VideoEventNodeSequence.fromPhiraVideos(videos, effectiveBeats);
+        const alpha = alphaEvents.length
+            ? EventNodeSequence.fromRPEJSON(EventType.videoAlpha, alphaEvents, this, "video.alpha")
+            : EventNodeSequence.newSeq(EventType.videoAlpha, effectiveBeats);
+        const dim = dimEvents.length
+            ? EventNodeSequence.fromRPEJSON(EventType.videoDim, dimEvents, this, "video.dim")
+            : EventNodeSequence.newSeq(EventType.videoDim, effectiveBeats);
+        name.id  = "@video.name";
+        alpha.id = "@video.alpha";
+        dim.id   = "@video.dim";
+        this.video = { name, alpha, dim };
+    }
     
     /**
      * 更新有效节拍数
@@ -357,6 +472,11 @@ export class Chart {
         for (let i = 0; i < this.judgeLines.length; i++) {
             const judgeLine = this.judgeLines[i]
             judgeLine.updateEffectiveBeats(EB);
+        }
+        // 视频序列不隶属于任何判定线，需要单独更新
+        for (const seq of [this.video.name, this.video.alpha, this.video.dim]) {
+            seq.effectiveBeats = EB;
+            seq.initJump();
         }
     }
     
@@ -385,6 +505,7 @@ export class Chart {
             macroEvaluators: this.macroLib.dumpMacroEvaluators(),
             timeMacros: this.macroLib.dumpTimeMacros(),
             valueMacros: this.macroLib.dumpValueMacros(),
+            noteMacros: this.macroLib.dumpNoteMacros(),
             eventNodeSequences: eventNodeSequenceData,
             info: {
                 level: this.level,
@@ -403,6 +524,11 @@ export class Chart {
                 level: this.levelAttach?.id
             },
             offset: this.offset,
+            video: {
+                name: this.video.name.dumpVideo(),
+                alpha: this.video.alpha.dump(),
+                dim: this.video.dim.dump()
+            },
             orphanLines: orphanLines,
             judgeLineGroups: this.judgeLineGroups.map(g => g.name),
             chartTime: this.chartingSeconds,
@@ -536,6 +662,17 @@ export class Chart {
             textures.add(line.texture);
         }
         return textures
+    }
+
+    scanAllVideos() {
+        const videos: Set<string> = new Set();
+        for (const seg of this.video.name.segments()) {
+            if (seg.node.value === "") {
+                continue;
+            }
+            videos.add(seg.node.value);
+        }
+        return videos;
     }
     
     /**
@@ -766,6 +903,9 @@ export class Chart {
         for (const [_, seq] of this.sequenceMap) {
             seq.checkErrors();
         }
+        // 视频的三条序列不在sequenceMap中，单独检查
+        this.video.alpha.checkErrors();
+        this.video.dim.checkErrors();
     }
     updateAllFloorPositions() {
         for (const [_, seq] of this.sequenceMap) {

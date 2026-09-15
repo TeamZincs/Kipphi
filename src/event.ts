@@ -53,7 +53,7 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
     constructor(time: TimeT, value: VT) {
         super(NodeType.MIDDLE);
         this.time = TC.validateIp([...time]);
-        this.value = value ?? 0;
+        this.value = value;
         if (typeof value === "number") {
             this.evaluator = NumericEasedEvaluator.default as unknown as Evaluator<VT>;
         } else if (typeof value === "string") {
@@ -507,6 +507,8 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
                type === EventType.scaleX || type === EventType.scaleY ? 1.0 :
                type === EventType.text                                ? ""  :
                type === EventType.color                               ? [255, 255, 255] :
+               type === EventType.video                               ? ""  :
+               type === EventType.videoAlpha                          ? 1   :
                0
     }
     /**
@@ -623,7 +625,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             type === EventType.easing
                 ? TC.toBeats(data[length - 1]!.endTime)
                 : chart.effectiveBeats);
-        let listLength = length;
+        const listLength = length;
         let lastEnd: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT> = seq.head;
         // 如果第一个事件不从0时间开始，那么添加一对面对面节点来垫背
         if (data[0] && TC.ne(data[0].startTime, [0, 0, 1])) {

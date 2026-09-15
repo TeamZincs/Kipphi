@@ -311,6 +311,51 @@ export interface FinalEventStartNodeDataKPA2<T = number> {
     linkedMacro?: MacroLink[];
 }
 
+/**
+ * 视频缩放模式
+ *
+ * 与Phira的`"cropCenter" | "inside" | "fit"`一一对应
+ *
+ * @since 2.2.0
+ */
+export enum VideoScale {
+    /** 裁剪并居中 */
+    cropCenter,
+    /** 完整置于内部 */
+    inside,
+    /** 拉伸适配 */
+    fit
+}
+
+/**
+ * 视频事件节点数据
+ *
+ * 与{@linkcode EventDataKPA2}不同，视频节点没有缓动、宏和求值器，
+ * 其值在节点到下一节点之间保持恒定。
+ *
+ * @since 2.2.0
+ */
+export interface VideoEventNodeDataKPA2 {
+    /** 节点时间 */
+    time: TimeT;
+    /** 视频路径，空串表示无视频 */
+    value: string;
+    /** 缩放模式，缺省为{@linkcode VideoScale.cropCenter} */
+    scale?: VideoScale;
+}
+
+/**
+ * 视频事件节点序列数据
+ *
+ * @since 2.2.0
+ */
+export interface VideoEventNodeSequenceDataKPA2 {
+    /** 按时间升序排列的节点，首个节点必须位于[0, 0, 1] */
+    events: VideoEventNodeDataKPA2[];
+    /** 序列ID */
+    id: string;
+}
+
 export enum EventValueType {
     numeric,
     color,
@@ -603,6 +648,14 @@ export interface ChartDataKPA2 {
         bar?: number;
         name?: number;
         level?: number;
+    };
+    video: {
+        /** 视频路径序列 */
+        name: VideoEventNodeSequenceDataKPA2;
+        /** 视频变暗序列，取值0~1，全谱拉通 */
+        dim: EventNodeSequenceDataKPA2<number>;
+        /** 视频不透明度序列，取值0~1，全谱拉通 */
+        alpha: EventNodeSequenceDataKPA2<number>;
     }
     templateEasings: TemplateEasingBodyData[];
     wrapperEasings: WrapperEasingBodyData[];
@@ -629,7 +682,13 @@ export enum EventType {
     scaleX,
     scaleY,
     text,
-    color
+    color,
+    /** 视频路径序列 @since 2.2.0 */
+    video,
+    /** 视频不透明度序列，取值0~1 @since 2.2.0 */
+    videoAlpha,
+    /** 视频变暗程度序列，取值0~1 @since 2.2.0 */
+    videoDim
 }
 export enum NoteType {
     tap=1,
@@ -639,7 +698,7 @@ export enum NoteType {
 }
 
 
-export type ValueTypeOfEventType<T extends EventType> = [number, number, number, number, number, number, number, number, number, string, RGB][T]
+export type ValueTypeOfEventType<T extends EventType> = [number, number, number, number, number, number, number, number, number, string, RGB, string, number, number][T]
 
 export type ExtendedEventTypeName = "scaleX" | "scaleY" | "text" | "color"
 /// #enddeclaration

@@ -515,9 +515,12 @@
               7,
               8,
               9,
-              10
+              10,
+              11,
+              12,
+              13
             ],
-            "description": "事件类型(moveX, moveY, rotate, alpha, speed, easing, bpm, scaleX, scaleY, text, color)\n\nEvent type (moveX, moveY, rotate, alpha, speed, easing, bpm, scaleX, scaleY, text, color)"
+            "description": "事件类型(moveX, moveY, rotate, alpha, speed, easing, bpm, scaleX, scaleY, text, color, video, videoAlpha, videoDim)\n\nEvent type (moveX, moveY, rotate, alpha, speed, easing, bpm, scaleX, scaleY, text, color, video, videoAlpha, videoDim)"
           },
           "final": {
             "type": "object",
@@ -997,6 +1000,75 @@
         ]
       }
     },
+    "video": {
+      "type": "object",
+      "description": "谱面级视频通道\n\nChart-level video channel",
+      "properties": {
+        "name": {
+          "type": "object",
+          "description": "视频路径序列\n\nVideo path sequence",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "序列标识符\n\nSequence identifier"
+            },
+            "events": {
+              "type": "array",
+              "description": "视频节点列表，按时间升序，首节点位于[0, 0, 1]\n\nVideo node list, ascending by time, the first node is at [0, 0, 1]",
+              "items": {
+                "type": "object",
+                "description": "视频事件节点\n\nVideo event node",
+                "properties": {
+                  "time": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "节点时间[整数, 分子, 分母]\n\nNode time [integer, numerator, denominator]"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "视频路径，空串表示无视频\n\nVideo path, empty string means no video"
+                  },
+                  "scale": {
+                    "type": "number",
+                    "enum": [
+                      0,
+                      1,
+                      2
+                    ],
+                    "description": "视频缩放模式(cropCenter, inside, fit)\n\nVideo scale mode (cropCenter, inside, fit)"
+                  }
+                },
+                "required": [
+                  "time",
+                  "value"
+                ]
+              }
+            }
+          },
+          "required": [
+            "events",
+            "id"
+          ]
+        },
+        "alpha": {
+          "type": "object",
+          "description": "视频不透明度序列，取值0~1，全谱拉通\n\nVideo alpha sequence, 0~1, spanning the whole chart"
+        },
+        "dim": {
+          "type": "object",
+          "description": "视频变暗程度序列，取值0~1，全谱拉通\n\nVideo dim sequence, 0~1, spanning the whole chart"
+        }
+      },
+      "required": [
+        "name",
+        "alpha",
+        "dim"
+      ]
+    },
     "judgeLineGroups": {
       "type": "array",
       "description": "判定线组名称列表\n\nJudge line group name list",
@@ -1100,6 +1172,7 @@
     "timeMacros",
     "valueMacros",
     "eventNodeSequences",
+    "video",
     "orphanLines",
     "bpmList",
     "judgeLineGroups"

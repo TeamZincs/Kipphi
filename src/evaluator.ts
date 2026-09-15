@@ -33,6 +33,22 @@ export abstract class Evaluator<T extends EventValueESType> {
     abstract dumpFor(node: EventStartNode<T>): EvaluatorDataKPA2<T>;
 }
 
+export class ConstEvaluator<T extends EventValueESType> extends Evaluator<T> {
+    constructor() {
+        super()
+    }
+    eval(event: NonLastStartNode<T>, beats: number): T;
+    eval(event: NonLastStartNode<T>, seconds: number, timeCalculator: TimeCalculator): T;
+    eval(event: NonLastStartNode<T>, seconds: number, timeCalculator?: unknown): T {
+        return event.value;
+    }
+    dumpFor(node: EventStartNode<T>): EvaluatorDataKPA2<T> {
+        return null;
+    }
+}
+
+export const CONST_EVALUATOR: ConstEvaluator<any> = new ConstEvaluator();
+
 const clamp = (left: number, right: number, val: number) =>
     left > val ? left : right < val ? right : val;
 

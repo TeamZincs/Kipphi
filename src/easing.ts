@@ -409,7 +409,7 @@ export class TemplateEasingLib {
     easings = new Map<string, TemplateEasing>();
     wrapperEasings = new Map<string, WrapperEasing>();
     // 被迫给一个静态方法进行依赖注入，恨死你了，ESM
-    constructor(public getNewSequence: (type: EventType, effectiveBeats: number) => EventNodeSequence<number>, public ExpressionEvaluatorCon: typeof ExpressionEvaluator) {
+    constructor(public getNewSequence: (type: EventType.easing, effectiveBeats: number) => EventNodeSequence<number>, public ExpressionEvaluatorCon: typeof ExpressionEvaluator) {
     }
     getOrNew(name: string): TemplateEasing {
         const DEFAULT_TEMPLATE_LENGTH = Environment.DEFAULT_TEMPLATE_LENGTH;
