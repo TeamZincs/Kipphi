@@ -59,6 +59,18 @@ export class NotePropChangeOperation<T extends NotePropName> extends Operation {
         return false;
     }
 }
+/**
+ * 把音符从它所在的 NoteNode / NNList 上摘下来。
+ *
+ * 只动数据结构，不通知编辑器——这是"物理删除"，语义层的删除请用
+ * {@linkcode NoteDeleteOperation}。hold 音符还会顺带修正尾判跳数组。
+ *
+ * @example
+ * ```ts
+ * // 通常不直接用，而是作为 NoteAddOperation 的配对操作
+ * operations.do(NoteRemoveOperation.lazy(note));
+ * ```
+ */
 export class NoteRemoveOperation extends Operation {
     noteNode: NoteNode;
     note: Note;
@@ -115,6 +127,17 @@ export class NoteDeleteOperation extends NoteRemoveOperation {
     updatesEditor = true
 }
 
+/**
+ * 批量删除音符。
+ *
+ * 每个音符对应一个 {@linkcode NoteDeleteOperation}，物量按个数累计；
+ * 空集合时整体无效。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MultiNoteDeleteOperation([noteA, noteB, noteC]));
+ * ```
+ */
 export class MultiNoteDeleteOperation extends ComplexOperation<NoteDeleteOperation[]> {
     updatesEditor = true
     constructor(notes: Set<Note> | Note[]) {
@@ -131,6 +154,18 @@ export class MultiNoteDeleteOperation extends ComplexOperation<NoteDeleteOperati
 
 
 
+/**
+ * 把一个音符挂到指定的 NoteNode 上。
+ *
+ * NoteNode 需要调用方先用 `nnList.getNodeOf()` 取到；hold 音符若会让
+ * 该节点变长，会同步更新行尾跳数组。物量在这里 +1（假音符不计）。
+ *
+ * @example
+ * ```ts
+ * const node = line.getNNList(note.speed, note.yOffset, false, true).getNodeOf(note.startTime);
+ * operations.do(new NoteAddOperation(note, node));
+ * ```
+ */
 export class NoteAddOperation extends Operation {
     noteNode: NoteNode
     note: Note;
@@ -176,6 +211,17 @@ export class NoteAddOperation extends Operation {
     }
 }
 
+/**
+ * 批量添加音符。
+ *
+ * 内部会按每个音符的 speed / yOffset 找到它该去的 NNList，再各自生成
+ * {@linkcode NoteAddOperation}。空集合时整体无效。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MultiNoteAddOperation([noteA, noteB], line));
+ * ```
+ */
 export class MultiNoteAddOperation extends ComplexOperation<NoteAddOperation[]> {
     updatesEditor = true;
     constructor(notes: Set<Note> | Note[], judgeLine: JudgeLine) {
@@ -332,6 +378,18 @@ extends ComplexOperation<[NotePropChangeOperation<"speed">, NoteRemoveOperation,
     }
 }
 
+/**
+ * 修改 Note 的 yOffset 属性。
+ *
+ * 与 {@linkcode NoteSpeedChangeOperation} 同理，yOffset 决定了音符落在哪个
+ * NNList，所以要"改值 + 摘除 + 重新插入"。speed 为 0 时 yOffset 必须为 0，
+ * 否则操作无效。
+ *
+ * @example
+ * ```ts
+ * operations.do(new NoteYOffsetChangeOperation(note, 50, judgeLine));
+ * ```
+ */
 export class NoteYOffsetChangeOperation
 extends ComplexOperation<[NotePropChangeOperation<"yOffset">, NoteRemoveOperation, NoteAddOperation]> {
     updatesEditor = true
@@ -386,7 +444,20 @@ class NoteTreeChangeOperation extends NoteAddOperation {
 // 按照规矩，音符节点的时间不可变，所以不会对音符节点动手。
 // 依旧不用组合的NoteTimeChangeOperation的方式，因为那需要多次更新跳数组。
 /**
+ * 把一组音符整体平移指定拍数。
+ *
+ * 音符时刻本身不可变，所以做法是改所属 NoteNode —— 这里直接操作内部结构
+ * 而不是组合多个 {@linkcode NoteTimeChangeOperation}，因为后者会反复重建
+ * 跳数组。`lazy` 静态方法被显式禁用（无效操作，不应延迟构造）。
+ *
  * @author Zes Minkey Young
+ *
+ * @example
+ * ```ts
+ * // 把 4 拍之后的所有音符往后推 2 拍
+ * const notes = nnList.getNodesAfterOne(nnList.getNodeOf([4, 0, 1])).flatMap(n => n.notes);
+ * operations.do(new MultiNoteOffsetOperation(nnList, notes, [2, 0, 1]));
+ * ```
  */
 // @ts-expect-error 我需要明确禁用掉lazy静态方法，这不会破坏类型安全。
 export class MultiNoteOffsetOperation extends Operation {
@@ -436,6 +507,17 @@ export class MultiNoteOffsetOperation extends Operation {
 
 type TimeRange = [TimeT, TimeT]
 
+/**
+ * 删除 NNList 上一段时间内的所有音符，并把后面的音符整体前移，补上空缺。
+ *
+ * 等价于"删掉区间 + 后续左移区间长度"，结束后会清理空节点。
+ *
+ * @example
+ * ```ts
+ * // 删掉 4~8 拍，后面的音符整体前移 4 拍
+ * operations.do(new NNListTimeRangeDeleteOperation(nnList, [[4, 0, 1], [8, 0, 1]]));
+ * ```
+ */
 export class NNListTimeRangeDeleteOperation extends ComplexOperation<[MultiNoteDeleteOperation, MultiNoteOffsetOperation]> {
     constructor(public nnList: NNList, public timeRange: TimeRange, public updatesJump: boolean = true) {
         const delNodes = nnList.getNodesFromOneAndRangeRight(nnList.getNodeOf(timeRange[0]), timeRange[1]);
@@ -462,6 +544,15 @@ export class NNListTimeRangeDeleteOperation extends ComplexOperation<[MultiNoteD
     }
 }
 
+/**
+ * 在 NNList 的指定位置插入一段空白，后面的音符整体后移。
+ *
+ * @example
+ * ```ts
+ * // 在 4 拍处插入 2 拍空白
+ * operations.do(new NNListAddBlankOperation(nnList, [4, 0, 1], [2, 0, 1]));
+ * ```
+ */
 export class NNListAddBlankOperation extends MultiNoteOffsetOperation {
     updatesEditor = true;
     constructor(nnList: NNList, pos: TimeT, length: TimeT) {

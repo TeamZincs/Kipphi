@@ -11,6 +11,15 @@ import { ComplexOperation, LazyOperation, Operation, UnionOperation } from "./ba
 
 /**
  * 移除一对节点（背靠背）
+ *
+ * 内部会连同左侧面对面的 EndNode 一起摘掉，等于删掉
+ * `[上一时刻, 该节点时刻]` 这一段事件。首节点或已脱离序列的节点会静默失效。
+ *
+ * @example
+ * ```ts
+ * // 删掉 4 拍处的那个事件段
+ * operations.do(new EventNodePairRemoveOperation(seq.getNodeAt(4)));
+ * ```
  */
 export class EventNodePairRemoveOperation extends Operation {
     updatesEditor = true;
@@ -66,6 +75,15 @@ export class EventNodePairRemoveOperation extends Operation {
  * 将一对孤立的节点对插入到一个开始节点之后的操作。
  * 
  * 如果这个节点对的时刻与节点对的时刻相同，那么抛出错误。
+ *
+ * @example
+ * ```ts
+ * const start = new EventStartNode([4, 0, 1], 1);
+ * const end = new EventEndNode([6, 0, 1], 2);
+ * EventNode.connect(start, end);
+ * // 插到 2 拍所在节点之后
+ * operations.do(new EventNodePairInsertOperation.lazy(start, seq.getNodeAt(2)));
+ * ```
  */
 export class EventNodePairInsertOperation <VT extends EventValueESType> extends Operation {
     updatesEditor = true
@@ -116,6 +134,18 @@ export class EventNodePairInsertOperation <VT extends EventValueESType> extends 
     }
 }
 
+/**
+ * 插入或覆盖：目标时刻已有事件就改值，否则插入新事件。
+ *
+ * 走哪条路由内部的 UnionOperation 在构造时决定，`overlapping` 为 true
+ * 表示最终是"覆盖"。插入分支用懒操作包裹，避免构造器误判在连接孤立节点。
+ *
+ * @example
+ * ```ts
+ * // 4 拍处有事件就改值，没有就插入
+ * operations.do(new EventNodePairInsertOrOverwriteOperation(node, seq.getNodeAt(4)));
+ * ```
+ */
 export class EventNodePairInsertOrOverwriteOperation <VT extends EventValueESType>
 extends UnionOperation<LazyOperation<typeof EventNodePairInsertOperation<VT>> | EventNodeValueChangeOperation<VT>> {
     overlapping: boolean = false;
@@ -135,12 +165,34 @@ extends UnionOperation<LazyOperation<typeof EventNodePairInsertOperation<VT>> | 
     }
 }
 
+/**
+ * 自动定位插入点的插入操作。
+ *
+ * 与 {@linkcode EventNodePairInsertOperation} 的区别是不用自己算前一个节点，
+ * 内部按节点时刻调用 `parentSeq.getNodeAt()` 去找。
+ *
+ * @example
+ * ```ts
+ * const node = new EventStartNode([4, 0, 1], 1.0);
+ * operations.do(new EventNodePairAutoInsertOperation(node, seq));
+ * ```
+ */
 export class EventNodePairAutoInsertOperation<VT extends EventValueESType> extends EventNodePairInsertOperation<VT> {
     constructor(node: EventStartNode<VT>, parentSeq: EventNodeSequence<VT>, updatesFP = true) {
         super(node, parentSeq.getNodeAt(TC.toBeats(node.time)), updatesFP);
     }
 }
 
+/**
+ * 修改某个事件节点的值。
+ *
+ * 会自动重算速度序列的 floorPosition 与 BPM 缓存；节点已脱离序列时只改值。
+ *
+ * @example
+ * ```ts
+ * operations.do(new EventNodeValueChangeOperation(startNode, 2.0));
+ * ```
+ */
 export class EventNodeValueChangeOperation <VT extends EventValueESType> extends Operation {
     updatesEditor = true
     node: EventNode<VT>
@@ -202,6 +254,17 @@ export class EventNodeValueChangeOperation <VT extends EventValueESType> extends
     }
 }
 
+/**
+ * 修改事件的发生时刻。
+ *
+ * 传入 StartNode 或 EndNode 都可以，内部会把它所属的一对背靠背节点整体
+ * 搬到新时刻，并重新接好前后连接与跳数组。
+ *
+ * @example
+ * ```ts
+ * operations.do(new EventNodeTimeChangeOperation(startNode, [4, 0, 1]));
+ * ```
+ */
 export class EventNodeTimeChangeOperation extends Operation {
     updatesEditor = true
     sequence: EventNodeSequence;
@@ -269,6 +332,18 @@ export class EventNodeTimeChangeOperation extends Operation {
 }
 
 
+/**
+ * 替换事件节点的求值器（缓动 / 表达式）。
+ *
+ * 若序列本身是缓动序列、且新求值器用的是模板缓动，构造时会检查循环引用。
+ *
+ * @example
+ * ```ts
+ * operations.do(new EventNodeEvaluatorChangeOperation(
+ *     startNode, new NumericEasedEvaluator(easeInOutSine)
+ * ));
+ * ```
+ */
 export class EventNodeEvaluatorChangeOperation <VT extends EventValueESType> extends Operation {
     updatesEditor = true
     originalValue: Evaluator<VT>
@@ -294,6 +369,18 @@ export class EventNodeEvaluatorChangeOperation <VT extends EventValueESType> ext
 
 
 
+/**
+ * 把一个事件按固定步长切分成多个节点。
+ *
+ * 只切分、不改形状——中间节点的值取自原事件曲线，所以撤销前后外观一致，
+ * 之后就能单独编辑其中某一段。最后一刀不会落在终点上。
+ *
+ * @example
+ * ```ts
+ * // 每 1/4 拍切一刀
+ * operations.do(new EventInterpolationOperation(startNode, [0, 1, 4]));
+ * ```
+ */
 // 这个地方得懒一下，不然每亩，导致撤回操作时只能撤回第一个插值节点。
 export class EventInterpolationOperation <VT extends EventValueESType> extends ComplexOperation<LazyOperation<typeof EventNodePairInsertOperation<VT>>[]> {
     updatesEditor = true;
@@ -320,6 +407,20 @@ export class EventInterpolationOperation <VT extends EventValueESType> extends C
 
 
 
+/**
+ * 把使用模板缓动的事件，替换成模板内部节点展开后的等价事件序列。
+ *
+ * 结果曲线与模板缓动一致，但不再依赖模板库，便于导出到不支持模板的目标格式。
+ *
+ * @throws CANNOT_SUBSTITUTE_EXPRESSION_EVALUATOR 求值器不是缓动型
+ * @throws MUST_INTERPOLATE_TEMPLATE_EASING 缓动不是模板缓动
+ *
+ * @example
+ * ```ts
+ * // 展开后这一段就变成普通事件，可以单独编辑
+ * operations.do(new EventSubstituteOperation(startNode as NonLastStartNode<number>));
+ * ```
+ */
 export class EventSubstituteOperation<VT extends EventValueESType> extends ComplexOperation<[...LazyOperation<typeof EventNodePairInsertOperation<VT>>[], EventNodeEvaluatorChangeOperation<VT>, EventNodeValueChangeOperation<VT>]> {
     updatesEditor = true;
     /**
@@ -379,6 +480,21 @@ export class EventSubstituteOperation<VT extends EventValueESType> extends Compl
 } 
 
 
+/**
+ * 把一段连续的节点打包成一个模板缓动，并用单个事件替代原区间。
+ *
+ * 是 {@linkcode EventSubstituteOperation} 的逆过程。通常用静态方法
+ * {@linkcode EncapsuleOperation.encapsule} 构造，它会先校验这些节点
+ * 是否同属一条序列、首尾值是否相差过大。
+ *
+ * @example
+ * ```ts
+ * const op = EncapsuleOperation.encapsule(
+ *     chart.templateEasingLib, seq, selectedNodes, "myEasing"
+ * );
+ * operations.do(op);
+ * ```
+ */
 export class EncapsuleOperation extends ComplexOperation<[MultiNodeDeleteOperation, EventNodeEvaluatorChangeOperation<number>, EventNodeValueChangeOperation<number>]> {
     updatesEditor = true;
     constructor(nodes: EventStartNode<number>[], easing: TemplateEasing) {
@@ -426,7 +542,14 @@ export class EncapsuleOperation extends ComplexOperation<[MultiNodeDeleteOperati
  * 批量添加节点对
  * 
  * 节点对需要有序的，且不能有重叠
-
+ *
+ * 内部把每个节点都交给 {@linkcode EventNodePairInsertOrOverwriteOperation}，
+ * 用"上一个插入点"做游标；速度序列会在整体结束后重算一次 floorPosition。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MultiNodeAddOperation([nodeA, nodeB, nodeC], seq));
+ * ```
  */
 export class MultiNodeAddOperation <VT extends EventValueESType> extends ComplexOperation<EventNodePairInsertOrOverwriteOperation<VT>[]> {
     updatesEditor = true
@@ -454,6 +577,16 @@ export class MultiNodeAddOperation <VT extends EventValueESType> extends Complex
     }
 }
 
+/**
+ * 批量移除事件段。
+ *
+ * 内部按顺序生成懒操作，避免前一次删除影响后一个节点在链表中的定位。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MultiNodeDeleteOperation([seq.getNodeAt(2), seq.getNodeAt(4)]));
+ * ```
+ */
 export class MultiNodeDeleteOperation extends ComplexOperation<LazyOperation<typeof EventNodePairRemoveOperation>[]> {
     updatesEditor = true;
     constructor(nodes: EventStartNode<any>[]) {
@@ -461,6 +594,17 @@ export class MultiNodeDeleteOperation extends ComplexOperation<LazyOperation<typ
     }
 }
 
+/**
+ * 重命名事件序列的 id，并同步维护 `chart.sequenceMap` 的索引。
+ *
+ * 新旧名字相同时操作无效。判定线 id 变化时由
+ * {@linkcode JudgeLineIdChangeOperation} 批量调用。
+ *
+ * @example
+ * ```ts
+ * operations.do(new EventNodeSequenceRenameOperation(seq, "#0.alpha"));
+ * ```
+ */
 export class EventNodeSequenceRenameOperation extends Operation { 
     updatesEditor: boolean = true;
     originalName: string;

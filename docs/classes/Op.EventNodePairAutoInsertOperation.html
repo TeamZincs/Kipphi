@@ -12,9 +12,16 @@
 <li><a href="" aria-current="page">EventNodePairAutoInsertOperation</a></li></ul>
 <h1>Class EventNodePairAutoInsertOperation&lt;VT&gt;</h1></div>
 <section class="tsd-panel tsd-comment">
-<div class="tsd-comment tsd-typography"><p>将一对孤立的节点对插入到一个开始节点之后的操作。</p>
-<p>如果这个节点对的时刻与节点对的时刻相同，那么抛出错误。</p>
-</div></section>
+<div class="tsd-comment tsd-typography"><p>自动定位插入点的插入操作。</p>
+<p>与 <a href="Op.EventNodePairInsertOperation.html" class="tsd-kind-class"><code>EventNodePairInsertOperation</code></a> 的区别是不用自己算前一个节点，
+内部按节点时刻调用 <code>parentSeq.getNodeAt()</code> 去找。</p>
+</div>
+<div class="tsd-comment tsd-typography">
+<div class="tsd-tag-example">
+<h4 class="tsd-anchor-link" id="example">Example<a href="#example" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h4><pre><code class="ts"><span class="hl-4">const</span><span class="hl-2"> </span><span class="hl-6">node</span><span class="hl-2"> = </span><span class="hl-4">new</span><span class="hl-2"> </span><span class="hl-3">EventStartNode</span><span class="hl-2">([</span><span class="hl-7">4</span><span class="hl-2">, </span><span class="hl-7">0</span><span class="hl-2">, </span><span class="hl-7">1</span><span class="hl-2">], </span><span class="hl-7">1.0</span><span class="hl-2">);</span><br/><span class="hl-1">operations</span><span class="hl-2">.</span><span class="hl-3">do</span><span class="hl-2">(</span><span class="hl-4">new</span><span class="hl-2"> </span><span class="hl-3">EventNodePairAutoInsertOperation</span><span class="hl-2">(</span><span class="hl-1">node</span><span class="hl-2">, </span><span class="hl-1">seq</span><span class="hl-2">));</span>
+</code><button type="button">Copy</button></pre>
+
+</div></div></section>
 <section class="tsd-panel">
 <h4>Type Parameters</h4>
 <ul class="tsd-type-parameter-list">
@@ -26,7 +33,7 @@
 <ul class="tsd-hierarchy">
 <li class="tsd-hierarchy-item"><span class="tsd-hierarchy-target">EventNodePairAutoInsertOperation</span></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L138">src/operation/event.ts:138</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L180">src/operation/event.ts:180</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -79,7 +86,7 @@
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">EventNodePairAutoInsertOperation</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="#vt">VT</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Overrides <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#constructor">constructor</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L139">src/operation/event.ts:139</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L181">src/operation/event.ts:181</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="properties-1">Properties<a href="#properties-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -91,61 +98,61 @@
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#combodelta">comboDelta</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L205">src/operation/basic.ts:205</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L227">src/operation/basic.ts:227</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="ineffective"><span>ineffective</span><a href="#ineffective" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">ineffective</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#ineffective">ineffective</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L196">src/operation/basic.ts:196</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L218">src/operation/basic.ts:218</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="node"><span>node</span><a href="#node" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">node</span><span class="tsd-signature-symbol">:</span> <a href="EventStartNode.html" class="tsd-signature-type tsd-kind-class">EventStartNode</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="#vt">VT</a><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#node">node</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L72">src/operation/event.ts:72</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L90">src/operation/event.ts:90</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="originalvalue"><span>original<wbr/>Value</span><a href="#originalvalue" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">originalValue</span><span class="tsd-signature-symbol">:</span> <a class="tsd-signature-type tsd-kind-type-parameter" href="#vt">VT</a></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#originalvalue">originalValue</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L75">src/operation/event.ts:75</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L93">src/operation/event.ts:93</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="reflows"><span>reflows</span><a href="#reflows" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">reflows</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#reflows">reflows</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L199">src/operation/basic.ts:199</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L221">src/operation/basic.ts:221</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="sequence"><span>sequence</span><a href="#sequence" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">sequence</span><span class="tsd-signature-symbol">:</span> <a href="EventNodeSequence.html" class="tsd-signature-type tsd-kind-class">EventNodeSequence</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="#vt">VT</a><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#sequence">sequence</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L74">src/operation/event.ts:74</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L92">src/operation/event.ts:92</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="tarprev"><span>tar<wbr/>Prev</span><a href="#tarprev" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">tarPrev</span><span class="tsd-signature-symbol">:</span> <a href="EventStartNode.html" class="tsd-signature-type tsd-kind-class">EventStartNode</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="#vt">VT</a><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#tarprev">tarPrev</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L73">src/operation/event.ts:73</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L91">src/operation/event.ts:91</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="updateseditor"><span>updates<wbr/>Editor</span><a href="#updateseditor" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">updatesEditor</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> = true</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#updateseditor">updatesEditor</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L71">src/operation/event.ts:71</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L89">src/operation/event.ts:89</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="updatesfp"><span>updates<wbr/>FP</span><a href="#updatesfp" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">updatesFP</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> = false</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#updatesfp">updatesFP</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L77">src/operation/event.ts:77</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L95">src/operation/event.ts:95</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="value"><span>value</span><a href="#value" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">value</span><span class="tsd-signature-symbol">:</span> <a class="tsd-signature-type tsd-kind-type-parameter" href="#vt">VT</a></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#value">value</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L76">src/operation/event.ts:76</a></li></ul></aside></section></section></details>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L94">src/operation/event.ts:94</a></li></ul></aside></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -162,7 +169,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#do">do</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L96">src/operation/event.ts:96</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L114">src/operation/event.ts:114</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="rewrite"><span>rewrite</span><a href="#rewrite" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -177,7 +184,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#rewrite">rewrite</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L211">src/operation/basic.ts:211</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L233">src/operation/basic.ts:233</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="tostring"><span>to<wbr/>String</span><a href="#tostring" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -187,7 +194,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#tostring">toString</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L212">src/operation/basic.ts:212</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L234">src/operation/basic.ts:234</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="undo"><span>undo</span><a href="#undo" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -201,7 +208,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#undo">undo</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/event.ts#L107">src/operation/event.ts:107</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/event.ts#L125">src/operation/event.ts:125</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="lazy"><code class="tsd-tag">Static</code><span>lazy</span><a href="#lazy" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -220,7 +227,7 @@
 <h4 class="tsd-returns-title">Returns <a href="Op.LazyOperation.html" class="tsd-signature-type tsd-kind-class">LazyOperation</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="Op.Operation.html#lazyc">C</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="Op.EventNodePairInsertOperation.html">EventNodePairInsertOperation</a>.<a href="Op.EventNodePairInsertOperation.html#lazy">lazy</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L215">src/operation/basic.ts:215</a></li></ul></aside></div></li></ul></section></section></details></div>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L237">src/operation/basic.ts:237</a></li></ul></aside></div></li></ul></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

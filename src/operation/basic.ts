@@ -192,6 +192,28 @@ export class OperationList extends EventTarget {
 }
 
 
+/**
+ * 所有可撤销操作的基类。
+ *
+ * 操作只记录"从什么变成了什么"，不关心何时被调用。`do` 与 `undo`
+ * 必须严格互逆，且一次 `do` 之后紧跟一次 `undo` 应当让谱面回到原状。
+ *
+ * 编辑器通常不直接调用 `do` / `undo`，而是把操作推入
+ * {@linkcode OperationList}，由其负责调用与事件通知。
+ *
+ * @example
+ * ```ts
+ * class ChartRenameOperation extends Operation {
+ *     private original: string;
+ *     constructor(private chart: Chart, public name: string) {
+ *         super();
+ *         this.original = chart.name;
+ *     }
+ *     do() { this.chart.name = this.name; }
+ *     undo() { this.chart.name = this.original; }
+ * }
+ * ```
+ */
 export abstract class Operation {
     ineffective: boolean;
     updatesEditor: boolean;
@@ -223,6 +245,14 @@ export abstract class Operation {
 /**
  * 懒操作，实例化的时候不记录任何数据，do的时候才执行真正实例化
  * 防止连续的操作中状态改变导致的错误
+ *
+ * @example
+ * ```ts
+ * // 不要这样写：构造时就会读取 note 的当前状态
+ * buffer.push(new NoteRemoveOperation(note));
+ * // 而应这样写：真正 do 的时候才去读状态
+ * buffer.push(NoteRemoveOperation.lazy(note));
+ * ```
  */
 export class LazyOperation<C extends new (...args: any[]) => any> extends Operation {
     public operationClass: C;
@@ -253,6 +283,17 @@ export class LazyOperation<C extends new (...args: any[]) => any> extends Operat
  * 一个不确定类型的子操作
  * 
  * 注意这个操作不懒，会在构造时就实例化子操作
+ *
+ * @example
+ * ```ts
+ * // 根据音符类型决定要不要顺带改 endTime，hold以外返回null表示无需子操作
+ * new UnionOperation(() => {
+ *     if (note.type !== NoteType.hold) {
+ *         return new NotePropChangeOperation(note, "endTime", node.startTime);
+ *     }
+ *     return null;
+ * });
+ * ```
  */
 export class UnionOperation<T extends Operation | null> extends Operation {
     operation: T;
@@ -275,6 +316,19 @@ export class UnionOperation<T extends Operation | null> extends Operation {
 }
 
 
+/**
+ * 由若干子操作拼成的复合操作。
+ *
+ * `do` 按正序执行子操作，`undo` 按逆序回滚；`ineffective` 的子操作会被跳过。
+ * 组合顺序决定了撤销的正确性，因此子操作之间有依赖时要先想清楚顺序。
+ *
+ * @example
+ * ```ts
+ * // 删除判定线：先移除，再把后面所有线的id依次前移
+ * new JudgeLineDeleteOperation(chart, line);
+ * //= ComplexOperation<[JudgeLineRemoveOperation, ...LazyOperation<...>[]]>
+ * ```
+ */
 export class ComplexOperation<T extends Operation[]> extends Operation {
     subOperations: T;
     length: number;

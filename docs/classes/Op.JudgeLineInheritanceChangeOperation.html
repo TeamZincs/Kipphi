@@ -11,6 +11,18 @@
 <li><a href="../modules/Op.html">Op</a></li>
 <li><a href="" aria-current="page">JudgeLineInheritanceChangeOperation</a></li></ul>
 <h1>Class JudgeLineInheritanceChangeOperation</h1></div>
+<section class="tsd-panel tsd-comment">
+<div class="tsd-comment tsd-typography"><p>修改判定线的父判定线（或脱离父线）。</p>
+<p>传入 <code>null</code> 表示脱离，此时判定线会进入 <code>chart.orphanLines</code>。
+若目标父线是本线的后代，会形成环，构造时判定为 <code>ineffective</code> 静默失效，
+调用方应当先用 <a href="JudgeLine.html#checkinterdependency" class="tsd-kind-method"><code>JudgeLine.checkinterdependency</code></a> 自行判断并抛错。</p>
+</div>
+<div class="tsd-comment tsd-typography">
+<div class="tsd-tag-example">
+<h4 class="tsd-anchor-link" id="example">Example<a href="#example" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h4><pre><code class="ts"><span class="hl-0">// 挂到另一条线下；传 null 表示脱离</span><br/><span class="hl-1">operations</span><span class="hl-2">.</span><span class="hl-3">do</span><span class="hl-2">(</span><span class="hl-4">new</span><span class="hl-2"> </span><span class="hl-3">JudgeLineInheritanceChangeOperation</span><span class="hl-2">(</span><span class="hl-1">chart</span><span class="hl-2">, </span><span class="hl-1">line</span><span class="hl-2">, </span><span class="hl-1">father</span><span class="hl-2">));</span><br/><span class="hl-1">operations</span><span class="hl-2">.</span><span class="hl-3">do</span><span class="hl-2">(</span><span class="hl-4">new</span><span class="hl-2"> </span><span class="hl-3">JudgeLineInheritanceChangeOperation</span><span class="hl-2">(</span><span class="hl-1">chart</span><span class="hl-2">, </span><span class="hl-1">line</span><span class="hl-2">, </span><span class="hl-4">null</span><span class="hl-2">));</span>
+</code><button type="button">Copy</button></pre>
+
+</div></div></section>
 <section class="tsd-panel tsd-hierarchy" data-refl="4637">
 <h4>Hierarchy (<a href="../hierarchy.html#Op.JudgeLineInheritanceChangeOperation">View Summary</a>)</h4>
 <ul class="tsd-hierarchy">
@@ -18,7 +30,7 @@
 <ul class="tsd-hierarchy">
 <li class="tsd-hierarchy-item"><span class="tsd-hierarchy-target">JudgeLineInheritanceChangeOperation</span></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L18">src/operation/line.ts:18</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L32">src/operation/line.ts:32</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -66,7 +78,7 @@
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">JudgeLineInheritanceChangeOperation</a></h4><aside class="tsd-sources">
 <p>Overrides <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#constructor">constructor</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L23">src/operation/line.ts:23</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L37">src/operation/line.ts:37</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="properties-1">Properties<a href="#properties-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -74,7 +86,7 @@
 <h3 class="tsd-anchor-link" id="chart"><span>chart</span><a href="#chart" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">chart</span><span class="tsd-signature-symbol">:</span> <a href="Chart.html" class="tsd-signature-type tsd-kind-class">Chart</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L23">src/operation/line.ts:23</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L37">src/operation/line.ts:37</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="combodelta"><span>combo<wbr/>Delta</span><a href="#combodelta" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">comboDelta</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -83,45 +95,45 @@
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#combodelta">comboDelta</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L205">src/operation/basic.ts:205</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L227">src/operation/basic.ts:227</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="ineffective"><span>ineffective</span><a href="#ineffective" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">ineffective</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#ineffective">ineffective</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L196">src/operation/basic.ts:196</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L218">src/operation/basic.ts:218</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="judgeline"><span>judge<wbr/>Line</span><a href="#judgeline" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">judgeLine</span><span class="tsd-signature-symbol">:</span> <a href="JudgeLine.html" class="tsd-signature-type tsd-kind-class">JudgeLine</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L23">src/operation/line.ts:23</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L37">src/operation/line.ts:37</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="originalvalue"><span>original<wbr/>Value</span><a href="#originalvalue" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">originalValue</span><span class="tsd-signature-symbol">:</span> <a href="JudgeLine.html" class="tsd-signature-type tsd-kind-class">JudgeLine</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">null</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L19">src/operation/line.ts:19</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L33">src/operation/line.ts:33</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="reflows"><span>reflows</span><a href="#reflows" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">reflows</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">JudgeLinesEditorLayoutType</span><span class="tsd-signature-symbol"> = JudgeLineInheritanceChangeOperation.REFLOWS</span></div><aside class="tsd-sources">
 <p>Overrides <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#reflows">reflows</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L22">src/operation/line.ts:22</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L36">src/operation/line.ts:36</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="updateseditor"><span>updates<wbr/>Editor</span><a href="#updateseditor" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">updatesEditor</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> = true</span></div><aside class="tsd-sources">
 <p>Overrides <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#updateseditor">updatesEditor</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L20">src/operation/line.ts:20</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L34">src/operation/line.ts:34</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="value"><span>value</span><a href="#value" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">value</span><span class="tsd-signature-symbol">:</span> <a href="JudgeLine.html" class="tsd-signature-type tsd-kind-class">JudgeLine</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">null</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L23">src/operation/line.ts:23</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L37">src/operation/line.ts:37</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="reflows-1"><code class="tsd-tag">Static</code><span>REFLOWS</span><a href="#reflows-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">REFLOWS</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">JudgeLinesEditorLayoutType</span><span class="tsd-signature-symbol"> = JudgeLinesEditorLayoutType.tree</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L21">src/operation/line.ts:21</a></li></ul></aside></section></section></details>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L35">src/operation/line.ts:35</a></li></ul></aside></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -134,7 +146,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <p>Overrides <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#do">do</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L34">src/operation/line.ts:34</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L48">src/operation/line.ts:48</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="rewrite"><span>rewrite</span><a href="#rewrite" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -149,7 +161,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#rewrite">rewrite</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L211">src/operation/basic.ts:211</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L233">src/operation/basic.ts:233</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="tostring"><span>to<wbr/>String</span><a href="#tostring" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -159,7 +171,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#tostring">toString</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L212">src/operation/basic.ts:212</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L234">src/operation/basic.ts:234</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="undo"><span>undo</span><a href="#undo" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -169,7 +181,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <p>Overrides <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#undo">undo</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/line.ts#L50">src/operation/line.ts:50</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/line.ts#L64">src/operation/line.ts:64</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="lazy"><code class="tsd-tag">Static</code><span>lazy</span><a href="#lazy" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -188,7 +200,7 @@
 <h4 class="tsd-returns-title">Returns <a href="Op.LazyOperation.html" class="tsd-signature-type tsd-kind-class">LazyOperation</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="Op.Operation.html#lazyc">C</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#lazy">lazy</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L215">src/operation/basic.ts:215</a></li></ul></aside></div></li></ul></section></section></details></div>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L237">src/operation/basic.ts:237</a></li></ul></aside></div></li></ul></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

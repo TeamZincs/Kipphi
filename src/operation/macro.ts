@@ -9,6 +9,17 @@ import { Note, notePropTypes } from "../note";
 import { HoldEndTimeChangeOperation, NotePropChangeOperation, NotePropName, NoteSpeedChangeOperation, NoteTimeChangeOperation, NoteYOffsetChangeOperation } from "./note";
 import { checkType } from "../util";
 
+/**
+ * 重新求值所有绑定了某个时间宏的节点。
+ *
+ * 宏本质是 JS 表达式，可能带随机性，所以"重做"不等于"还原"；
+ * 这里按宏的当前内容重算一遍，并把结果作为一次可撤销操作。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MacroTimeReevaluateOperation(macro, chart));
+ * ```
+ */
 export class MacroTimeReevaluateOperation extends ComplexOperation<EventNodeMacroTimeReevaluateOperation[]> {
     constructor(macroTime: EventMacroTime, chart: Chart) {
         const ops: EventNodeMacroTimeReevaluateOperation[] = [];
@@ -19,6 +30,16 @@ export class MacroTimeReevaluateOperation extends ComplexOperation<EventNodeMacr
     }
 }
 
+/**
+ * 按节点上的时间宏重算该节点的时间。
+ *
+ * 宏返回的不是合法时间元组时，回退到节点当前时间。
+ *
+ * @example
+ * ```ts
+ * operations.do(new EventNodeMacroTimeReevaluateOperation(node, chart));
+ * ```
+ */
 export class EventNodeMacroTimeReevaluateOperation extends EventNodeTimeChangeOperation {
     constructor(node: EventStartNode<any>, chart: Chart) {
         let time: TimeT | undefined = node.macroTime?.eval?.(node, chart);
@@ -29,6 +50,16 @@ export class EventNodeMacroTimeReevaluateOperation extends EventNodeTimeChangeOp
     }
 }
 
+/**
+ * 给事件节点绑定（或换绑）一个时间宏，并立即求值。
+ *
+ * 撤销时恢复原宏，并按原宏重新求值。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MacroTimeAssignOperation(macro, node));
+ * ```
+ */
 export class MacroTimeAssignOperation extends Operation {
     /** 原本可能没有绑定宏 */
     public originalMacroTime: EventMacroTime | null;
@@ -49,6 +80,16 @@ export class MacroTimeAssignOperation extends Operation {
     }
 }
 
+/**
+ * 解绑事件节点上的时间宏。
+ *
+ * 解绑后节点时间不再被宏驱动，保留当前值。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MacroTimeDeassginOperation(node));
+ * ```
+ */
 export class MacroTimeDeassginOperation extends Operation {
     /** 原本可能没有绑定宏 */
     public originalMacroTime: EventMacroTime | null;
@@ -64,6 +105,14 @@ export class MacroTimeDeassginOperation extends Operation {
     }
 }
 
+/**
+ * 重新求值所有绑定了某个值宏的节点。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MacroValueReevaluateOperation(macro, chart));
+ * ```
+ */
 export class MacroValueReevaluateOperation extends ComplexOperation<EventNodeMacroValueReevaluateOperation[]> {
     constructor(macroValue: EventMacroValue, chart: Chart) {
         const ops: EventNodeMacroValueReevaluateOperation[] = [];
@@ -75,6 +124,14 @@ export class MacroValueReevaluateOperation extends ComplexOperation<EventNodeMac
 }
 
 
+/**
+ * 按节点上的值宏重算该节点的值。
+ *
+ * @example
+ * ```ts
+ * operations.do(new EventNodeMacroValueReevaluateOperation(node, chart));
+ * ```
+ */
 export class EventNodeMacroValueReevaluateOperation extends EventNodeValueChangeOperation<EventValueESType> {
     constructor(node: EventStartNode<any>, chart: Chart) {
         const value = node.macro?.eval?.(node, chart);
@@ -82,6 +139,14 @@ export class EventNodeMacroValueReevaluateOperation extends EventNodeValueChange
     }
 }
 
+/**
+ * 给事件节点绑定（或换绑）一个值宏，并立即求值。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MacroValueAssignOperation(macro, node));
+ * ```
+ */
 export class MacroValueAssignOperation extends Operation {
     public originalMacroValue: EventMacroValue;
     private valueChangeOperation: EventNodeMacroValueReevaluateOperation;
@@ -101,6 +166,14 @@ export class MacroValueAssignOperation extends Operation {
     }
 }
 
+/**
+ * 解绑事件节点上的值宏。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MacroValueDeassginOperation(node));
+ * ```
+ */
 export class MacroValueDeassginOperation extends Operation {
     public originalMacroValue: EventMacroValue;
     constructor(public node: EventStartNode<any>) {
@@ -116,6 +189,14 @@ export class MacroValueDeassginOperation extends Operation {
     }
 }
 
+/**
+ * 重新求值所有绑定了某个宏的音符。
+ *
+ * @example
+ * ```ts
+ * operations.do(new NoteMacroReevaluateOperation(macro, chart));
+ * ```
+ */
 export class NoteMacroReevaluateOperation extends ComplexOperation<NoteNoteMacroReevaluateOperation[]> {
     constructor(macroValue: NoteMacro, chart: Chart) {
         const ops: NoteNoteMacroReevaluateOperation[] = [];
@@ -127,6 +208,18 @@ export class NoteMacroReevaluateOperation extends ComplexOperation<NoteNoteMacro
 }
 
 
+/**
+ * 按音符上的宏重算该音符的各项属性。
+ *
+ * 只为宏实际返回了的字段生成子操作（时间、hold 结束时间、位置、透明度、
+ * 大小、是否假音符、可见拍、yOffset、speed），因此同一个宏在不同音符上
+ * 可能产生不同数量的子操作。
+ *
+ * @example
+ * ```ts
+ * operations.do(new NoteNoteMacroReevaluateOperation(note, chart));
+ * ```
+ */
 export class NoteNoteMacroReevaluateOperation extends ComplexOperation<Operation[]> {
     constructor(note: Note, chart: Chart) {
         const mnote = note.macro?.eval?.(note, chart);
@@ -158,6 +251,14 @@ export class NoteNoteMacroReevaluateOperation extends ComplexOperation<Operation
     }
 }
 
+/**
+ * 给音符绑定（或换绑）一个宏，并立即求值。
+ *
+ * @example
+ * ```ts
+ * operations.do(new NoteMacroAssignOperation(macro, note));
+ * ```
+ */
 export class NoteMacroAssignOperation extends Operation {
     public originalMacro: NoteMacro;
     private changeOperation: NoteNoteMacroReevaluateOperation;
@@ -177,6 +278,14 @@ export class NoteMacroAssignOperation extends Operation {
     }
 }
 
+/**
+ * 解绑音符上的宏。
+ *
+ * @example
+ * ```ts
+ * operations.do(new NoteMacroDeassginOperation(note));
+ * ```
+ */
 export class NoteMacroDeassginOperation extends Operation {
     public originalMacro: NoteMacro;
     constructor(public note: Note) {
@@ -196,6 +305,14 @@ export class NoteMacroDeassginOperation extends Operation {
  * 修改宏的表达式，可撤销
  *
  * 宏求值器的表达式字段为expression，其余宏为macro。
+ *
+ * 只改文本，不会自动重新求值；改完通常再接一次
+ * {@linkcode MacroEvaluatorReevaluateOperation} 或对应的 Reevaluate 操作。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MacroExpressionChangeOperation(macro, "@node.time + 0.5"));
+ * ```
  */
 export class MacroExpressionChangeOperation extends Operation {
     public originalExpression: string;
@@ -226,6 +343,14 @@ export class MacroExpressionChangeOperation extends Operation {
 
 /**
  * 重新编译宏求值器在所有绑定节点上的表达式，可撤销
+ *
+ * 与 {@linkcode MacroExpressionChangeOperation} 搭配使用：前者改文本，
+ * 本操作把新表达式编译到每个消费者节点上。
+ *
+ * @example
+ * ```ts
+ * operations.do(new MacroEvaluatorReevaluateOperation(evaluator, chart));
+ * ```
  */
 export class MacroEvaluatorReevaluateOperation extends Operation {
     private originals: [EventStartNode<any>, ExpressionEvaluator<any>][];

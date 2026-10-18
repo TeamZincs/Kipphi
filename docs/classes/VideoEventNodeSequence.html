@@ -15,7 +15,7 @@
 <p>结构与<a href="EventNodeSequence.html" class="tsd-kind-class"><code>EventNodeSequence</code></a>完全一致（背靠背的Start/End对），
 但序列的语义是阶梯型的：节点处切换视频，节点之间视频恒定。</p>
 <p>序列中的第一个节点必定位于[0, 0, 1]，缺失时会自动补一个空路径节点。</p>
-<pre><code><span class="hl-7">HEAD</span><span class="hl-2"> -&gt; </span><span class="hl-3">VS0</span><span class="hl-2">(</span><span class="hl-1">t</span><span class="hl-2">=</span><span class="hl-6">0</span><span class="hl-2">) -&gt; </span><span class="hl-3">VE0</span><span class="hl-2">(</span><span class="hl-1">t1</span><span class="hl-2">) -&gt; </span><span class="hl-3">VS1</span><span class="hl-2">(</span><span class="hl-1">t1</span><span class="hl-2">) -&gt; </span><span class="hl-3">VE1</span><span class="hl-2">(</span><span class="hl-1">t2</span><span class="hl-2">) -&gt; ... -&gt; </span><span class="hl-1">VSn</span><span class="hl-2"> -&gt; </span><span class="hl-7">TAIL</span>
+<pre><code><span class="hl-6">HEAD</span><span class="hl-2"> -&gt; </span><span class="hl-3">VS0</span><span class="hl-2">(</span><span class="hl-1">t</span><span class="hl-2">=</span><span class="hl-7">0</span><span class="hl-2">) -&gt; </span><span class="hl-3">VE0</span><span class="hl-2">(</span><span class="hl-1">t1</span><span class="hl-2">) -&gt; </span><span class="hl-3">VS1</span><span class="hl-2">(</span><span class="hl-1">t1</span><span class="hl-2">) -&gt; </span><span class="hl-3">VE1</span><span class="hl-2">(</span><span class="hl-1">t2</span><span class="hl-2">) -&gt; ... -&gt; </span><span class="hl-1">VSn</span><span class="hl-2"> -&gt; </span><span class="hl-6">TAIL</span>
 </code><button>Copy</button></pre>
 
 <p>与事件序列不同，本序列使用独立的<a href="../interfaces/VideoEventNodeSequenceDataKPA2.html" class="tsd-kind-interface"><code>VideoEventNodeSequenceDataKPA2</code></a>格式，
@@ -32,7 +32,7 @@
 <ul class="tsd-hierarchy">
 <li class="tsd-hierarchy-item"><span class="tsd-hierarchy-target">VideoEventNodeSequence</span></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/video.ts#L124">src/video.ts:124</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/video.ts#L124">src/video.ts:124</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -97,7 +97,7 @@
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">VideoEventNodeSequence</a></h4><aside class="tsd-sources">
 <p>Overrides <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#constructor">constructor</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/video.ts#L125">src/video.ts:125</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/video.ts#L125">src/video.ts:125</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="properties-1">Properties<a href="#properties-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -110,7 +110,7 @@
 </div></div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#chart">chart</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L464">src/event.ts:464</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L464">src/event.ts:464</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="consumerlines"><span>consumer<wbr/>Lines</span><a href="#consumerlines" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">consumerLines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><a href="JudgeLine.html" class="tsd-signature-type tsd-kind-class">JudgeLine</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = ...</span></div>
@@ -118,19 +118,19 @@
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#consumerlines">consumerLines</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L484">src/event.ts:484</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L484">src/event.ts:484</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="effectivebeats"><span>effective<wbr/>Beats</span><a href="#effectivebeats" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">effectiveBeats</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#effectivebeats">effectiveBeats</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L486">src/event.ts:486</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L486">src/event.ts:486</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="head"><span>head</span><a href="#head" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">head</span><span class="tsd-signature-symbol">:</span> <a href="EventNodeLike.html" class="tsd-signature-type tsd-kind-class">EventNodeLike</a><span class="tsd-signature-symbol">&lt;</span><a href="../enums/NodeType.html#head" class="tsd-signature-type tsd-kind-enum-member">HEAD</a><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#head">head</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L469">src/event.ts:469</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L469">src/event.ts:469</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="id"><span>id</span><a href="#id" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">id</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
@@ -139,13 +139,13 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#id">id</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L468">src/event.ts:468</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L468">src/event.ts:468</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="jump"><code class="tsd-tag">Optional</code><span>jump</span><a href="#jump" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">jump</span><span class="tsd-signature-symbol">?:</span> <a href="JumpArray.html" class="tsd-signature-type tsd-kind-class">JumpArray</a><span class="tsd-signature-symbol">&lt;</span><a href="../types/AnyEN.html" class="tsd-signature-type tsd-kind-type-alias">AnyEN</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#jump">jump</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L471">src/event.ts:471</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L471">src/event.ts:471</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="jumpaveragebeats"><span>jump<wbr/>Average<wbr/>Beats</span><a href="#jumpaveragebeats" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">jumpAverageBeats</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -153,13 +153,13 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#jumpaveragebeats">jumpAverageBeats</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L474">src/event.ts:474</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L474">src/event.ts:474</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="listlength"><span>list<wbr/>Length</span><a href="#listlength" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">listLength</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#listlength">listLength</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L472">src/event.ts:472</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L472">src/event.ts:472</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="monotonicity"><span>monotonicity</span><a href="#monotonicity" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">monotonicity</span><span class="tsd-signature-symbol">:</span> <a href="../enums/Monotonicity.html" class="tsd-signature-type tsd-kind-enum">Monotonicity</a><span class="tsd-signature-symbol"> = Monotonicity.swinging</span></div>
@@ -167,19 +167,19 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#monotonicity">monotonicity</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L479">src/event.ts:479</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L479">src/event.ts:479</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="tail"><span>tail</span><a href="#tail" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">tail</span><span class="tsd-signature-symbol">:</span> <a href="EventNodeLike.html" class="tsd-signature-type tsd-kind-class">EventNodeLike</a><span class="tsd-signature-symbol">&lt;</span><a href="../enums/NodeType.html#tail" class="tsd-signature-type tsd-kind-enum-member">TAIL</a><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#tail">tail</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L470">src/event.ts:470</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L470">src/event.ts:470</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="type"><span>type</span><a href="#type" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">type</span><span class="tsd-signature-symbol">:</span> <a href="../enums/EventType.html" class="tsd-signature-type tsd-kind-enum">EventType</a></div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#type">type</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L486">src/event.ts:486</a></li></ul></aside></section></section></details>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L486">src/event.ts:486</a></li></ul></aside></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -192,7 +192,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#checkerrors">checkErrors</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L967">src/event.ts:967</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L967">src/event.ts:967</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="dump"><span>dump</span><a href="#dump" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -202,7 +202,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <a href="../interfaces/EventNodeSequenceDataKPA2.html" class="tsd-signature-type tsd-kind-interface">EventNodeSequenceDataKPA2</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#dump">dump</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L861">src/event.ts:861</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L861">src/event.ts:861</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="dumpvideo"><span>dump<wbr/>Video</span><a href="#dumpvideo" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -213,7 +213,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 </div>
 <h4 class="tsd-returns-title">Returns <a href="../interfaces/VideoEventNodeSequenceDataKPA2.html" class="tsd-signature-type tsd-kind-interface">VideoEventNodeSequenceDataKPA2</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/video.ts#L223">src/video.ts:223</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/video.ts#L223">src/video.ts:223</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="getfloorpositionat"><span>get<wbr/>Floor<wbr/>Position<wbr/>At</span><a href="#getfloorpositionat" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -229,7 +229,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#getfloorpositionat">getFloorPositionAt</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L821">src/event.ts:821</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L821">src/event.ts:821</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="getnodeat"><span>get<wbr/>Node<wbr/>At</span><a href="#getnodeat" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -244,7 +244,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <a href="EventStartNode.html" class="tsd-signature-type tsd-kind-class">EventStartNode</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#getnodeat">getNodeAt</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L793">src/event.ts:793</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L793">src/event.ts:793</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="getnodesafterone"><span>get<wbr/>Nodes<wbr/>After<wbr/>One</span><a href="#getnodesafterone" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -258,7 +258,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <a href="EventStartNode.html" class="tsd-signature-type tsd-kind-class">EventStartNode</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#getnodesafterone">getNodesAfterOne</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L891">src/event.ts:891</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L891">src/event.ts:891</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="getnodesfromoneandrangeright"><span>get<wbr/>Nodes<wbr/>From<wbr/>One<wbr/>And<wbr/>Range<wbr/>Right</span><a href="#getnodesfromoneandrangeright" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -273,7 +273,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <a href="EventStartNode.html" class="tsd-signature-type tsd-kind-class">EventStartNode</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#getnodesfromoneandrangeright">getNodesFromOneAndRangeRight</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L879">src/event.ts:879</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L879">src/event.ts:879</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="getscaleat"><span>get<wbr/>Scale<wbr/>At</span><a href="#getscaleat" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -288,7 +288,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <li><span><span class="tsd-kind-parameter">beats</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="../enums/VideoScale.html" class="tsd-signature-type tsd-kind-enum">VideoScale</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/video.ts#L261">src/video.ts:261</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/video.ts#L261">src/video.ts:261</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="getvalueat"><span>get<wbr/>Value<wbr/>At</span><a href="#getvalueat" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -303,7 +303,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#getvalueat">getValueAt</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L815">src/event.ts:815</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L815">src/event.ts:815</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="getvalueatbysecs"><span>get<wbr/>Value<wbr/>At<wbr/>By<wbr/>Secs</span><a href="#getvalueatbysecs" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -320,7 +320,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#getvalueatbysecs">getValueAtBySecs</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L818">src/event.ts:818</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L818">src/event.ts:818</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="hasreferenceto"><span>has<wbr/>Reference<wbr/>To</span><a href="#hasreferenceto" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -335,7 +335,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">true</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#hasreferenceto">hasReferenceTo</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L1008">src/event.ts:1008</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L1008">src/event.ts:1008</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="initjump"><span>init<wbr/>Jump</span><a href="#initjump" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -345,7 +345,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#initjump">initJump</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L740">src/event.ts:740</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L740">src/event.ts:740</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="segments"><span>segments</span><a href="#segments" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -356,7 +356,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Generator</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/VideoSegment.html" class="tsd-signature-type tsd-kind-interface">VideoSegment</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/video.ts#L246">src/video.ts:246</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/video.ts#L246">src/video.ts:246</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="updatefloorpositionafter"><span>update<wbr/>Floor<wbr/>Position<wbr/>After</span><a href="#updatefloorpositionafter" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -375,13 +375,13 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
 <div class="tsd-comment tsd-typography">
 <div class="tsd-tag-example">
-<h4 class="tsd-anchor-link" id="example">Example<a href="#example" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h4><pre><code class="ts"><span class="hl-1">node</span><span class="hl-2">.</span><span class="hl-1">value</span><span class="hl-2"> += </span><span class="hl-6">1</span><span class="hl-2">;</span><br/><span class="hl-2">(</span><span class="hl-1">node</span><span class="hl-2">.</span><span class="hl-1">parentSequence</span><span class="hl-2"> </span><span class="hl-8">as</span><span class="hl-2"> </span><span class="hl-9">SpeedENS</span><span class="hl-2">).</span><span class="hl-3">updateFloorPositionAfter</span><span class="hl-2">(</span><span class="hl-1">node</span><span class="hl-2">, </span><span class="hl-1">tc</span><span class="hl-2">);</span>
+<h4 class="tsd-anchor-link" id="example">Example<a href="#example" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h4><pre><code class="ts"><span class="hl-1">node</span><span class="hl-2">.</span><span class="hl-1">value</span><span class="hl-2"> += </span><span class="hl-7">1</span><span class="hl-2">;</span><br/><span class="hl-2">(</span><span class="hl-1">node</span><span class="hl-2">.</span><span class="hl-1">parentSequence</span><span class="hl-2"> </span><span class="hl-8">as</span><span class="hl-2"> </span><span class="hl-9">SpeedENS</span><span class="hl-2">).</span><span class="hl-3">updateFloorPositionAfter</span><span class="hl-2">(</span><span class="hl-1">node</span><span class="hl-2">, </span><span class="hl-1">tc</span><span class="hl-2">);</span>
 </code><button type="button">Copy</button></pre>
 
 </div></div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#updatefloorpositionafter">updateFloorPositionAfter</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L841">src/event.ts:841</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L841">src/event.ts:841</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="updatejump"><span>update<wbr/>Jump</span><a href="#updatejump" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -396,7 +396,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#updatejump">updateJump</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L786">src/event.ts:786</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L786">src/event.ts:786</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fromkpa2json"><code class="tsd-tag">Static</code><span>from<wbr/>KPA2<wbr/>JSON</span><a href="#fromkpa2json" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -418,7 +418,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">VideoEventNodeSequence</a></h4><aside class="tsd-sources">
 <p>Overrides <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#fromkpa2json">fromKPA2JSON</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/video.ts#L146">src/video.ts:146</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/video.ts#L146">src/video.ts:146</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fromphiravideos"><code class="tsd-tag">Static</code><span>from<wbr/>Phira<wbr/>Videos</span><a href="#fromphiravideos" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -444,7 +444,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-anchor-link" id="since-1">Since<a href="#since-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h4><p>2.2.0</p>
 </div></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/video.ts#L206">src/video.ts:206</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/video.ts#L206">src/video.ts:206</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="fromrpejson"><code class="tsd-tag">Static</code><span>from<wbr/>RPEJSON</span><a href="#fromrpejson" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -478,7 +478,7 @@ id follows the format <code>#${lineid}.${layerid}.${typename}</code> by default<
 <h4 class="tsd-returns-title">Returns <a href="EventNodeSequence.html" class="tsd-signature-type tsd-kind-class">EventNodeSequence</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="EventNodeSequence.html#fromrpejsonvt">VT</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#fromrpejson">fromRPEJSON</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L527">src/event.ts:527</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L527">src/event.ts:527</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="getdefaultvaluefromeventtype"><code class="tsd-tag">Static</code><span>get<wbr/>Default<wbr/>Value<wbr/>From<wbr/>Event<wbr/>Type</span><a href="#getdefaultvaluefromeventtype" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -500,7 +500,7 @@ Get the default value of the specified event type.</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">1</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">0</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">10</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;&quot;</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#getdefaultvaluefromeventtype">getDefaultValueFromEventType</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L506">src/event.ts:506</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L506">src/event.ts:506</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="mergesequences"><code class="tsd-tag">Static</code><span>merge<wbr/>Sequences</span><a href="#mergesequences" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -521,7 +521,7 @@ Get the default value of the specified event type.</p>
 <h4 class="tsd-anchor-link" id="throws">Throws<a href="#throws" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h4></div></div><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#mergesequences">mergeSequences</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L918">src/event.ts:918</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L918">src/event.ts:918</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="newseq"><code class="tsd-tag">Static</code><span>new<wbr/>Seq</span><a href="#newseq" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -543,7 +543,7 @@ Get the default value of the specified event type.</p>
 <h4 class="tsd-returns-title">Returns <a href="EventNodeSequence.html" class="tsd-signature-type tsd-kind-class">EventNodeSequence</a><span class="tsd-signature-symbol">&lt;</span><a href="../types/ValueTypeOfEventType.html" class="tsd-signature-type tsd-kind-type-alias">ValueTypeOfEventType</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="EventNodeSequence.html#newseqt">T</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="EventNodeSequence.html">EventNodeSequence</a>.<a href="EventNodeSequence.html#newseq">newSeq</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/event.ts#L724">src/event.ts:724</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/event.ts#L724">src/event.ts:724</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="newvideoseq"><code class="tsd-tag">Static</code><span>new<wbr/>Video<wbr/>Seq</span><a href="#newvideoseq" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -558,7 +558,7 @@ Get the default value of the specified event type.</p>
 <li><span><span class="tsd-kind-parameter">effectiveBeats</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">VideoEventNodeSequence</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/video.ts#L131">src/video.ts:131</a></li></ul></aside></div></li></ul></section></section></details></div>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/video.ts#L131">src/video.ts:131</a></li></ul></aside></div></li></ul></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

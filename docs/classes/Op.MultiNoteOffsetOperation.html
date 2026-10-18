@@ -12,9 +12,19 @@
 <li><a href="" aria-current="page">MultiNoteOffsetOperation</a></li></ul>
 <h1>Class MultiNoteOffsetOperation</h1></div>
 <section class="tsd-panel tsd-comment">
+<div class="tsd-comment tsd-typography"><p>把一组音符整体平移指定拍数。</p>
+<p>音符时刻本身不可变，所以做法是改所属 NoteNode —— 这里直接操作内部结构
+而不是组合多个 <a href="Op.NoteTimeChangeOperation.html" class="tsd-kind-class"><code>NoteTimeChangeOperation</code></a>，因为后者会反复重建
+跳数组。<code>lazy</code> 静态方法被显式禁用（无效操作，不应延迟构造）。</p>
+</div>
 <div class="tsd-comment tsd-typography">
 <div class="tsd-tag-author">
 <h4 class="tsd-anchor-link" id="author">Author<a href="#author" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h4><p>Zes Minkey Young</p>
+</div>
+<div class="tsd-tag-example">
+<h4 class="tsd-anchor-link" id="example">Example<a href="#example" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h4><pre><code class="ts"><span class="hl-0">// 把 4 拍之后的所有音符往后推 2 拍</span><br/><span class="hl-4">const</span><span class="hl-2"> </span><span class="hl-6">notes</span><span class="hl-2"> = </span><span class="hl-1">nnList</span><span class="hl-2">.</span><span class="hl-3">getNodesAfterOne</span><span class="hl-2">(</span><span class="hl-1">nnList</span><span class="hl-2">.</span><span class="hl-3">getNodeOf</span><span class="hl-2">([</span><span class="hl-7">4</span><span class="hl-2">, </span><span class="hl-7">0</span><span class="hl-2">, </span><span class="hl-7">1</span><span class="hl-2">])).</span><span class="hl-3">flatMap</span><span class="hl-2">(</span><span class="hl-1">n</span><span class="hl-2"> </span><span class="hl-4">=&gt;</span><span class="hl-2"> </span><span class="hl-1">n</span><span class="hl-2">.</span><span class="hl-1">notes</span><span class="hl-2">);</span><br/><span class="hl-1">operations</span><span class="hl-2">.</span><span class="hl-3">do</span><span class="hl-2">(</span><span class="hl-4">new</span><span class="hl-2"> </span><span class="hl-3">MultiNoteOffsetOperation</span><span class="hl-2">(</span><span class="hl-1">nnList</span><span class="hl-2">, </span><span class="hl-1">notes</span><span class="hl-2">, [</span><span class="hl-7">2</span><span class="hl-2">, </span><span class="hl-7">0</span><span class="hl-2">, </span><span class="hl-7">1</span><span class="hl-2">]));</span>
+</code><button type="button">Copy</button></pre>
+
 </div></div></section>
 <section class="tsd-panel tsd-hierarchy" data-refl="4556">
 <h4>Hierarchy (<a href="../hierarchy.html#Op.MultiNoteOffsetOperation">View Summary</a>)</h4>
@@ -25,7 +35,7 @@
 <ul class="tsd-hierarchy">
 <li class="tsd-hierarchy-item"><a href="Op.NNListAddBlankOperation.html" class="tsd-signature-type tsd-kind-class">NNListAddBlankOperation</a></li></ul></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/note.ts#L392">src/operation/note.ts:392</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/note.ts#L463">src/operation/note.ts:463</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -70,7 +80,7 @@
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">MultiNoteOffsetOperation</a></h4><aside class="tsd-sources">
 <p>Overrides <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#constructor">constructor</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/note.ts#L393">src/operation/note.ts:393</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/note.ts#L464">src/operation/note.ts:464</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="properties-1">Properties<a href="#properties-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -82,40 +92,40 @@
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#combodelta">comboDelta</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L205">src/operation/basic.ts:205</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L227">src/operation/basic.ts:227</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="ineffective"><span>ineffective</span><a href="#ineffective" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">ineffective</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#ineffective">ineffective</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L196">src/operation/basic.ts:196</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L218">src/operation/basic.ts:218</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="nnlist"><span>nn<wbr/>List</span><a href="#nnlist" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">nnList</span><span class="tsd-signature-symbol">:</span> <a href="NNList.html" class="tsd-signature-type tsd-kind-class">NNList</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/note.ts#L393">src/operation/note.ts:393</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/note.ts#L464">src/operation/note.ts:464</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="notes"><span>notes</span><a href="#notes" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">notes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <a href="Note.html" class="tsd-signature-type tsd-kind-class">Note</a><span class="tsd-signature-symbol">[]</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/note.ts#L393">src/operation/note.ts:393</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/note.ts#L464">src/operation/note.ts:464</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="offset"><span>offset</span><a href="#offset" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">offset</span><span class="tsd-signature-symbol">:</span> <a href="../types/TimeT.html" class="tsd-signature-type tsd-kind-type-alias">TimeT</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/note.ts#L393">src/operation/note.ts:393</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/note.ts#L464">src/operation/note.ts:464</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="reflows"><span>reflows</span><a href="#reflows" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">reflows</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#reflows">reflows</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L199">src/operation/basic.ts:199</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L221">src/operation/basic.ts:221</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="updateseditor"><span>updates<wbr/>Editor</span><a href="#updateseditor" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">updatesEditor</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#updateseditor">updatesEditor</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L197">src/operation/basic.ts:197</a></li></ul></aside></section></section></details>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L219">src/operation/basic.ts:219</a></li></ul></aside></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -128,7 +138,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <p>Overrides <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#do">do</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/note.ts#L396">src/operation/note.ts:396</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/note.ts#L467">src/operation/note.ts:467</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="rewrite"><span>rewrite</span><a href="#rewrite" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -143,7 +153,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#rewrite">rewrite</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L211">src/operation/basic.ts:211</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L233">src/operation/basic.ts:233</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited">
 <h3 class="tsd-anchor-link" id="tostring"><span>to<wbr/>String</span><a href="#tostring" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -153,7 +163,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <p>Inherited from <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#tostring">toString</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/basic.ts#L212">src/operation/basic.ts:212</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/basic.ts#L234">src/operation/basic.ts:234</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="undo"><span>undo</span><a href="#undo" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -163,7 +173,7 @@
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <p>Overrides <a href="Op.Operation.html">Operation</a>.<a href="Op.Operation.html#undo">undo</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/85f290e50e379cd1a4a592a11ebdea42b026e625/src/operation/note.ts#L414">src/operation/note.ts:414</a></li></ul></aside></div></li></ul></section></section></details></div>
+<li>Defined in <a href="https://github.com/TeamZincs/Kipphi/blob/4cd234beea139db242645e027700680e870ae87b/src/operation/note.ts#L485">src/operation/note.ts:485</a></li></ul></aside></div></li></ul></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
