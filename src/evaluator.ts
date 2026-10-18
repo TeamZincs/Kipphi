@@ -235,11 +235,12 @@ export class MacroEvaluator<T extends EventValueESType> extends Evaluator<T> {
     }
     compile(node: EventStartNode<T>, chart: Chart): ExpressionEvaluator<T> {
         const jsExpr = this.expression
-        .replace(/@([a-z\.]+)/, (k) => {
-            return JSON.stringify(EVENT_MACROS[k](node, chart)) + " "
+        .replace(/@([a-z\.]+)/, (_match, k: string) => {
+            // 注意：回调的第一个参数是完整匹配（含@），这里要用捕获组的内容
+            return JSON.stringify(EVENT_MACROS[k as keyof typeof EVENT_MACROS](node as EventStartNode<any>, chart)) + " "
         }).replace(/@\{\{(.+?)\}\}/g, (k) => {
             const replaced = k.replace(new RegExp(Object.keys(EVENT_MACROS).join("|"), "g"), (k) => {
-                return JSON.stringify(EVENT_MACROS[k](node, chart)) + " "
+                return JSON.stringify(EVENT_MACROS[k as keyof typeof EVENT_MACROS](node as EventStartNode<any>, chart)) + " "
             });
             return JSON.stringify(new Function("return " + replaced)()) + " ";
         });

@@ -522,7 +522,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
      * @param endValue 结束值（RPEJSON没有）
      * @returns 
      */
-    static fromRPEJSON<T extends EventType, VT extends EventValueESType = number>(type: T, data: EventDataRPELike<VT>[], chart: Chart, pos: string, endValue?: number) {
+    static fromRPEJSON<T extends EventType, VT extends EventValueESType = number>(type: T, data: EventDataRPELike<VT>[], chart: Chart, pos: string, endValue?: VT) {
         const {templateEasingLib: templates} = chart
         data.sort((a, b) => TC.cmp(a.startTime, b.startTime));
         const length = data.length;
@@ -584,7 +584,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             lastEnd = end;
         }
         const last = lastEnd;
-        const tail = new EventStartNode(
+        const tail = new EventStartNode<VT>(
             last.type === NodeType.HEAD ? [0, 0, 1] : last.time,
             endValue ?? (last as EventEndNode<VT>).value
         );
@@ -596,7 +596,8 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         seq.listLength = listLength;
         seq.initJump();
         if (type === EventType.speed) {
-            (seq as SpeedENS).updateFloorPositionAfter((seq as SpeedENS).head.next!, chart.timeCalculator)
+            const speedSeq = seq as unknown as SpeedENS;
+            speedSeq.updateFloorPositionAfter(speedSeq.head.next!, chart.timeCalculator)
         }
         return seq;
     }
@@ -706,7 +707,8 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         seq.listLength = listLength;
         seq.initJump();
         if (type === EventType.speed) {
-            (seq as SpeedENS).updateFloorPositionAfter((seq as SpeedENS).head.next!, chart.timeCalculator)
+            const speedSeq = seq as unknown as SpeedENS;
+            speedSeq.updateFloorPositionAfter(speedSeq.head.next!, chart.timeCalculator)
         }
         return seq;
     }
@@ -764,8 +766,10 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
                     return [time, nextNode]
                 }
             },
-            (node: EventStartNode<VT>, beats: number) => {
-                return TC.toBeats((node.next as EventEndNode<VT>).time) > beats ? false : EventNode.nextStartInJumpArray(node)
+            (node: AnyEN<VT>, beats: number) => {
+                // 跳数组只会在MIDDLE节点之间回调，HEAD/TAIL不会进来
+                const startNode = node as EventStartNode<VT>;
+                return TC.toBeats((startNode.next as EventEndNode<VT>).time) > beats ? false : EventNode.nextStartInJumpArray(startNode)
             },
             (node: AnyEN<VT>) => {
                 return node.next && node.next.type === NodeType.TAIL ? node.next : node;
@@ -973,7 +977,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         while (true) {
             const evaluator = currentNode.evaluator;
             if (this.type === EventType.easing && evaluator instanceof EasedEvaluator && evaluator.easing instanceof TemplateEasing) {
-                if (TemplateEasing.checkCircularReference(this as EventNodeSequence, evaluator.easing)) {
+                if (TemplateEasing.checkCircularReference(this as unknown as EventNodeSequence<number>, evaluator.easing)) {
                     err.TEMPLATE_EASING_CIRCULAR_REFERENCE(this.id).warn();
                 }
             }

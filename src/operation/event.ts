@@ -98,7 +98,7 @@ export class EventNodePairInsertOperation <VT extends EventValueESType> extends 
         this.sequence.updateJump(endNode, startNode)
         if (this.updatesFP) {
             // updatesFP的校验确保了序列为速度序列
-            (this.sequence as SpeedENS).updateFloorPositionAfter(this.tarPrev as EventStartNode, chart.timeCalculator) 
+            (this.sequence as unknown as SpeedENS).updateFloorPositionAfter(this.tarPrev as unknown as EventStartNode<number>, chart.timeCalculator) 
         }
         if (this.sequence.type === EventType.bpm) {
             chart.updateAllFloorPositions();
@@ -108,7 +108,7 @@ export class EventNodePairInsertOperation <VT extends EventValueESType> extends 
         this.sequence.updateJump(...EventNode.removeNodePair(...EventNode.getEndStart(this.node)))
         if (this.updatesFP) {
             // updatesFP的校验确保了序列为速度序列
-            (this.sequence as SpeedENS).updateFloorPositionAfter(this.tarPrev as EventStartNode, chart.timeCalculator) 
+            (this.sequence as unknown as SpeedENS).updateFloorPositionAfter(this.tarPrev as unknown as EventStartNode<number>, chart.timeCalculator) 
         }
         if (this.sequence.type === EventType.bpm) {
             chart.updateAllFloorPositions();
@@ -125,7 +125,7 @@ extends UnionOperation<LazyOperation<typeof EventNodePairInsertOperation<VT>> | 
             if (equalTime) {
                 return new EventNodeValueChangeOperation(targetPrevious, node.value);
             } else {
-                return EventNodePairInsertOperation.lazy(node, targetPrevious, updatesFP);
+                return EventNodePairInsertOperation.lazy<typeof EventNodePairInsertOperation<VT>>(node, targetPrevious, updatesFP);
                 // 此处使用懒操作，防止构造器认为自己在连接两个孤立节点而报错
             }
         });
@@ -158,7 +158,7 @@ export class EventNodeValueChangeOperation <VT extends EventValueESType> extends
             return;
         }
         if (this.node.parentSeq.type === EventType.speed) {
-            this.updateSpeedENS(chart, this.node.parentSeq as SpeedENS);
+            this.updateSpeedENS(chart, this.node.parentSeq as unknown as SpeedENS);
         } else if (this.node.parentSeq.type === EventType.bpm) {
             chart.timeCalculator.bpmSequence.updateSecondJump();
             chart.updateAllFloorPositions();
@@ -170,7 +170,7 @@ export class EventNodeValueChangeOperation <VT extends EventValueESType> extends
             return;
         }
         if (this.node.parentSeq.type === EventType.speed) {
-            this.updateSpeedENS(chart, this.node.parentSeq as SpeedENS);
+            this.updateSpeedENS(chart, this.node.parentSeq as unknown as SpeedENS);
         } else if (this.node.parentSeq.type === EventType.bpm) {
             chart.timeCalculator.bpmSequence.updateSecondJump();
             chart.updateAllFloorPositions();
@@ -191,7 +191,7 @@ export class EventNodeValueChangeOperation <VT extends EventValueESType> extends
                 return true;
             }
             if (this.node.parentSeq.type === EventType.speed) {
-                this.updateSpeedENS(chart, this.node.parentSeq as SpeedENS);
+                this.updateSpeedENS(chart, this.node.parentSeq as unknown as SpeedENS);
             } else if (this.node.parentSeq.type === EventType.bpm) {
                 chart.timeCalculator.bpmSequence.updateSecondJump();
                 chart.updateAllFloorPositions();
@@ -277,7 +277,7 @@ export class EventNodeEvaluatorChangeOperation <VT extends EventValueESType> ext
         this.originalValue = this.node.evaluator
         const seq = node.parentSeq;
         if (seq && seq.type === EventType.easing && value instanceof EasedEvaluator && value.easing instanceof TemplateEasing) {
-            const circular = TemplateEasing.checkCircularReference(seq as EventNodeSequence<number>, value.easing);
+            const circular = TemplateEasing.checkCircularReference(seq as unknown as EventNodeSequence<number>, value.easing);
             if (circular) {
                 throw err.TEMPLATE_EASING_CIRCULAR_REFERENCE(value.easing.name);
             }
@@ -295,7 +295,7 @@ export class EventNodeEvaluatorChangeOperation <VT extends EventValueESType> ext
 
 
 // 这个地方得懒一下，不然每亩，导致撤回操作时只能撤回第一个插值节点。
-export class EventInterpolationOperation <VT extends EventValueESType> extends ComplexOperation<LazyOperation<typeof EventNodePairInsertOperation>[]> {
+export class EventInterpolationOperation <VT extends EventValueESType> extends ComplexOperation<LazyOperation<typeof EventNodePairInsertOperation<VT>>[]> {
     updatesEditor = true;
     constructor(public eventStartNode: EventStartNode<VT>, public step: TimeT) {
         if (eventStartNode.next.type === NodeType.TAIL) {
@@ -310,7 +310,7 @@ export class EventInterpolationOperation <VT extends EventValueESType> extends C
             const start = new EventStartNode(time, value);
             const end = new EventEndNode(time, value);
             EventNode.connect(end, start); // 之前搞成面对面了，写注释留念
-            subOps.push(EventNodePairInsertOperation.lazy(start, lastStart));
+            subOps.push(EventNodePairInsertOperation.lazy<typeof EventNodePairInsertOperation<VT>>(start, lastStart));
             lastStart = start;
         }
         super(...subOps);
@@ -320,7 +320,7 @@ export class EventInterpolationOperation <VT extends EventValueESType> extends C
 
 
 
-export class EventSubstituteOperation<VT extends EventValueESType> extends ComplexOperation<[...LazyOperation<typeof EventNodePairInsertOperation>[], EventNodeEvaluatorChangeOperation<VT>, EventNodeValueChangeOperation<VT>]> {
+export class EventSubstituteOperation<VT extends EventValueESType> extends ComplexOperation<[...LazyOperation<typeof EventNodePairInsertOperation<VT>>[], EventNodeEvaluatorChangeOperation<VT>, EventNodeValueChangeOperation<VT>]> {
     updatesEditor = true;
     /**
      * 
@@ -367,7 +367,7 @@ export class EventSubstituteOperation<VT extends EventValueESType> extends Compl
             }
             newStartNode.evaluator = (evaluator as EasedEvaluator<VT>).deriveWithEasing(srcEvaluator.easing)
             EventNode.connect(newEndNode, newStartNode);
-            inserts.push(EventNodePairInsertOperation.lazy(newStartNode, lastPos));
+            inserts.push(EventNodePairInsertOperation.lazy<typeof EventNodePairInsertOperation<VT>>(newStartNode, lastPos));
             lastPos = newStartNode;
 
             currentNode = next;
@@ -443,13 +443,13 @@ export class MultiNodeAddOperation <VT extends EventValueESType> extends Complex
     do(chart: Chart) {
         super.do();
         if (this.updatesFP) {
-            (this.seq as SpeedENS).updateFloorPositionAfter(this.nodes[0] as EventStartNode<number>, chart.timeCalculator)
+            (this.seq as unknown as SpeedENS).updateFloorPositionAfter(this.nodes[0] as unknown as EventStartNode<number>, chart.timeCalculator)
         }
     }
     undo(chart: Chart) {
         super.undo();
         if (this.updatesFP) {
-            (this.seq as SpeedENS).updateFloorPositionAfter(this.nodes[0] as EventStartNode<number>, chart.timeCalculator)
+            (this.seq as unknown as SpeedENS).updateFloorPositionAfter(this.nodes[0] as unknown as EventStartNode<number>, chart.timeCalculator)
         }
     }
 }
@@ -464,7 +464,7 @@ export class MultiNodeDeleteOperation extends ComplexOperation<LazyOperation<typ
 export class EventNodeSequenceRenameOperation extends Operation { 
     updatesEditor: boolean = true;
     originalName: string;
-    constructor(public sequence: EventNodeSequence<EventValueESType>, public newName: string) {
+    constructor(public sequence: EventNodeSequence<any>, public newName: string) {
         super();
         this.originalName = sequence.id;
         if (this.originalName === newName) {

@@ -120,10 +120,13 @@ export class BPMSequence extends EventNodeSequence {
     declare head: BPMNodeLike<NodeType.HEAD>;
     /** 尾部节点 */
     declare tail: BPMNodeLike<NodeType.TAIL>;
-    /** 从拍数访问节点的跳转数组 */
-    declare jump: JumpArray<AnyBN>;
+    /** 从拍数访问节点的跳转数组
+     *
+     * JumpArray在入参上是逆变的，而BPM节点是EventNode的派生，所以这里用any
+     */
+    declare jump: JumpArray<any>;
     /** 以秒计时的跳转数组，处理从秒访问节点 */
-    secondJump: JumpArray<AnyBN>;
+    secondJump: JumpArray<any>;
     
     /**
      * 创建BPM序列
@@ -189,7 +192,7 @@ export class BPMSequence extends EventNodeSequence {
             return;
         }
         const originalListLength = this.listLength;
-        this.secondJump = new JumpArray<AnyBN>(
+        this.secondJump = new JumpArray<any>(
             this.head,
             this.tail,
             originalListLength,

@@ -161,8 +161,8 @@ export class VideoEventNodeSequence extends EventNodeSequence<string> {
         for (let i = 0; i < raw.length; i++) {
             const event = raw[i]!;
             if (lastTime && !TC.gt(event.time, lastTime)) {
-                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${i}]`)
-                    .warn(new VideoEventStartNode(event.time, event.value ?? ""));
+                const badNode: EventNode<any> = new VideoEventStartNode(event.time, event.value ?? "");
+                err.EVENT_NODE_TIME_NOT_INCREMENTAL(`${pos}.events[${i}]`).warn(badNode);
                 continue;
             }
             lastTime = event.time;

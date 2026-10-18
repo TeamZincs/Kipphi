@@ -85,7 +85,8 @@ import type { PhiraExtraJson } from "./extraTypes";
 /// #declaration:global
 
 
-export type BasicEventName = "moveX" | "moveY" | "rotate" | "alpha" | "speed";
+/** 事件层上可以编辑的事件类型（速度不在事件层上，单独存在speedSequence） */
+export type BasicEventName = "moveX" | "moveY" | "rotate" | "alpha";
 
 
 
@@ -143,8 +144,11 @@ export class Chart {
     readonly templateEasingLib = new TemplateEasingLib(EventNodeSequence.newSeq<EventType.easing>, ExpressionEvaluator);
     readonly macroLib = new MacroLib();
     
-    /** 事件序列映射表，通过ID索引事件序列 */
-    readonly sequenceMap = new Map<string, EventNodeSequence<EventValueESType>>();
+    /** 事件序列映射表，通过ID索引事件序列
+     *
+     * 这里装的是异构序列（数值/文本/颜色），因此用any承载VT
+     */
+    readonly sequenceMap = new Map<string, EventNodeSequence<any>>();
     /** 有效节拍数（基于谱面持续时间计算得出） */
     effectiveBeats: number;
     /** 音符节点列表，用于管理谱面上的所有音符 */
@@ -682,7 +686,7 @@ export class Chart {
      * @param data 缓动数据
      * @returns 创建的缓动对象
      */
-    createEasingFromData(data: EasingDataKPA2) {
+    createEasingFromData(data: EasingDataKPA2): Easing {
         switch (data.type) {
             case EasingType.bezier:
                 return new BezierEasing([data.bezier[0], data.bezier[1]], [data.bezier[2], data.bezier[3]]);
@@ -705,7 +709,7 @@ export class Chart {
      * @param type 事件值类型
      * @returns 创建的求值器对象
      */
-    bindEvaluator<T extends EventValueESType>(node: EventStartNode<T>, data: EvaluatorDataKPA2<T>, type: EventValueTypeOfType<T>, pos: string) {
+    bindEvaluator<T extends EventValueESType>(node: EventStartNode<any>, data: EvaluatorDataKPA2<T>, type: EventValueTypeOfType<T>, pos: string) {
         switch (data.type) {
             case EvaluatorType.eased:
                 // 我管你这的那的 —— 小奶椰
@@ -839,7 +843,7 @@ export class Chart {
         }
         return node;
     }
-    bindTimeMacro(node: EventStartNode<any>, macroData: MacroData, pos: string) {
+    bindTimeMacro(node: EventStartNode<any>, macroData: MacroData, pos: string): void {
         const id = Array.isArray(macroData) ? macroData[0] : macroData;
         const macro = this.macroLib.timeMacros.get(id);
         if (typeof macro === "object" && macro instanceof EventMacroTime) {
@@ -850,7 +854,7 @@ export class Chart {
         }
         return null;
     }
-    bindValueMacro(node: EventNode<any>, macroData: MacroData, pos: string) {
+    bindValueMacro(node: EventNode<any>, macroData: MacroData, pos: string): void {
         const id = Array.isArray(macroData) ? macroData[0] : macroData;
         const macro = this.macroLib.valueMacros.get(id);
         if (typeof macro === "object" && macro instanceof EventMacroValue) {
@@ -861,7 +865,7 @@ export class Chart {
         }
         return null;
     }
-    linkMacro(node: EventNode<EventValueESType>, linkData: MacroLink, pos: string) {
+    linkMacro(node: EventNode<any>, linkData: MacroLink, pos: string): void {
         const prefix = linkData[0].split(":")[0] as 'time' | 'value';
         const macroDict = prefix === 'time' ? this.macroLib.timeMacros : this.macroLib.valueMacros;
         const realName = linkData[0].substring(prefix.length + 1);
@@ -873,7 +877,7 @@ export class Chart {
         }
         return null;
     }
-    bindNoteMacro(note: Note, macroData: MacroData, pos: string) {
+    bindNoteMacro(note: Note, macroData: MacroData, pos: string): void {
         const id = Array.isArray(macroData) ? macroData[0] : macroData;
         const macro = this.macroLib.noteMacros.get(id);
         if (typeof macro === "object" && macro instanceof NoteMacro) {
@@ -884,7 +888,7 @@ export class Chart {
         }
         return null;
     }
-    linkNoteMacro(note: Note, linkData: NoteMacroLink, pos: string) {
+    linkNoteMacro(note: Note, linkData: NoteMacroLink, pos: string): void {
         const macro = this.macroLib.noteMacros.get(linkData[0]);
         if (typeof macro === "object" && macro instanceof NoteMacro) {
             macro.linkProtoNote(note, linkData[1]);
@@ -910,7 +914,7 @@ export class Chart {
     updateAllFloorPositions() {
         for (const [_, seq] of this.sequenceMap) {
             if (seq.type === EventType.speed) {
-                (seq as SpeedENS).updateFloorPositionAfter(seq.head.next, this.timeCalculator);
+                (seq as unknown as SpeedENS).updateFloorPositionAfter(seq.head.next, this.timeCalculator);
             }
         }
     }

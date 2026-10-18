@@ -36,7 +36,7 @@ type UTime = TimeT | number | string;
  * 
  * Can use with easing number, easing template name, easing object, evaluator object.
  */
-type UEvaluator = number | string | Evaluator<EventValueESType> | Easing;
+type UEvaluator = number | string | Evaluator<any> | Easing;
 
 export type ToOperable = (<T extends IntoOperable>(o: T) =>
     T extends Note
@@ -286,8 +286,8 @@ class OperableEventNode<T extends EventValueESType> extends Operable<EventNode<T
             evaluator,
             parent.type === EventType.text ? EventValueType.text : parent.type === EventType.color ? EventValueType.color : EventValueType.numeric,
             this.chart,
-            InterpreteAs.str);
-        this._evaluator = e as any;
+            InterpreteAs.str) as Evaluator<any>;
+        this._evaluator = e;
         this.buffer.push(EventNodeEvaluatorChangeOperation.lazy(this.target as any, e));
     }
     get previous(): OperableEventNode<T> | EventNodeLike<NodeType.HEAD, T> {
@@ -364,7 +364,7 @@ class OperableEventNodeSequenceSlice<T extends EventValueESType> extends Operabl
                             : EventValueType.numeric) as EventValueTypeOfType<T>;
         startNode.evaluator = uEvaluatorToEvaluator(evaluator, valueType, this.chart, interpreteAs ?? InterpreteAs.str) as any;
         EventNode.connect(startNode, endNode);
-        this.buffer.push(EventNodePairAutoInsertOperation.lazy(startNode, this.target));
+        this.buffer.push(EventNodePairAutoInsertOperation.lazy<typeof EventNodePairAutoInsertOperation<T>>(startNode, this.target));
         return this;
     }
 }
@@ -412,9 +412,30 @@ class OperableJudgeLine extends Operable<JudgeLine> {
     }
     notes(start: number, end: number): Generator<OperableNote>;
     notes(): Generator<OperableNote>;
+    /**
+     * 遍历该判定线上的音符。
+     *
+     * JudgeLine本身没有按时间遍历音符的能力，所以这里直接走它的普通音符表与Hold音符表。
+     */
     *notes(start?: number, end?: number) {
-        for (const note of this.target.notes(start, end)) {
-            yield new OperableNote(note, this.buffer, this.chart);
+        const lists = [...this.target.nnLists.values(), ...this.target.hnLists.values()];
+        for (const list of lists) {
+            let node: AnyNN = list.head.next;
+            while (node.type !== NodeType.TAIL) {
+                const noteNode = node as NoteNode;
+                const beats = TC.toBeats(noteNode.startTime);
+                if (start !== undefined && beats < start) {
+                    node = node.next;
+                    continue;
+                }
+                if (end !== undefined && beats > end) {
+                    break;
+                }
+                for (const note of noteNode.notes) {
+                    yield new OperableNote(note, this.buffer, this.chart);
+                }
+                node = node.next;
+            }
         }
     }
     getNNList(speed: number, yOffset: number, isHold: boolean) {

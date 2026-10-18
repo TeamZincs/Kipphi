@@ -17,7 +17,7 @@
     "noUncheckedIndexedAccess": true,
 
     // Some stricter flags (disabled by default)
-    "strict": false,
+    "strict": true,
     "strictNullChecks": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,

@@ -184,7 +184,8 @@ export class OperationList extends EventTarget {
         this.operations = [];
     }
     addEventListener<T extends OpEventType>(type: T, listener: (event: OpEventMap[T]) => void, options?: boolean | AddEventListenerOptions): void {
-        super.addEventListener(type, listener, options);
+        // 这里是自定义事件名，EventTarget的DOM类型声明不认识，运行时由自身派发
+        super.addEventListener(type, listener as unknown as EventListener, options);
     }
 }
 

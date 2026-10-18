@@ -439,7 +439,9 @@ export class NNList {
                 const startTime = (node.type === NodeType.HEAD) ? 0 : TC.toBeats(node.startTime)
                 return [startTime, nextNode]
             },
-            (note: NoteNode, beats: number) => {
+            (node: AnyNN, beats: number) => {
+                // 跳数组只会在MIDDLE节点之间回调，HEAD/TAIL不会进来
+                const note = node as NoteNode;
                 return TC.toBeats(note.startTime) >= beats ? false : <NoteNode>note.next; // getNodeAt有guard
             })
     }
@@ -583,8 +585,10 @@ export class HNList extends NNList {
                 const endTime = node.type === NodeType.HEAD ? 0 : TC.toBeats(node.endTime)
                 return [endTime, nextNode]
             },
-            (node: NoteNode, beats: number) => {
-                return TC.toBeats(node.endTime) >= beats ? false : <NoteNode>node.next; // getNodeAt有guard
+            (node: AnyNN, beats: number) => {
+                // 跳数组只会在MIDDLE节点之间回调，HEAD/TAIL不会进来
+                const note = node as NoteNode;
+                return TC.toBeats(note.endTime) >= beats ? false : <NoteNode>note.next; // getNodeAt有guard
             }
         )
     }
@@ -708,7 +712,9 @@ export class NNNList {
                 const startTime = node.type === NodeType.HEAD ? 0 : TC.toBeats((node as NNNode).startTime)
                 return [startTime, nextNode]
             },
-            (note: NNNode, beats: number) => {
+            (node: AnyNNN, beats: number) => {
+                // 跳数组只会在MIDDLE节点之间回调，HEAD/TAIL不会进来
+                const note = node as NNNode;
                 return TC.toBeats(note.startTime) >= beats ? false : <NNNode>note.next; // getNodeAt有guard
             })
     }

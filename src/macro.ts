@@ -45,6 +45,10 @@ export const NOTE_MACROS = {
     "line.group": (note: Note) => getLineForNote(note).group,
 }
 
+/** 音符宏中可以作为原形参数引用的属性名 */
+const NOTE_PROTO_PROPS = "above|alpha|endTime|isFake|positionX|size|speed|startTime|type|visibleBeats|yOffset";
+const NOTE_PROTO_REGEX = new RegExp(`@proto\\.(${NOTE_PROTO_PROPS})`);
+
 export interface MNote {
     above?: boolean;
     alpha?: number;
@@ -90,29 +94,31 @@ export abstract class Macro<T extends Macroable, C extends Macroee, P extends Ma
     abstract eval(consumer: C, chart: Chart): T;
 }
 
-export abstract class EventMacro<T extends Macroable> extends Macro<T, EventNode<EventValueESType>, EventNode<EventValueESType>> {
-    eval(node: EventNode<EventValueESType>, chart: Chart): T {
-        let jsExpr = this.parametric ? this.macro.replace(/@proto\.(value|time)/, (k) => {
-            return JSON.stringify(this.protoNodes[this.consumers.get(node)!][k]) + " "
-        }): this.macro;
-        jsExpr =  this.macro.replace(/@([a-z]+\.[a-z])/, (k) => {
-            return JSON.stringify(EVENT_MACROS[k](node, chart)) + " "
+export abstract class EventMacro<T extends Macroable> extends Macro<T, EventNode<any>, EventNode<any>> {
+    eval(node: EventNode<any>, chart: Chart): T {
+        let jsExpr = this.macro;
+        if (this.parametric) {
+            jsExpr = jsExpr.replace(/@proto\.(value|time)/, (_k, prop: "value" | "time") => {
+                return JSON.stringify(this.protoNodes[this.consumers.get(node)!][prop]) + " "
+            });
+        }
+        jsExpr = jsExpr.replace(/@([a-z]+\.[a-z]+)/, (k) => {
+            if (!(k in EVENT_MACROS)) {
+                throw err.UNKNOWN_MACRO_EXPRESSION(k, this.id);
+            }
+            return JSON.stringify(EVENT_MACROS[k as keyof typeof EVENT_MACROS](node as EventStartNode<any>, chart)) + " "
         });
         return new Function("return " + jsExpr)() as T;
     }
-    checkSyntax(): KPAError<ERROR_IDS.PROTO_PRESENT_IN_NONPARAMETRIC | ERROR_IDS.UNKNOWN_MACRO_EXPRESSION | ERROR_IDS.JAVASCRIPT_SYNTAX_ERROR> | null {
-        let jsExpr: string;
+    checkSyntax(): KPAError<any> | null {
+        let jsExpr = this.macro;
         if (this.parametric) {
-            jsExpr = this.macro.replace(/@proto\.(value|time)/, (k) => {
-                return '"aaa" '
-            });
-        } else {
-            if (/@proto/.test(this.macro)) {
-                return err.PROTO_PRESENT_IN_NONPARAMETRIC(this.id);
-            }
+            jsExpr = jsExpr.replace(/@proto\.(value|time)/, () => '"aaa" ');
+        } else if (/@proto/.test(this.macro)) {
+            return err.PROTO_PRESENT_IN_NONPARAMETRIC(this.id);
         }
         try {
-            jsExpr =  this.macro.replace(/@([a-z]+\.[a-z])/, (k) => {
+            jsExpr = jsExpr.replace(/@([a-z]+\.[a-z]+)/, (k) => {
                 if (!(k in EVENT_MACROS)) {
                     throw err.UNKNOWN_MACRO_EXPRESSION(k, this.id);
                 }
@@ -128,10 +134,10 @@ export abstract class EventMacro<T extends Macroable> extends Macro<T, EventNode
         try {
             new Function("return " + jsExpr); // 仅检查语法，不执行
         } catch (e) {
-            return err.JAVASCRIPT_SYNTAX_ERROR(e, this.id);
+            return err.JAVASCRIPT_SYNTAX_ERROR(e instanceof Error ? e : new Error(String(e)), this.id);
         }
     }
-    bindNode(node: EventNode<EventValueESType>, macroData: MacroData, pos?: string) {
+    bindNode(node: EventNode<any>, macroData: MacroData, pos?: string) {
         if (this.parametric) {
             if (typeof macroData === "string") {
                 throw err.PARAMETRIC_MACRO_REQUIRES_PROTO_KEY(pos)
@@ -144,7 +150,7 @@ export abstract class EventMacro<T extends Macroable> extends Macro<T, EventNode
             this.consumers.set(node, -1);
         }
     }
-    linkProtoNode(node: EventNode<EventValueESType>, id: number): void {
+    linkProtoNode(node: EventNode<any>, id: number): void {
         this.protoNodes[id] = node;
         node.linkedMacros.add(this);
     }
@@ -168,52 +174,54 @@ export abstract class EventMacro<T extends Macroable> extends Macro<T, EventNode
      * } satisfies EvenDataKPA2
      * 
      */
-    dumpForNode(node: EventNode<EventValueESType>): MacroData {
+    dumpForNode(node: EventNode<any>): MacroData {
         if (this.parametric) {
             return [this.id, this.consumers.get(node)!]
         } else {
             return this.id
         }
     }
-    abstract dumpLinkForNode(node: EventNode<EventValueESType>): MacroLink;
+    abstract dumpLinkForNode(node: EventNode<any>): MacroLink;
 }
 
 export class EventMacroValue extends EventMacro<EventValueESType> {
-    dumpLinkForNode(node: EventNode<EventValueESType>): MacroLink {
+    dumpLinkForNode(node: EventNode<any>): MacroLink {
         return [`value:${this.id}`, this.protoNodes.indexOf(node)];
     }
 }
 
 export class EventMacroTime extends EventMacro<TimeT> {
-    dumpLinkForNode(node: EventNode<EventValueESType>): MacroLink {
+    dumpLinkForNode(node: EventNode<any>): MacroLink {
         return [`time:${this.id}`, this.protoNodes.indexOf(node)];
     }
 }
 
 export class NoteMacro extends Macro<MNote, Note, Note> {
     eval(note: Note, chart: Chart): MNote {
-        let jsExpr = this.parametric ? this.macro.replace(/@proto\.(value|time)/, (k) => {
-            return JSON.stringify(this.protoNodes[this.consumers.get(note)!][k]) + " "
-        }): this.macro;
-        jsExpr =  this.macro.replace(/@([a-z]+\.[a-z])/, (k) => {
-            return JSON.stringify(NOTE_MACROS[k](note, chart)) + " "
+        let jsExpr = this.macro;
+        if (this.parametric) {
+            jsExpr = jsExpr.replace(NOTE_PROTO_REGEX, (_k, prop: keyof MNote) => {
+                return JSON.stringify(this.protoNodes[this.consumers.get(note)!][prop]) + " "
+            });
+        }
+        jsExpr = jsExpr.replace(/@([a-z]+\.[a-z]+)/, (k) => {
+            if (!(k in NOTE_MACROS)) {
+                throw err.UNKNOWN_MACRO_EXPRESSION(k, this.id);
+            }
+            return JSON.stringify(NOTE_MACROS[k as keyof typeof NOTE_MACROS](note)) + " "
         });
         return new Function("return " + jsExpr)() as MNote;
     }
-    checkSyntax(): KPAError<ERROR_IDS.PROTO_PRESENT_IN_NONPARAMETRIC | ERROR_IDS.UNKNOWN_MACRO_EXPRESSION | ERROR_IDS.JAVASCRIPT_SYNTAX_ERROR> | null {
-        let jsExpr: string;
+    checkSyntax(): KPAError<any> | null {
+        let jsExpr = this.macro;
         if (this.parametric) {
-            jsExpr = this.macro.replace(/@proto\.(above|alpha|endTime|isFake|positionX|size|speed|startTime|type|visibleBeats|yOffset)/, (k) => {
-                return '"aaa" '
-            });
-        } else {
-            if (/@proto/.test(this.macro)) {
-                return err.PROTO_PRESENT_IN_NONPARAMETRIC(this.id);
-            }
+            jsExpr = jsExpr.replace(NOTE_PROTO_REGEX, () => '"aaa" ');
+        } else if (/@proto/.test(this.macro)) {
+            return err.PROTO_PRESENT_IN_NONPARAMETRIC(this.id);
         }
         try {
-            jsExpr =  this.macro.replace(/@([a-z]+\.[a-z])/, (k) => {
-                if (!(k in EVENT_MACROS)) {
+            jsExpr = jsExpr.replace(/@([a-z]+\.[a-z]+)/, (k) => {
+                if (!(k in NOTE_MACROS)) {
                     throw err.UNKNOWN_MACRO_EXPRESSION(k, this.id);
                 }
                 return '"aaa" '
@@ -228,7 +236,7 @@ export class NoteMacro extends Macro<MNote, Note, Note> {
         try {
             new Function("return " + jsExpr); // 仅检查语法，不执行
         } catch (e) {
-            return err.JAVASCRIPT_SYNTAX_ERROR(e, this.id);
+            return err.JAVASCRIPT_SYNTAX_ERROR(e instanceof Error ? e : new Error(String(e)), this.id);
         }
     }
     bindNote(note: Note, macroData: MacroData, pos?: string) {

@@ -219,8 +219,9 @@ type GetEnumKey<TEnum extends Record<string, any>, TValue extends TEnum[keyof TE
 type ERROR_NAMES = keyof typeof ERROR_IDS;
 
 interface ErrorMap extends Record<ERROR_NAMES, Array<any>>{
-    EVENT_NODE_NOT_DENSE: [EventNode<EventValueESType>];
-    EVENT_NODE_TIME_NOT_INCREMENTAL: [EventNode<EventValueESType>];
+    // 这里的节点是异构的（VT可能是number/string/RGB），用any承载
+    EVENT_NODE_NOT_DENSE: [EventNode<any>];
+    EVENT_NODE_TIME_NOT_INCREMENTAL: [EventNode<any>];
     
 }
 
@@ -257,7 +258,10 @@ export class KPAError<ET extends ERROR_IDS> extends Error {
 
 export const err = new Proxy(ERRORS, {
     get(target, name) {
-        return (...args: any[]) => new KPAError<typeof ERROR_IDS[keyof typeof ERROR_IDS]>(target[name](...args) + `(KP${ERROR_IDS[name].toString(16)})`, ERROR_IDS[name]);
+        // Proxy的name一定是ERRORS自身的键
+        const key = name as keyof typeof ERRORS;
+        const format = target[key] as (...args: any[]) => string;
+        return (...args: any[]) => new KPAError<typeof ERROR_IDS[keyof typeof ERROR_IDS]>(format(...args) + `(KP${ERROR_IDS[key].toString(16)})`, ERROR_IDS[key]);
     }
 }) as unknown as { [key in keyof typeof ERRORS]: (...args: Parameters<typeof ERRORS[key]>) => KPAError<typeof ERROR_IDS[key]>};
 

@@ -267,13 +267,18 @@ export class JudgeLine {
             if (!predicate(value)) {
                 throw err.EXPECTED_TYPED_ENS(typeStr, sequence.id, value);
             }
-            return sequence as EventNodeSequence<VT>;
+            return sequence as unknown as EventNodeSequence<VT>;
         }
-        for (const eventLayerData of data.eventLayers) {
-            const eventLayer: EventLayer = {} as EventLayer;
-            for (const key in eventLayerData) {
+        // 解析期间速度序列会临时挂在事件层上，稍后合并到speedSequence
+        type EventLayerWithSpeed = EventLayer & { speed?: EventNodeSequence };
+        for (const rawLayerData of data.eventLayers) {
+            const eventLayer: EventLayerWithSpeed = {};
+            const eventLayerData = rawLayerData as EventLayerDataKPA;
+            for (const key of Object.keys(eventLayerData) as (keyof EventLayerDataKPA)[]) {
+                const seqId = eventLayerData[key];
+                if (!seqId) continue;
                 // use "fromRPEJSON" for they have the same logic
-                eventLayer[key] = unwrap(chart.sequenceMap.get(eventLayerData[key]), v => typeof v === "number", "numeric");
+                eventLayer[key] = unwrap(chart.sequenceMap.get(seqId), v => typeof v === "number", "numeric");
             }
             line.eventLayers.push(eventLayer);
         }
@@ -748,17 +753,17 @@ export class JudgeLine {
         for (let i = 0; i < this.eventLayers.length; i++) {
             const layer = this.eventLayers[i];
             if (!layer) continue;
-            const layerData = {}
-            for (const type in layer) {
-                const sequence = layer[type as keyof EventLayer];
+            const layerData: Partial<Record<keyof EventLayer, string>> = {};
+            for (const type of Object.keys(layer) as (keyof EventLayer)[]) {
+                const sequence = layer[type];
                 if (!sequence) continue;
                 eventNodeSequences.add(sequence);
                 layerData[type] = sequence.id;
             }
             eventLayers.push(layerData as EventLayerDataKPA);
         }
-        const hnListsData = {};
-        const nnListsData = {};
+        const hnListsData: { [id: string]: NNListDataKPA } = {};
+        const nnListsData: { [id: string]: NNListDataKPA } = {};
         for (const [id, list] of this.hnLists) {
             hnListsData[id] = list.dumpKPA();
         }

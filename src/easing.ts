@@ -508,8 +508,9 @@ export const easingMap = {
 }
 
 for (const funcType in easingMap) {
-    for (const easeType in easingMap[funcType]) {
-        const easing = easingMap[funcType][easeType];
+    const funcs = easingMap[funcType as keyof typeof easingMap];
+    for (const easeType in funcs) {
+        const easing = funcs[easeType as keyof typeof funcs];
         easing.funcType = funcType;
         easing.easeType = easeType;
     }

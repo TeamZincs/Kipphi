@@ -14,7 +14,7 @@ export type TupleCoord = [x: number, y: number]
  * @param value 
  * @param type 为字符串时，用typeof检测，为构造函数时，用instanceof检测，为数组时，识别为元组类型。
  */
-export const checkType = (value: unknown, type: string | (string | typeof Function)[] | typeof Function) => {
+export const checkType = (value: unknown, type: string | (string | typeof Function)[] | typeof Function): boolean => {
     if (Array.isArray(type)) {
         return Array.isArray(value)
         && value.length === type.length
