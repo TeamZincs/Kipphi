@@ -54,6 +54,7 @@ export enum ERROR_IDS {
     INVALID_EVENT_NODE_SEQUENCE_TYPE =              ENS        | INVALID_DATA  | 0,
     EVENT_NODE_TIME_NOT_INCREMENTAL =               ENS        | INVALID_DATA  | 1,
     EVENT_NODE_NOT_DENSE =                          ENS        | INVALID_DATA  | 2,
+    EVENT_NODE_SEQUENCE_NOT_FOUND =                 ENS        | INVALID_DATA  | 3,
     PARENT_SEQUENCE_NOT_FOUND =                     ENS        | INVALID_USAGE | 1,
     NEEDS_AT_LEAST_ONE_ENS =                        ENS        | INVALID_USAGE | 2,
     SEQUENCE_TYPE_NOT_CONSISTENT =                  ENS        | INVALID_USAGE | 3,
@@ -183,6 +184,8 @@ export const ERRORS = {
         `Parametric Macro requires key. At ${pos}`,
     MACRO_NOT_PARAMETRIC: (macroId: string, pos) =>
         `Macro '${macroId}' is not parametric. At ${pos}`,
+    EVENT_NODE_SEQUENCE_NOT_FOUND: (id: string, pos: string) =>
+        `EventNodeSequence '${id}' not found (at ${pos})`,
     EVENT_NODE_NOT_DENSE: (pos: string) =>
         `EventNode is not dense. At ${pos}`,
     HOLD_HAS_NO_DURATION: () =>

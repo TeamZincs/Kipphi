@@ -136,6 +136,7 @@ export abstract class EventMacro<T extends Macroable> extends Macro<T, EventNode
         } catch (e) {
             return err.JAVASCRIPT_SYNTAX_ERROR(e instanceof Error ? e : new Error(String(e)), this.id);
         }
+        return null;
     }
     bindNode(node: EventNode<any>, macroData: MacroData, pos?: string) {
         if (this.parametric) {
@@ -238,6 +239,7 @@ export class NoteMacro extends Macro<MNote, Note, Note> {
         } catch (e) {
             return err.JAVASCRIPT_SYNTAX_ERROR(e instanceof Error ? e : new Error(String(e)), this.id);
         }
+        return null;
     }
     bindNote(note: Note, macroData: MacroData, pos?: string) {
         if (this.parametric) {
@@ -304,7 +306,7 @@ export class MacroLib {
         const len = data.length;
         for (let i = 0; i < len; i++) {
             const datum = data[i]!;
-            const macro = new EventMacroTime(datum.macro, datum.id, datum.parametric);
+            const macro = new EventMacroTime(datum.macro, datum.id, datum.parametric ?? false);
             this.timeMacros.set(datum.id, macro);
         }
     }
@@ -319,7 +321,7 @@ export class MacroLib {
         const len = data.length;
         for (let i = 0; i < len; i++) {
             const datum = data[i]!;
-            const macro = new NoteMacro(datum.macro, datum.id, datum.parametric);
+            const macro = new NoteMacro(datum.macro, datum.id, datum.parametric ?? false);
             this.noteMacros.set(datum.id, macro);
         }
     }
@@ -335,7 +337,7 @@ export class MacroLib {
         const len = data.length;
         for (let i = 0; i < len; i++) {
             const datum = data[i]!;
-            const macro = new EventMacroValue(datum.macro, datum.id, datum.parametric);
+            const macro = new EventMacroValue(datum.macro, datum.id, datum.parametric ?? false);
             this.valueMacros.set(datum.id, macro);
         }
     }

@@ -337,10 +337,10 @@ export class TemplateEasing extends Easing {
     }
     get valueDelta(): number {
         const seq = this.eventNodeSequence;
-        return seq.tail.previous.value - seq.head.next.value;
+        return seq.tail.previous!.value - seq.head.next!.value;
     }
     get headValue(): number {
-        return this.eventNodeSequence.head.next.value;
+        return this.eventNodeSequence.head.next!.value;
     }
     
     segmentedValueGetter(easingLeft: number, easingRight: number) {
@@ -414,7 +414,7 @@ export class TemplateEasingLib {
     getOrNew(name: string): TemplateEasing {
         const DEFAULT_TEMPLATE_LENGTH = Environment.DEFAULT_TEMPLATE_LENGTH;
         if (this.easings.has(name)) {
-            return this.easings.get(name);
+            return this.easings.get(name)!;
         } else {
             const easing = new TemplateEasing(name, this.getNewSequence(EventType.easing, DEFAULT_TEMPLATE_LENGTH));
             easing.eventNodeSequence.id = "*" + name;
@@ -430,7 +430,7 @@ export class TemplateEasingLib {
             this.wrapperEasings.set(datum.id, new WrapperEasing(new this.ExpressionEvaluatorCon(datum.jsExpr), datum.start, datum.end, datum.id))
         }
     }
-    getWrapper(name: string): WrapperEasing {
+    getWrapper(name: string): WrapperEasing | undefined {
         return this.wrapperEasings.get(name);
     }
     /**
@@ -438,10 +438,11 @@ export class TemplateEasingLib {
      * register a template easing when reading eventNodeSequences, but does not implement it immediately
      */
     require(name: string) {
-        this.easings.set(name, new TemplateEasing(name, null));
+        // 占位：先不实现，由check()负责提示。eventNodeSequence为null时不应被使用。
+        this.easings.set(name, new TemplateEasing(name, null as unknown as EventNodeSequence));
     }
     implement(name: string, sequence: EventNodeSequence) {
-        this.easings.get(name).eventNodeSequence = sequence;
+        this.easings.get(name)!.eventNodeSequence = sequence;
     }
     /**
      * 检查所有模板缓动是否实现

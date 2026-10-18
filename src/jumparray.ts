@@ -4,13 +4,20 @@ import Env from "./env";
 // type EndBeats = number;
 /// #declaration:global
 
-type EndNextFn<T extends TwoDirectionNodeLike> = (node: T) => [endBeats: number, next: T];
+type EndNextFn<T extends TwoDirectionNodeLike> =
+    (node: T) => [endBeats: number, next: T] | [endBeats: null, next: null];
 
 
 
+/**
+ * 跳数组对节点的要求：只需要能读 type，并能顺着 next 走。
+ *
+ * 这里不对 next/previous 的具体类型做约束 —— 链表节点、HEAD/TAIL 哨兵
+ * 的结构各不相同，用 this 或联合类型都会让实现方无法满足。
+ */
 interface TwoDirectionNodeLike {
-    next: this | null;
-    previous: this | null;
+    next: unknown;
+    previous: unknown;
     type: NodeType;
 }
 
@@ -112,9 +119,10 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         const averageBeats: number = this.averageBeats;
         const minorBeats: number = averageBeats / MINOR_PARTS;
         let [previousEndTime, currentNode] = endNextFn(firstNode);
-        let jumpIndex = Math.floor(previousEndTime / averageBeats); // 这里写漏了特此留念
+        // 首个节点一定不是尾部，所以previousEndTime不为null
+        let jumpIndex = Math.floor(previousEndTime! / averageBeats); // 这里写漏了特此留念
         for (;;) {
-            let [endTime, nextNode] = endNextFn(currentNode);
+            let [endTime, nextNode] = endNextFn(currentNode!);
             // console.log("----Node:", currentNode, "next:", nextNode, "endTime:", endTime, "previousEndTime:", previousEndTime )
             if (endTime === null) {
                 endTime = effectiveBeats;
@@ -155,7 +163,7 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
                     return;
                 }
                 do {
-                    let [endTime, nextNode] = endNextFn(currentNode);
+                    let [endTime, nextNode] = endNextFn(currentNode!);
                     if (endTime === null) {
                         endTime = this.effectiveBeats;
                     }
@@ -195,7 +203,7 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
      */
     getNodeAt(beats: number): T {
         if (beats < 0) {
-            return this.header.next;
+            return this.header.next as T;
         }
         if (beats >= this.effectiveBeats) {
             return this.tailer;

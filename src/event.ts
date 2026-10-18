@@ -62,7 +62,7 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
             this.evaluator = ColorEasedEvaluator.default as unknown as Evaluator<VT>;
         }
     }
-    clone(offset: TimeT): EventStartNode<VT> | EventEndNode<VT> {
+    clone(offset?: TimeT): EventStartNode<VT> | EventEndNode<VT> {
         const ret = new (this.constructor as (typeof EventStartNode | typeof EventEndNode))
                         (offset ? TC.add(this.time, offset) : this.time, this.value);
         ret.evaluator = this.evaluator;
@@ -82,7 +82,7 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
             const easing = new BezierEasing([bp[0], bp[1]], [bp[2], bp[3]]);
             return easing
         } else if (typeof data.easingType === "string") {
-            return templates.get(data.easingType);
+            return templates.get(data.easingType)!;
         } else if (typeof data.easingType === "number" && data.easingType !== 0) {
             return rpeEasingArray[data.easingType];
         } else if (data.start === data.end) {
@@ -123,7 +123,7 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
             }
             return new ExpressionEvaluator(data.easingType);
         } else if (typeof data.easingType === "string") {
-            return wrap(templates.get(data.easingType));
+            return wrap(templates.get(data.easingType)!);
         } else if (typeof data.easingType === "number" && data.easingType !== 0) {
             return wrap(rpeEasingArray[data.easingType]);
         } else if (data.start === data.end) {
@@ -189,10 +189,12 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
         const next = startNode.next;
         prev.next = next;
         next.previous = prev;
-        endNode.previous = null;
-        startNode.next = null;
-        endNode.parentSeq = null;
-        startNode.parentSeq = null; // 每亩的东西（
+        // 这里是把节点从链表上摘下来，置null作为“已脱离序列”的标记，
+        // 运行时有 `if (!node.parentSeq) return` 之类的守卫，但类型上仍声明为非空
+        endNode.previous = null as unknown as EventStartNode<VT>;
+        startNode.next = null as unknown as EventEndNode<VT>;
+        endNode.parentSeq = null as unknown as EventNodeSequence<VT>;
+        startNode.parentSeq = null as unknown as EventNodeSequence<VT>; // 每亩的东西（
         return [this.previousStartOfStart(prev), this.nextStartOfEnd(next)]
     }
     static insert<VT extends EventValueESType>(node: EventStartNode<VT>, tarPrev: EventStartNode<VT>): [EventNodeLike<NodeType.HEAD, VT> | EventStartNode<VT>, EventStartNode<VT> | EventNodeLike<NodeType.TAIL, VT>] {
@@ -324,7 +326,7 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
             end: endNode.value,
             startTime: this.time,
             endTime: endNode.time,
-            evaluator: this.evaluator.dumpFor(this),
+            evaluator: this.evaluator.dumpFor(this)!,
             macroStart: this.macro?.dumpForNode(this),
             macroEnd: this.macro?.dumpForNode(endNode),
             macroStartTime: this.macroTime?.dumpForNode(this),
@@ -337,7 +339,7 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
         return {
             start: this.value,
             startTime: this.time,
-            evaluator: this.evaluator.dumpFor(this),
+            evaluator: this.evaluator.dumpFor(this)!,
             macro: this.macro?.dumpForNode(this),
             macroTime: this.macroTime?.dumpForNode(this),
             linkedMacro: [...this.linkedMacros].map(macro => macro.dumpLinkForNode(this)),
@@ -351,7 +353,7 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
         if (this.next.type === NodeType.TAIL) {
             return this.value;
         }
-        return this.evaluator.eval(this as NonLastStartNode<VT>, beatsOrSecs, timeCalculator);
+        return this.evaluator.eval(this as NonLastStartNode<VT>, beatsOrSecs, timeCalculator!);
     }
     getSpeedValueAt(this: EventStartNode<number>, beats: number) {
         if (this.next.type === NodeType.TAIL) {
@@ -752,10 +754,11 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
                     return [null, null]
                 }
                 if (node.type === NodeType.HEAD) {
-                    if (node.next.next.type === NodeType.TAIL) {
-                        return [0, node.next.next]
+                    const headNext = node.next!;
+                    if (headNext.next.type === NodeType.TAIL) {
+                        return [0, headNext.next]
                     }
-                    return [0, node.next]
+                    return [0, headNext]
                 }
                 const endNode = (node as EventStartNode<VT>).next as EventEndNode<VT>;
                 const time = TC.toBeats(endNode.time);
@@ -785,7 +788,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             this.initJump();
 
         }
-        this.jump.updateRange(from, to);
+        this.jump!.updateRange(from, to);
     }
     getNodeAt(beats: number, usePrev: boolean = false): EventStartNode<VT> {
         let node 
@@ -793,10 +796,10 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
                 || this.head.next as (EventStartNode<VT> | EventNodeLike<NodeType.TAIL, VT>);
         if (node.type === NodeType.TAIL) {
             if (usePrev) {
-                return node.previous.previous.previous;
+                return node.previous!.previous!.previous!;
             }
             // 最后一个事件节点本身具有无限延伸的特性
-            return node.previous;
+            return node.previous!;
         }
         if (usePrev && TC.toBeats(node.time) === beats) {
             const prev = node.previous;
@@ -857,7 +860,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
     }
     dump(): EventNodeSequenceDataKPA2<VT> {
         const nodes: EventDataKPA2<VT>[] = [];
-        let currentNode: EventStartNode<VT> = this.head.next;
+        let currentNode: EventStartNode<VT> = this.head.next!;
 
         while (currentNode && !(currentNode.next.type === NodeType.TAIL)) {
             const eventData = currentNode.dump();
@@ -962,7 +965,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         return dest;
     }
     checkErrors() {
-        let currentNode: EventStartNode<VT> = this.head.next;
+        let currentNode: EventStartNode<VT> = this.head.next!;
         if (TC.ne(currentNode.time, [0, 0, 1])) {
             err.EVENT_NODE_NOT_DENSE(`${this.id}, ${currentNode.time}`).fix(currentNode);
             currentNode.time = [0, 0, 1];
@@ -998,13 +1001,13 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             if (TC.ne(lastEnd.time, currentNode.time)) {
                 err.EVENT_NODE_NOT_DENSE(`${this.id}, ${currentNode.time}`).warn(currentNode);
             }
-            currentNode = currentNode.next.next;
+            currentNode = (currentNode.next as EventEndNode<VT>).next;
             lastEnd = endNode;
         }
     }
     hasReferenceTo(this: EventNodeSequence<number>, seq: EventNodeSequence<number>) {
         
-        let node = this.head.next;
+        let node = this.head.next!;
         while (true) {
             const endNode = node.next;
             if (endNode.type === NodeType.TAIL) {

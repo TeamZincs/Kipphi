@@ -166,8 +166,8 @@ export interface EventDataRPELike<T = number> {
     easingLeft: number;
     /** 截取缓动右边界 */
     easingRight: number;
-    /** 缓动类型 */
-    easingType: number | string;
+    /** 缓动类型。贝塞尔/模板/包装缓动无法用RPE的缓动编号表达时为null */
+    easingType: number | string | null;
     /** 结束值 */
     end: T;
     /** 结束时间 */
@@ -524,12 +524,12 @@ export interface JudgeLineDataKPA {
 
     anchor: [number, number];
     extended?: {
-        scaleXEvents: string;
-        scaleYEvents: string;
+        scaleXEvents?: string;
+        scaleYEvents?: string;
         textEvents?: string;
         colorEvents?: string;
     }
-    zOrder: number;
+    zOrder?: number;
 }
 
 export interface JudgeLineDataKPA2 {
@@ -547,12 +547,12 @@ export interface JudgeLineDataKPA2 {
 
     anchor: [number, number];
     extended?: {
-        scaleXEvents: string;
-        scaleYEvents: string;
+        scaleXEvents?: string;
+        scaleYEvents?: string;
         textEvents?: string;
         colorEvents?: string;
     }
-    zOrder: number;
+    zOrder?: number;
 }
 
 

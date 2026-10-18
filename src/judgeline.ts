@@ -143,7 +143,7 @@ export class JudgeLine {
         }
         const eventLayers = data.eventLayers;
         const length = eventLayers.length;
-        const createSequence = (type: EventType, events: EventDataRPELike[], index: number) =>  {
+        const createSequence = (type: EventType, events: EventDataRPELike[] | undefined, index: number) =>  {
             if (events) {
                 const seqId = `#${id}.${index}.${EventType[type]}`;
                 const sequence = EventNodeSequence.fromRPEJSON(type, events, chart, seqId);
@@ -152,7 +152,7 @@ export class JudgeLine {
                 return sequence;
             }
         }
-        const createExtendedSequence = <T extends EventType>(type: T, events: EventDataRPELike<ValueTypeOfEventType<T>>[]) =>  {
+        const createExtendedSequence = <T extends EventType>(type: T, events: EventDataRPELike<ValueTypeOfEventType<T>>[] | undefined) =>  {
             if (events) {
                 const seqId = `#${id}.ex.${EventType[type]}`;
                 const sequence = EventNodeSequence.fromRPEJSON(type, events, chart, seqId);
@@ -181,7 +181,7 @@ export class JudgeLine {
         }
         if (speedSequences.length > 1) {
             line.speedSequence = EventNodeSequence.mergeSequences(speedSequences) as SpeedENS;
-            line.speedSequence.updateFloorPositionAfter(line.speedSequence.head.next, timeCalculator);
+            line.speedSequence.updateFloorPositionAfter(line.speedSequence.head.next!, timeCalculator);
         } else if (speedSequences.length === 1) {
             line.speedSequence = speedSequences[0]
             chart.registerEventNodeSequence(EventType.speed, `#${id}.speed`, speedSequences[0]);
@@ -262,8 +262,12 @@ export class JudgeLine {
             childLine.father = line;
             line.children.add(childLine);
         }
-        const unwrap = <VT extends EventValueESType>(sequence: EventNodeSequence<EventValueESType>, predicate: (value: unknown) => boolean, typeStr: keyof typeof EventValueType) => {
-            const value = sequence.head.next.value
+        const unwrap = <VT extends EventValueESType>(seqId: string, predicate: (value: unknown) => boolean, typeStr: keyof typeof EventValueType, pos: string) => {
+            const sequence = chart.sequenceMap.get(seqId);
+            if (!sequence) {
+                throw err.EVENT_NODE_SEQUENCE_NOT_FOUND(seqId, pos);
+            }
+            const value = sequence.head.next!.value
             if (!predicate(value)) {
                 throw err.EXPECTED_TYPED_ENS(typeStr, sequence.id, value);
             }
@@ -278,22 +282,23 @@ export class JudgeLine {
                 const seqId = eventLayerData[key];
                 if (!seqId) continue;
                 // use "fromRPEJSON" for they have the same logic
-                eventLayer[key] = unwrap(chart.sequenceMap.get(seqId), v => typeof v === "number", "numeric");
+                eventLayer[key] = unwrap(seqId, v => typeof v === "number", "numeric", `${line.id}.eventLayers[${key}]`);
             }
             line.eventLayers.push(eventLayer);
         }
         if (independentSpeedENS) {
             const seq = unwrap(
-                chart.sequenceMap.get((data as JudgeLineDataKPA2).speedEventNodeSeq),
+                (data as JudgeLineDataKPA2).speedEventNodeSeq,
                 v => typeof v === "number",
-                "numeric"
+                "numeric",
+                `${line.id}.speedEventNodeSeq`
             );
             line.speedSequence = seq as SpeedENS;
         } else {
             // 合并多个层级上的速度序列，合并完以后置空
             const oldSequences: SpeedENS[] = [];
             for (const layer of line.eventLayers) {
-                const ly = layer as {speed: SpeedENS};
+                const ly = layer as {speed: SpeedENS | null};
                 if (ly.speed) {
                     oldSequences.push(ly.speed);
                     ly.speed = null;
@@ -305,36 +310,38 @@ export class JudgeLine {
                 seq = EventNodeSequence.mergeSequences(
                     oldSequences
                 ) as SpeedENS;
-                seq.updateFloorPositionAfter((seq as SpeedENS).head.next, timeCalculator);
+                seq.updateFloorPositionAfter((seq as SpeedENS).head.next!, timeCalculator);
             } else if (oldSequences.length === 1) {
                 chart.registerEventNodeSequence(EventType.speed, `#${line.id}.speed`, oldSequences[0]);
                 seq = oldSequences[0];
-                seq.updateFloorPositionAfter(seq.head.next, timeCalculator);
+                seq.updateFloorPositionAfter(seq.head.next!, timeCalculator);
             } else {
                 seq = chart.createEventNodeSequence(EventType.speed, `#${line.id}.speed`) as SpeedENS;
             }
             line.speedSequence = seq as SpeedENS;
         }
         line.extendedLayer.scaleX = data.extended?.scaleXEvents
-                                ? unwrap(chart.sequenceMap.get(
-                                    data.extended.scaleXEvents),
+                                ? unwrap(
+                                    data.extended.scaleXEvents,
                                     v => typeof v === "number",
-                                    "numeric"
+                                    "numeric",
+                                    `${line.id}.extended.scaleXEvents`
                                 )
                                 : chart.createEventNodeSequence(EventType.scaleX, `#${line.id}.ex.scaleX`);
         line.extendedLayer.scaleY = data.extended?.scaleYEvents
-                                ? unwrap(chart.sequenceMap.get(
-                                    data.extended.scaleYEvents),
+                                ? unwrap(
+                                    data.extended.scaleYEvents,
                                     v => typeof v === "number",
-                                    "numeric"
+                                    "numeric",
+                                    `${line.id}.extended.scaleYEvents`
                                 )
                                 : chart.createEventNodeSequence(EventType.scaleY, `#${line.id}.ex.scaleY`);
         if (data.extended) {
             if (data.extended.textEvents) {
-                line.extendedLayer.text = unwrap(chart.sequenceMap.get(data.extended.textEvents), v => typeof v === "string", "text");
+                line.extendedLayer.text = unwrap(data.extended.textEvents, v => typeof v === "string", "text", `${line.id}.extended.textEvents`);
             }
             if (data.extended.colorEvents) {
-                line.extendedLayer.color = unwrap(chart.sequenceMap.get(data.extended.colorEvents), v => Array.isArray(v), "color");
+                line.extendedLayer.color = unwrap(data.extended.colorEvents, v => Array.isArray(v), "color", `${line.id}.extended.colorEvents`);
             }
         }
         
@@ -365,7 +372,7 @@ export class JudgeLine {
                 const noteData = nodeData.notes[j];
                 const note = new Note(noteData);
                 const median = getRangeMedian(note.yOffset)
-                const list = getOrCreateNNList(median, namePrefix + "o" + median);
+                const list = getOrCreateNNList(median, namePrefix + "o" + median)!;
                 const cur = list.currentPoint;
                 if (!note.visibleBeats) {
                     note.computeVisibleBeats(timeCalculator)
@@ -446,7 +453,7 @@ export class JudgeLine {
         
         // 获取起始节点
         let startNode: EventStartNode<number> = this.speedSequence.getNodeAt(beats);
-        let range: [number, number] = [undefined, undefined];
+        let range = [undefined, undefined] as unknown as [number, number];
         // 启用遮罩时，两个Y边界都是正数，直接返回空数组
         if (lineMonotonicity === Monotonicity.increasing && startY >= 0 && endY > 0) {
 
@@ -535,10 +542,10 @@ export class JudgeLine {
             }
         
             
-            const nextTime = TC.toBeats(nextStart.time);
+            const nextTime = TC.toBeats(nextStart!.time);
             
             const thisPosY = startNode.floorPosition - currentJudgeLineFloorPos;
-            const nextPosY = nextStart.floorPosition - currentJudgeLineFloorPos;
+            const nextPosY = nextStart!.floorPosition - currentJudgeLineFloorPos;
             
             let thisSpeed = startNode.value;
             let nextSpeed = endNode.value;
@@ -573,7 +580,7 @@ export class JudgeLine {
                             // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
                             return result;
                         }
-                        range = [undefined, undefined];
+                        range = [undefined, undefined] as unknown as [number, number];
                     }
                 }
                 
@@ -592,7 +599,7 @@ export class JudgeLine {
                             // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
                             return result;
                         }
-                        range = [undefined, undefined];
+                        range = [undefined, undefined] as unknown as [number, number];
                     }
                 }
             } else {
@@ -624,7 +631,7 @@ export class JudgeLine {
                             // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
                             return result;
                         }
-                        range = [undefined, undefined];
+                        range = [undefined, undefined] as unknown as [number, number];
                     } else if ((thisSpeed < 0 || nextSpeed < 0) && startY >= thisPosY) {
                         range[1] = thisSpeed !== nextSpeed ? nextTime : computeTime(
                             thisSpeed,
@@ -634,14 +641,14 @@ export class JudgeLine {
                             // 单调的FloorPosition函数只能产生一个符合条件的区间，可以提前返回达到优化目的
                             return result;
                         }
-                        range = [undefined, undefined];
+                        range = [undefined, undefined] as unknown as [number, number];
                     }
                 }
                 // 我挺希望能够显式内联上面的……复用性也太低了
             }
             
             // 移动到下一个节点
-            startNode = nextStart;
+            startNode = nextStart!;
         }
         
         return result;
@@ -776,8 +783,12 @@ export class JudgeLine {
             textEvents: this.extendedLayer.text?.id,
             colorEvents: this.extendedLayer.color?.id,
         };
-        eventNodeSequences.add(this.extendedLayer.scaleX)
-        eventNodeSequences.add(this.extendedLayer.scaleY)
+        if (this.extendedLayer.scaleX) {
+            eventNodeSequences.add(this.extendedLayer.scaleX)
+        }
+        if (this.extendedLayer.scaleY) {
+            eventNodeSequences.add(this.extendedLayer.scaleY)
+        }
         
         if (this.extendedLayer.color) {
             eventNodeSequences.add(this.extendedLayer.color);
@@ -821,7 +832,7 @@ export class JudgeLine {
             const layer = this.eventLayers[i];
             for (const type in layer) {
                 const sequence = layer[type as keyof EventLayer];
-                sequence.effectiveBeats = EB;
+                sequence!.effectiveBeats = EB;
             }
         }
         for (const lists of [this.nnLists, this.hnLists]) {

@@ -76,7 +76,8 @@ export class BPMEndNode extends EventEndNode {
      * @param endTime 节点结束时间
      */
     constructor(endTime: TimeT) {
-        super(endTime, null);
+        // value由getter代理到前一个起始节点，这里传什么都不会被读到
+        super(endTime, 0);
     }
 }
 
@@ -134,7 +135,7 @@ export class BPMSequence extends EventNodeSequence {
      * @param duration 总持续时间
      */
     constructor(bpmList: BPMSegmentData[], public duration: number) {
-        super(EventType.bpm, null);
+        super(EventType.bpm, 0);
         let curPos: BPMNodeLike<NodeType.HEAD> | BPMEndNode = this.head;
         let next = bpmList[0];
         this.listLength = bpmList.length;
@@ -157,7 +158,7 @@ export class BPMSequence extends EventNodeSequence {
      * 初始化跳转数组
      */
     override initJump(): void {
-        this.effectiveBeats = TC.toBeats(this.tail.previous.time)
+        this.effectiveBeats = TC.toBeats(this.tail.previous!.time)
         if (this.effectiveBeats !== 0) {
             super.initJump(); // 为0可以跳过jumpArray，用不到
             // 只有一个BPM片段就会这样
@@ -174,7 +175,7 @@ export class BPMSequence extends EventNodeSequence {
         console.log(111);
         let integral = 0;
         // 计算积分并缓存到BPMNode
-        let node: BPMStartNode = this.head.next;
+        let node: BPMStartNode = this.head.next!;
         while (true) {
             node.cachedStartIntegral = integral;
             if (node.next.type === NodeType.TAIL) {
@@ -205,7 +206,7 @@ export class BPMSequence extends EventNodeSequence {
                     return [0, node.next];
                 }
                 const endNode = <BPMEndNode>(<BPMStartNode>node).next;
-                const time = node.cachedIntegral;
+                const time = node.cachedIntegral!;
                 const nextNode = endNode.next;
                 if (nextNode.next.type === NodeType.TAIL) {
                     return [time, nextNode.next]; // Tailer代替最后一个StartNode去占位
@@ -214,7 +215,7 @@ export class BPMSequence extends EventNodeSequence {
                 }
             },
             (node: BPMStartNode, seconds: number) => {
-                return node.cachedIntegral > seconds ? false : (<BPMEndNode>node.next).next;
+                return node.cachedIntegral! > seconds ? false : (<BPMEndNode>node.next).next;
             }
         );
     }
@@ -236,7 +237,7 @@ export class BPMSequence extends EventNodeSequence {
      */
     getNodeBySeconds(seconds: number): BPMStartNode {
         if (this.effectiveBeats === 0) {
-            return this.tail.previous
+            return this.tail.previous!
         }
         const node = this.secondJump.getNodeAt(seconds);
         if (node.type === NodeType.TAIL) {
@@ -250,7 +251,7 @@ export class BPMSequence extends EventNodeSequence {
      * @returns BPM片段数据数组
      */
     dumpBPM(): BPMSegmentData[] {
-        let cur = this.head.next;
+        let cur = this.head.next!;
         const ret: BPMSegmentData[] = [];
         while (true) {
             ret.push({
@@ -266,7 +267,7 @@ export class BPMSequence extends EventNodeSequence {
         return ret;
     }
     dumpPhiraBPM(): PhiraBpmSegment[] {
-        let cur = this.head.next;
+        let cur = this.head.next!;
         const ret: PhiraBpmSegment[] = [];
         while (true) {
             ret.push({
@@ -339,7 +340,7 @@ export class TimeCalculator {
      */
     toSeconds(beats: number) {
         const node: BPMStartNode = this.bpmSequence.getNodeAt(beats);
-        return node.cachedStartIntegral + node.getSeconds(beats)
+        return node.cachedStartIntegral! + node.getSeconds(beats)
     }
     
     /**
@@ -361,7 +362,7 @@ export class TimeCalculator {
     secondsToBeats(seconds: number) {
         const node = this.bpmSequence.getNodeBySeconds(seconds);
         // console.log("node:", node)
-        const beats = (seconds - node.cachedStartIntegral) * node.value / 60;
+        const beats = (seconds - node.cachedStartIntegral!) * node.value / 60;
         return TC.toBeats(node.time) + beats
     }
     

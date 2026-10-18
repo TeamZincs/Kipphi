@@ -354,7 +354,7 @@ export class Chart {
             if (sequence.type !== EventType.easing) {
                 throw err.CANNOT_IMPLEMENT_TEMEAS_WITH_NON_EASING_ENS(easingData.name);
             }
-            if (typeof sequence.head.next.value !== "number") {
+            if (typeof sequence.head.next!.value !== "number") {
                 throw err.CANNOT_IMPLEMENT_TEMEAS_WITH_NON_NUMERIC_ENS(easingData.name);
             }
             chart.templateEasingLib.implement(easingData.name, sequence as EventNodeSequence<number>);
@@ -694,10 +694,20 @@ export class Chart {
                 return rpeEasingArray[data.identifier];
             case EasingType.segmented:
                 return new SegmentedEasing(this.createEasingFromData(data.inner), data.left, data.right);
-            case EasingType.template:
-                return this.templateEasingLib.get(data.identifier);
-            case EasingType.wrapper:
-                return this.templateEasingLib.getWrapper(data.identifier);
+            case EasingType.template: {
+                const easing = this.templateEasingLib.get(data.identifier);
+                if (!easing) {
+                    throw err.UNIMPLEMENTED_TEMPLATE_EASING(data.identifier);
+                }
+                return easing;
+            }
+            case EasingType.wrapper: {
+                const easing = this.templateEasingLib.getWrapper(data.identifier);
+                if (!easing) {
+                    throw err.UNIMPLEMENTED_TEMPLATE_EASING(data.identifier);
+                }
+                return easing;
+            }
         }
     }
     
@@ -768,7 +778,7 @@ export class Chart {
                     : new ColorEasedEvaluator(easing) as EasedEvaluatorOfType<T>;
             case EventValueType.text:
                 return easingIsNormal
-                    ? TextEasedEvaluator.evaluatorsOfNoEzAndItpAs[easing.rpeId][interpreteAs] as EasedEvaluatorOfType<T>
+                    ? TextEasedEvaluator.evaluatorsOfNoEzAndItpAs[easing.rpeId][interpreteAs ?? InterpreteAs.str] as EasedEvaluatorOfType<T>
                     : new TextEasedEvaluator(easing, interpreteAs) as EasedEvaluatorOfType<T>
         }
     }
@@ -852,7 +862,7 @@ export class Chart {
         } else {
             err.TIME_MACRO_NOT_FOUND(id, pos).warn();
         }
-        return null;
+        return;
     }
     bindValueMacro(node: EventNode<any>, macroData: MacroData, pos: string): void {
         const id = Array.isArray(macroData) ? macroData[0] : macroData;
@@ -863,7 +873,7 @@ export class Chart {
         } else {
             err.VALUE_MACRO_NOT_FOUND(id, pos).warn();
         }
-        return null;
+        return;
     }
     linkMacro(node: EventNode<any>, linkData: MacroLink, pos: string): void {
         const prefix = linkData[0].split(":")[0] as 'time' | 'value';
@@ -875,7 +885,7 @@ export class Chart {
         } else {
             err[`${prefix.toUpperCase() as 'TIME' | 'VALUE'}_MACRO_NOT_FOUND`](realName, pos).warn();
         }
-        return null;
+        return;
     }
     bindNoteMacro(note: Note, macroData: MacroData, pos: string): void {
         const id = Array.isArray(macroData) ? macroData[0] : macroData;
@@ -886,7 +896,7 @@ export class Chart {
         } else {
             err.NOTE_MACRO_NOT_FOUND(id, pos).warn();
         }
-        return null;
+        return;
     }
     linkNoteMacro(note: Note, linkData: NoteMacroLink, pos: string): void {
         const macro = this.macroLib.noteMacros.get(linkData[0]);
@@ -895,7 +905,7 @@ export class Chart {
         } else {
             err.NOTE_MACRO_NOT_FOUND(linkData[0], pos).warn();
         }
-        return null;
+        return;
     }
     /* 暂时不用此方法，因为谱面播放器里面还是用反解法弄的
     updateNNListsFromENS(speedENS: SpeedENS) {
@@ -914,7 +924,7 @@ export class Chart {
     updateAllFloorPositions() {
         for (const [_, seq] of this.sequenceMap) {
             if (seq.type === EventType.speed) {
-                (seq as unknown as SpeedENS).updateFloorPositionAfter(seq.head.next, this.timeCalculator);
+                (seq as unknown as SpeedENS).updateFloorPositionAfter(seq.head.next!, this.timeCalculator);
             }
         }
     }

@@ -76,8 +76,9 @@ export class Note {
     */
 
     parentNode: NoteNode;
-    tint: HEX;
-    tintHitEffects: HEX;
+    /** 未设置时为undefined */
+    tint: HEX | undefined;
+    tintHitEffects: HEX | undefined;
     judgeSize: number;
 
     linkedMacros: Set<NoteMacro>;
@@ -99,7 +100,7 @@ export class Note {
         this.speed = data.speed ?? 1.0;
         this.startTime = TC.validateIp(data.startTime);
         this.type = data.type;
-        this.visibleTime = data.visibleTime;
+        this.visibleTime = data.visibleTime ?? 99999.0;
         // @ts-expect-error 若data是RPE数据，则为undefined，无影响。
         this.yOffset = data.absoluteYOffset ?? data.yOffset * this.speed;
         // @ts-expect-error 若data是RPE数据，则为undefined，无影响。
@@ -322,7 +323,8 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
             return;
         }
         this.notes.splice(index, 1)
-        note.parentNode = null
+        // 置null表示已脱离节点，运行时有 `if (note.parentNode)` 之类的守卫
+        note.parentNode = null as unknown as NoteNode;
     }
     accepts(note: Note) {
         if (this.isHold !== (note.type === NoteType.hold)) {
@@ -339,16 +341,16 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
             return true;
         }
     }
-    static disconnect(note1: NNOrHead, note2: NNOrTail) {
+    static disconnect(note1: NNOrHead | null | undefined, note2: NNOrTail | null | undefined) {
         if (note1) {
-            note1.next = null;
+            note1.next = null as unknown as NNOrTail;
         }
         if (note2) {
             note2.previous = null;
         }
 
     }
-    static connect(note1: NNOrHead, note2: NNOrTail) {
+    static connect(note1: NNOrHead | null, note2: NNOrTail) {
         if (note1) {
             note1.next = note2;
         }
@@ -398,7 +400,7 @@ export class NNList {
         this.tail = new NoteNodeLike(NodeType.TAIL);
         this.tail.parentSeq = this;
         this.timesWithNotes = 0;
-        this.effectiveBeats = effectiveBeats
+        this.effectiveBeats = effectiveBeats ?? 0;
     }
     /** 此方法永远用于最新KPAJSON */
     static fromKPAJSON<T extends boolean>(isHold: T, effectiveBeats: number, data: NNListDataKPA, nnnList: NNNList, chart: Chart, pos: string): T extends true ? HNList : NNList {
@@ -420,10 +422,10 @@ export class NNList {
         const originalListLength = this.timesWithNotes;
         if (!this.effectiveBeats) {
             const prev = this.tail.previous
-            if (prev.type === NodeType.HEAD) {
+            if (!prev || prev.type === NodeType.HEAD) {
                 return;
             }
-            this.effectiveBeats = TC.toBeats(prev.endTime)
+            this.effectiveBeats = TC.toBeats((prev as NoteNode).endTime)
         }
         const effectiveBeats: number = this.effectiveBeats;
         this.jump = new JumpArray<AnyNN>(
@@ -462,7 +464,7 @@ export class NNList {
      */
     getNodeOf(time: TimeT): NoteNode {
         let node = this.getNodeAt(TC.toBeats(time), false)
-                    .previous;
+                    .previous!;
 
 
         let isEqual = node.type !== NodeType.HEAD && TC.eq((node as NoteNode).startTime, time)
@@ -528,8 +530,8 @@ export class NNList {
     }
     
     clearEmptyNodes(updatesJump: boolean = true) {
-        let node = this.head.next;
-        let lastNonEmptyNode: NoteNode = null;
+        let node = this.head.next!;
+        let lastNonEmptyNode: NNOrHead | null = null;
         while (node.type !== NodeType.TAIL) {
             if (node.notes.length === 0) {
                 const next = node.next;
@@ -600,6 +602,7 @@ export class HNList extends NNList {
     insertNoteJumpUpdater(note: NoteNode): () => void {
         const {previous, next} = note
         return () => {
+            if (!previous || !next) return;
             this.jump.updateRange(previous, next)
             this.holdTailJump.updateRange(previous, next)
         }

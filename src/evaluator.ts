@@ -30,7 +30,8 @@ import { type TimeCalculator } from "./bpm";
 export abstract class Evaluator<T extends EventValueESType> {
     abstract eval(event: NonLastStartNode<T>, beats: number): T;
     abstract eval(event: NonLastStartNode<T>, seconds: number, timeCalculator: TimeCalculator): T;
-    abstract dumpFor(node: EventStartNode<T>): EvaluatorDataKPA2<T>;
+    /** 常量求值器没有可导出的数据，允许返回null */
+    abstract dumpFor(node: EventStartNode<T>): EvaluatorDataKPA2<T> | null;
 }
 
 export class ConstEvaluator<T extends EventValueESType> extends Evaluator<T> {
@@ -42,7 +43,7 @@ export class ConstEvaluator<T extends EventValueESType> extends Evaluator<T> {
     eval(event: NonLastStartNode<T>, seconds: number, timeCalculator?: unknown): T {
         return event.value;
     }
-    dumpFor(node: EventStartNode<T>): EvaluatorDataKPA2<T> {
+    dumpFor(node: EventStartNode<T>): EvaluatorDataKPA2<T> | null {
         return null;
     }
 }
@@ -253,7 +254,7 @@ export class MacroEvaluator<T extends EventValueESType> extends Evaluator<T> {
     override eval(startNode: NonLastStartNode<T>, beats: number): T;
     override eval(startNode: NonLastStartNode<T>, seconds: number, timeCalculator: TimeCalculator): T;
     eval(event: NonLastStartNode<T>, beats: number, timeCalculator?: TimeCalculator): T {
-        return this.consumers.get(event)!.eval(event, beats, timeCalculator);
+        return this.consumers.get(event)!.eval(event, beats, timeCalculator!);
     }
     dumpFor(node: EventStartNode<T>): MacroEvaluatorDataKPA2 {
         return {

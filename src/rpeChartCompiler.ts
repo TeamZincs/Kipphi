@@ -52,8 +52,8 @@ export class RPEChartCompiler {
                 || [...line.hnLists].some(([_, l]) => hasNotes(l))
                 || line.eventLayers.length > 0
                   && (["moveX", "moveY", "rotate", "alpha"] as const).some((evType) => {
-                    const seq = line.eventLayers[0][evType];
-                    let node = seq.head.next;
+                    const seq = line.eventLayers[0][evType]!;
+                    let node = seq.head.next!;
                     for (let i = 0; i < 2; i++) {
                         const endNode = node.next;
                         if (node.value !== 0) {
@@ -423,7 +423,7 @@ export class RPEChartCompiler {
     }
     dumpSpeedENS(seq: SpeedENS): EventDataRPELike<number>[] {
         const ret: EventDataRPELike<number>[] = [];
-        let node = seq.head.next;
+        let node = seq.head.next!;
         while (true) {
             const end = node.next;
             if (end.type === NodeType.TAIL) {

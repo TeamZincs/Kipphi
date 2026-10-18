@@ -14,11 +14,14 @@
     // Best practices
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
+    // 暂时关闭：会带来约300处索引/链表访问断言，后续按文件逐步开启
+    "noUncheckedIndexedAccess": false,
 
     // Some stricter flags (disabled by default)
     "strict": true,
-    "strictNullChecks": false,
+    "strictNullChecks": true,
+    // 暂时关闭：字段大多在静态工厂里赋值，用!声明噪音太大，后续逐步开启
+    "strictPropertyInitialization": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
