@@ -1,7 +1,6 @@
 import { NodeType } from "./util";
 import Env from "./env";
 
-// type EndBeats = number;
 /// #declaration:global
 
 type EndNextFn<T extends TwoDirectionNodeLike> =
@@ -51,12 +50,9 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         ) {
         this.header = head;
         this.tailer = tail;
-        // const originalListLength = this.listLength
         const listLength: number = Math.max(Env.JUMPARRAY_MIN_LENGTH, Math.min(originalListLength * 4, Env.JUMPARRAY_MAX_LENGTH));
         const averageBeats: number = Math.pow(2, Math.ceil(Math.log2(effectiveBeats / listLength)));
         const exactLength: number = Math.ceil(effectiveBeats / averageBeats);
-        // console.log(exactLength, listLength, averageBeats, exactLength)
-        // console.log(originalListLength, effectiveBeats, averageBeats, minorBeats, exactLength)
         const jumpArray: (T | T[])[] = new Array(exactLength);
         this.array = jumpArray;
         this.averageBeats = averageBeats;
@@ -98,7 +94,6 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         const {endNextFn, effectiveBeats, resolveLastNode} = this;
         lastNode = resolveLastNode(lastNode);
         const MINOR_PARTS = this.MINOR_SCALE_COUNT;
-        // console.log(firstNode, lastNode)
         /**
          * 
          * @param startTime 
@@ -112,8 +107,6 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
             for (let minorIndex = startsFrom; minorIndex < endsBefore; minorIndex++) {
                 minorArray[minorIndex] = currentNode!;
             }
-            // console.log(jumpIndex, arrayForIn(minorArray, (n) => node2string(n)).join("]["))
-            // console.log("cur:", currentNode)
         }
         const jumpArray = this.array
         const averageBeats: number = this.averageBeats;
@@ -125,7 +118,6 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         let jumpIndex = Math.floor(previousEndTime / averageBeats); // 这里写漏了特此留念
         for (;;) {
             let [endTime, nextNode] = endNextFn(currentNode!);
-            // console.log("----Node:", currentNode, "next:", nextNode, "endTime:", endTime, "previousEndTime:", previousEndTime )
             if (endTime === null) {
                 endTime = effectiveBeats;
             }
@@ -157,7 +149,6 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         }
         const minor = jumpArray[jumpIndex];
         if (Array.isArray(minor)) {
-            // console.log("minor", arrayForIn(minor, (n) => node2string(n)))
             if (!minor[MINOR_PARTS - 1]) {
                 if (!currentNode) {
                     currentNode = this.tailer
@@ -222,13 +213,11 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         if (node.type === NodeType.TAIL) {
             return node;
         }
-        // console.log(this, node, jumpPos, beats)
         if (!node) {
             console.warn("No node:", node, beats)
             throw new Error();
         }
         let next: T | false;
-        // console.log(this)
         while (next = nextFn(node, beats)) {
             node = next;
             if (node.type === NodeType.TAIL) {

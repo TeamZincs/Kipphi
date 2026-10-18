@@ -65,16 +65,6 @@ export class Note {
     visibleTime: number;
     visibleBeats: number;
     yOffset: number;
-    /*
-     * 和打击位置的距离，与yOffset和上下无关，为负不可见
-    positionY: number;
-    endPositionY?: number;
-     */
-    /*
-    next: NNOrTail;
-    previousSibling?: Note;
-    nextSibling: Note;
-    */
 
     parentNode: NoteNode;
     /** 未设置时为undefined */
@@ -148,16 +138,6 @@ export class Note {
         data.endTime = TC.add(data.endTime, offset); // 踩坑
         return new Note(data);
     }
-    /*
-    static connectPosSibling(note1: Note, note2: Note) {
-        note1.posNextSibling = note2;
-        note2.posPreviousSibling = note1;
-    }
-    static connectPos(note1: Note, note2: Note) {
-        note1.posNext = note2;
-        note2.posPrevious = note1;
-    }
-    */
     dumpRPE(timeCalculator: TimeCalculator): NoteDataRPE {
         let visibleTime: number;
         if (this.visibleBeats !== Infinity) {
@@ -272,7 +252,7 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
     }
     add(note: Note) {
         if (!TC.eq(note.startTime, this.startTime)) {
-            console.warn("Wrong addition!")
+            console.warn(`Note startTime (${TC.toBeats(note.startTime)} beats) does not match NoteNode startTime (${TC.toBeats(this.startTime)} beats), added anyway`);
         }
         this.notes.push(note);
         note.parentNode = this
@@ -320,7 +300,7 @@ export class NoteNode extends NoteNodeLike<NodeType.MIDDLE> {
     remove(note: Note) {
         const index = this.notes.indexOf(note);
         if (index === -1) {
-            console.warn("Note not found in this node!")
+            console.warn(`Note not found in NoteNode at ${TC.toBeats(this.startTime)} beats, nothing to remove`);
             return;
         }
         this.notes.splice(index, 1)
@@ -397,7 +377,6 @@ export class NNList {
         this.head = new NoteNodeLike(NodeType.HEAD);
         this.head.parentSeq = this;
         this.currentPoint = this.head;
-        // this.currentBranchPoint = <NoteNode>{startTime: [-1, 0, 1]}
         this.tail = new NoteNodeLike(NodeType.TAIL);
         this.tail.parentSeq = this;
         this.timesWithNotes = 0;
@@ -478,9 +457,7 @@ export class NNList {
             const newNode = new NoteNode(time);
             const next = node.next
             NoteNode.insert(node, newNode, next);
-            // console.log("created:", node2string(newNode))
             this.jump.updateRange(node, next);
-            // console.log("pl", this.parentLine)
 
             if (this.parentLine?.chart) {
                 this.parentLine.chart.nnnList.getNode(time).add(newNode)
@@ -697,11 +674,6 @@ export class NNNList {
     }
     initJump() {
         const originalListLength = this.timesWithNotes || 512;
-        /*
-        if (!this.effectiveBeats) {
-            this.effectiveBeats = TC.toBeats(this.tail.previous.endTime)
-        }
-        */
         const effectiveBeats: number = this.effectiveBeats;
         this.jump = new JumpArray<AnyNNN>(
             this.head,

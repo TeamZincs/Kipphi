@@ -436,11 +436,6 @@ extends ComplexOperation<[NotePropChangeOperation<"type">, NoteRemoveOperation, 
     }
 }
 
-class NoteTreeChangeOperation extends NoteAddOperation {
-
-}
-
-
 // 按照规矩，音符节点的时间不可变，所以不会对音符节点动手。
 // 依旧不用组合的NoteTimeChangeOperation的方式，因为那需要多次更新跳数组。
 /**

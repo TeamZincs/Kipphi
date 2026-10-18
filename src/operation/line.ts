@@ -180,7 +180,6 @@ export class JudgeLineCreateOperation extends Operation {
     // 之前把=写成了:半天不知道咋错了
     constructor(public chart: Chart, public judgeLine: JudgeLine) {
         super();
-        //this.judgeLine = new JudgeLine(chart);
     }
     do(chart: Chart) {
         const id = this.chart.judgeLines.length;
@@ -190,7 +189,6 @@ export class JudgeLineCreateOperation extends Operation {
         this.chart.judgeLineGroups[0].add(this.judgeLine);
         this.judgeLine.extendedLayer.scaleX = chart.createEventNodeSequence(EventType.scaleX, `#${id}.ex.scaleX`);
         this.judgeLine.extendedLayer.scaleY = chart.createEventNodeSequence(EventType.scaleY, `#${id}.ex.scaleY`);
-        debugger
     }
     undo() {
         this.chart.judgeLineGroups[0].remove(this.judgeLine);

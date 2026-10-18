@@ -26,7 +26,6 @@ export interface ChartDataRPE {
 export interface BPMSegmentData {
     bpm: number;
     startTime: TimeT;
-    // endTime?: TimeT;
 }
 export interface MetaData {
     /** RPE版本（int） */

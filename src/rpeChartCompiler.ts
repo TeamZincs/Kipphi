@@ -32,7 +32,6 @@ export class RPEChartCompiler {
     }
 
     compileChart(): ChartDataRPE {
-        // console.time("compileChart")
         const chart = this.chart;
         const judgeLineGroups = chart.judgeLineGroups.map(group => group.name);
         const hasNotes = (nnList: NNList) => {
@@ -118,7 +117,6 @@ export class RPEChartCompiler {
         }
 
 
-        // console.timeEnd("compileChart");
         return {
             BPMList,
             META,
@@ -177,9 +175,6 @@ export class RPEChartCompiler {
         const innerEasing = isSegmented ? easing.easing : easing;
         const start = getValue(snode);
         const end = getValue(easing === fixedEasing ? snode : endNode)
-        // if (isNaN(start) || isNaN(end)) {
-        //     console.log("????")
-        // }
         return {
             bezier: innerEasing instanceof BezierEasing ? 1 : 0,
             bezierPoints: innerEasing instanceof BezierEasing ?

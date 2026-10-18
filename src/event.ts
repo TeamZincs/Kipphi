@@ -372,7 +372,6 @@ export class EventStartNode<VT extends EventValueESType = number> extends EventN
     }
     getFullLocalFloorPos(this: EventStartNode<number>, timeCalculator: TimeCalculator) {
         if (this.next.type === NodeType.TAIL) {
-            console.log(this)
             throw err.CANNOT_GET_FULL_INTEGRAL_OF_FINAL_START_NODE();
         }
         const end = this.next;
@@ -528,8 +527,6 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         const {templateEasingLib: templates} = chart
         data.sort((a, b) => TC.cmp(a.startTime, b.startTime));
         const length = data.length;
-        // const isSpeed = type === EventType.Speed;
-        // console.log(isSpeed)
         const seq = new EventNodeSequence<VT>(type, type === EventType.easing ? TC.toBeats(data[length - 1].endTime) : chart.effectiveBeats);
         let listLength = length;
         let lastEnd: EventEndNode<VT> | EventNodeLike<NodeType.HEAD, VT> = seq.head;
@@ -621,8 +618,6 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
     )
     {
         const length = data.length;
-        // const isSpeed = type === EventType.Speed;
-        // console.log(isSpeed)
         const seq = new EventNodeSequence<VT>(
             type,
             type === EventType.easing
@@ -749,7 +744,6 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             originalListLength,
             effectiveBeats,
             (node) => {
-                // console.log(node)
                 if (node.type === NodeType.TAIL) {
                     return [null, null]
                 }
@@ -777,10 +771,6 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
             (node: AnyEN<VT>) => {
                 return node.next && node.next.type === NodeType.TAIL ? node.next : node;
             }
-            /*(node: EventStartNode) => {
-                const prev = node.previous;
-                return prev.type === NodeType.HEAD ? node : prev.previous;
-            }*/
             )
     }
     updateJump(from: ENOrHead<VT>, to: ENOrTail<VT>) {
@@ -822,7 +812,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         const node: EventStartNode<number> = this.getNodeAt(beats);
         const value = node.getLocalFloorPos(beats, timeCalculator) + node.floorPosition;
         if (isNaN(value)) {
-            debugger;
+            throw new Error(`FloorPosition is NaN at beats ${beats} in sequence '${this.id}'`);
         }
         return value
     }
@@ -900,12 +890,6 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
         }
         return arr;
     }
-//    connectLine(consumer: JudgeLine) {
-//        this.consumerLines.add(consumer);
-//    }
-//    disconnectLine(consumer: JudgeLine) {
-//        this.consumerLines.delete(consumer);
-//    }
     /**
      * 将多个事件层上的数值性事件节点序列合为一个
      * 

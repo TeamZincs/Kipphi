@@ -172,7 +172,6 @@ export class BPMSequence extends EventNodeSequence {
      * 缓存每个节点的秒数发生在这里。
      */
     updateSecondJump(): void {
-        console.log(111);
         let integral = 0;
         // 计算积分并缓存到BPMNode
         let node: BPMStartNode = this.head.next!;
@@ -361,7 +360,6 @@ export class TimeCalculator {
      */
     secondsToBeats(seconds: number) {
         const node = this.bpmSequence.getNodeBySeconds(seconds);
-        // console.log("node:", node)
         const beats = (seconds - node.cachedStartIntegral!) * node.value / 60;
         return TC.toBeats(node.time) + beats
     }

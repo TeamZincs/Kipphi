@@ -302,7 +302,6 @@ export class EventNodeTimeChangeOperation extends Operation {
         this.newPrevious = mayBeThere === this.startNode ? (<EventEndNode>this.startNode.previous).previous : mayBeThere
         this.value = val;
         this.originalValue = node.time
-        console.log("操作：", this)
     }
     do(chart: Chart) { // 这里其实还要设计重新选址的问题
         this.startNode.time = this.endNode.time = this.value;

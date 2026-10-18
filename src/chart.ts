@@ -907,11 +907,6 @@ export class Chart {
         }
         return;
     }
-    /* 暂时不用此方法，因为谱面播放器里面还是用反解法弄的
-    updateNNListsFromENS(speedENS: SpeedENS) {
-        
-    }
-    */
     checkErrors() {
         KPAError.flush();
         for (const [_, seq] of this.sequenceMap) {

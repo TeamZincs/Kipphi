@@ -76,11 +76,9 @@ export class JudgeLine {
     name: string = "Untitled";
     readonly chart: Chart;
     constructor(chart: Chart) {
-        //this.notes = [];
         this.chart = chart;
         this.texture = "line.png";
         this.cover = true;
-        // this.noteSpeeds = {};
     }
     static fromRPEJSON(chart: Chart, id: number, data: JudgeLineDataRPE, templates: TemplateEasingLib, timeCalculator: TimeCalculator) {
         const line = new JudgeLine(chart)
@@ -114,9 +112,6 @@ export class JudgeLine {
                 return TC.gt(n1.endTime, n2.endTime) ? -1 : 1 // 这里曾经排反了（
             })
             const len = notes.length;
-            // let lastTime: TimeT = [-1, 0, 1];
-            // let comboInfoEntity: ComboInfoEntity;
-                    
             for (let i = 0; i < len; i++) {
                 const note: Note = new Note(notes[i]);
                 note.computeVisibleBeats(timeCalculator);
@@ -401,14 +396,6 @@ export class JudgeLine {
             return this.eventLayers[index];
         }
     }
-    /*
-    应该是古老代码，现在不用了，暂时不移除
-    updateSpeedIntegralFrom(beats: number, timeCalculator: TimeCalculator) {
-        for (const eventLayer of this.eventLayers) {
-            eventLayer?.speed?.updateNodesIntegralFrom(beats, timeCalculator);
-        }
-    }
-    //*/
     /**
      * 判定线当前所在的FloorPosition
      * 
@@ -717,7 +704,6 @@ export class JudgeLine {
             }
             current += layer.speed.getFloorPositionAt(beats, timeCalculator);
         }
-        // console.log("integral", current)
         return current;
     }//*/
     /**
@@ -817,17 +803,6 @@ export class JudgeLine {
         }
     }
 
-    /*
-    暂时不用此方法
-    updateNNListFloorPositions() {
-        for (const lists of [this.nnLists, this.hnLists]) {
-            for (const list of lists) {
-
-            }
-        }
-    }
-        */
-    
     updateEffectiveBeats(EB: number) {
         for (let i = 0; i < this.eventLayers.length; i++) {
             const layer = this.eventLayers[i];
