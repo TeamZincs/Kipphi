@@ -110,7 +110,7 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
             const startsFrom: number = startTime < currentJumpBeats ? 0 : Math.ceil((startTime - currentJumpBeats) / minorBeats)
             const endsBefore: number = endTime > currentJumpBeats + averageBeats ? MINOR_PARTS : Math.ceil((endTime - currentJumpBeats) / minorBeats)
             for (let minorIndex = startsFrom; minorIndex < endsBefore; minorIndex++) {
-                minorArray[minorIndex] = currentNode;
+                minorArray[minorIndex] = currentNode!;
             }
             // console.log(jumpIndex, arrayForIn(minorArray, (n) => node2string(n)).join("]["))
             // console.log("cur:", currentNode)
@@ -118,9 +118,11 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
         const jumpArray = this.array
         const averageBeats: number = this.averageBeats;
         const minorBeats: number = averageBeats / MINOR_PARTS;
-        let [previousEndTime, currentNode] = endNextFn(firstNode);
-        // 首个节点一定不是尾部，所以previousEndTime不为null
-        let jumpIndex = Math.floor(previousEndTime! / averageBeats); // 这里写漏了特此留念
+        const [firstEndTime, startNode] = endNextFn(firstNode);
+        // 首个节点一定不是尾部，所以firstEndTime不为null
+        let previousEndTime: number = firstEndTime!;
+        let currentNode: T | null = startNode;
+        let jumpIndex = Math.floor(previousEndTime / averageBeats); // 这里写漏了特此留念
         for (;;) {
             let [endTime, nextNode] = endNextFn(currentNode!);
             // console.log("----Node:", currentNode, "next:", nextNode, "endTime:", endTime, "previousEndTime:", previousEndTime )
@@ -133,7 +135,7 @@ export class JumpArray<T extends TwoDirectionNodeLike> {
                     if (Array.isArray(jumpArray[jumpIndex])) {
                         fillMinor(previousEndTime, endTime)
                     } else {
-                        jumpArray[jumpIndex] = currentNode;
+                        jumpArray[jumpIndex] = currentNode!;
                     }
                     jumpIndex++;
                 }
