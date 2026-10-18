@@ -8,7 +8,8 @@ import { JumpArray } from "./jumparray";
 import { type TimeCalculator } from "./bpm";
 import TC from "./time";
 import { hex2rgb, NodeType, rgb2hex } from "./util";
-import { Environment, MacroLib, NoteMacro } from ".";
+import Environment from "./env";
+import { NoteMacro } from "./macro";
 
 /// #declaration:global
 
