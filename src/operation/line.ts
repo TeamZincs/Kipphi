@@ -176,7 +176,7 @@ export class JudgeLineENSChangeOperation extends Operation {
     originalValue: EventNodeSequence;
     constructor(public judgeLine: JudgeLine, public layerId: number, public typeStr: BasicEventName, public value: EventNodeSequence) {
         super();
-        this.originalValue = judgeLine.eventLayers[layerId][typeStr];
+        this.originalValue = judgeLine.eventLayers[layerId][typeStr]!;
     }
     do() {
         this.judgeLine.eventLayers[this.layerId][this.typeStr] = this.value;
@@ -200,7 +200,8 @@ export class JudgeLineExtendENSChangeOperation<T extends ExtendedEventTypeName> 
         this.originalValue = judgeLine.extendedLayer[typeStr satisfies keyof ExtendedLayer] as ENSOfTypeName<T>;
     }
     do() {
-        this.judgeLine.extendedLayer[this.typeStr] = this.value
+        // ExtendedLayer的成员是可选的，用undefined表示置空
+        this.judgeLine.extendedLayer[this.typeStr] = this.value ?? undefined
     }
     undo() {
         this.judgeLine.extendedLayer[this.typeStr] = this.originalValue
@@ -223,11 +224,13 @@ export class UIAttachOperation extends Operation {
 
 export class UIDetachOperation extends Operation {
     updatesEditor = true;
-    judgeLine: JudgeLine;
+    // ineffective时不会赋值，但这类操作会被跳过
+    judgeLine!: JudgeLine;
     constructor(public chart: Chart, public ui: UIName) {
         super();
-        if (chart[`${ui}Attach` satisfies keyof Chart]) {
-            this.judgeLine = chart[`${ui}Attach` satisfies keyof Chart];
+        const attached = chart[`${ui}Attach` satisfies keyof Chart];
+        if (attached) {
+            this.judgeLine = attached;
         } else {
             this.ineffective = true;
         }
@@ -280,14 +283,14 @@ export class JudgeLineIdChangeOperation extends ComplexOperation<EventNodeSequen
             super(
                 ...judgeLine.eventLayers
                 .flatMap((layer) => [layer.alpha, layer.moveX, layer.moveY, layer.rotate])
-                .filter(seq => seq && seq.id.match(/^#\d+\./))
+                .filter((seq): seq is EventNodeSequence => !!seq && /^#\d+\./.test(seq.id))
                 .map(seq => new EventNodeSequenceRenameOperation(
                     seq,
                     `#${value}.${seq.id.substring(seq.id.indexOf(".") + 1)}`
                 )),
                 ...[extendedLayer.scaleX, extendedLayer.scaleY, extendedLayer.text, extendedLayer.color,
                     judgeLine.speedSequence]
-                .filter(seq => seq && seq.id.match(/^#\d+\./))
+                .filter((seq): seq is EventNodeSequence => !!seq && /^#\d+\./.test(seq.id))
                 .map(seq => new EventNodeSequenceRenameOperation(
                     seq,
                     `#${value}.${seq.id.substring(seq.id.indexOf(".") + 1)}`

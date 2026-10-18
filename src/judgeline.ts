@@ -47,7 +47,8 @@ export class JudgeLine {
     extendedLayer: ExtendedLayer = {};
     // notePosition: Float64Array;
     // noteSpeeds: NoteSpeeds;
-    father: JudgeLine;
+    /** 父判定线，为null表示游离 */
+    father: JudgeLine | null;
     children: Set<JudgeLine> = new Set();
 
 
@@ -841,7 +842,7 @@ export class JudgeLine {
             }
         }
     }
-    static checkinterdependency(judgeLine: JudgeLine, toBeFather: JudgeLine) { 
+    static checkinterdependency(judgeLine: JudgeLine, toBeFather: JudgeLine | null) { 
         const descendantsAndSelf = new Set<JudgeLine>();
         const add = (line: JudgeLine) => {
             descendantsAndSelf.add(line);
@@ -850,7 +851,7 @@ export class JudgeLine {
             }
         }
         add(judgeLine);
-        return descendantsAndSelf.has(toBeFather);
+        return !!toBeFather && descendantsAndSelf.has(toBeFather);
     }
 }
 /// #enddeclaration

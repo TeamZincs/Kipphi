@@ -253,11 +253,11 @@ class OperableEventNode<T extends EventValueESType> extends Operable<EventNode<T
      * 
      * 注意如果是final节点，会返回TAIL。
      */
-    get end(): OperableEventNode<T> | EventNodeLike<NodeType.TAIL, T> {
+    get end(): OperableEventNode<T> | EventNodeLike<NodeType.TAIL, T> | null {
         return this.isEnd ? this : this.next;
     }
     get isFinal() {
-        return this.isStart && this.target.next.type === NodeType.TAIL;
+        return this.isStart && this.target.next?.type === NodeType.TAIL;
     }
     private _time: TimeT;
     get time() {
@@ -290,12 +290,14 @@ class OperableEventNode<T extends EventValueESType> extends Operable<EventNode<T
         this._evaluator = e;
         this.buffer.push(EventNodeEvaluatorChangeOperation.lazy(this.target as any, e));
     }
-    get previous(): OperableEventNode<T> | EventNodeLike<NodeType.HEAD, T> {
+    get previous(): OperableEventNode<T> | EventNodeLike<NodeType.HEAD, T> | null {
         const prev = this.target.previous;
+        if (!prev) return null;
         return prev.type === NodeType.HEAD ? prev : new OperableEventNode(prev, this.buffer, this.chart);
     }
-    get next(): OperableEventNode<T> | EventNodeLike<NodeType.TAIL, T> {
+    get next(): OperableEventNode<T> | EventNodeLike<NodeType.TAIL, T> | null {
         const next = this.target.next;
+        if (!next) return null;
         return next.type === NodeType.TAIL ? next : new OperableEventNode(next, this.buffer, this.chart);
     }
     get parentSeq() {
@@ -320,7 +322,7 @@ class OperableEventNodeSequenceSlice<T extends EventValueESType> extends Operabl
             }
             node = node.next.next;
         } else {
-            node = this.target.head.next;
+            node = this.target.head.next!;
         }
         while (true) {
             const end = node.next;
@@ -362,7 +364,8 @@ class OperableEventNodeSequenceSlice<T extends EventValueESType> extends Operabl
         const valueType = (this.type === EventType.color ? EventValueType.color
                             : this.type === EventType.text  ? EventValueType.text
                             : EventValueType.numeric) as EventValueTypeOfType<T>;
-        startNode.evaluator = uEvaluatorToEvaluator(evaluator, valueType, this.chart, interpreteAs ?? InterpreteAs.str) as any;
+        // 未指定求值器时默认线性缓动
+        startNode.evaluator = uEvaluatorToEvaluator(evaluator ?? 1, valueType, this.chart, interpreteAs ?? InterpreteAs.str) as any;
         EventNode.connect(startNode, endNode);
         this.buffer.push(EventNodePairAutoInsertOperation.lazy<typeof EventNodePairAutoInsertOperation<T>>(startNode, this.target));
         return this;
@@ -515,9 +518,9 @@ class OperableJudgeLine extends Operable<JudgeLine> {
             above: params.above ?? 1,
             visibleTime: params.visibleTime ?? 99999.0,
             absoluteYOffset: params.absoluteYOffset ?? 0,
-            yOffset: params.yOffset,
-            tintHitEffects: params.tintHitEffects ?? null,
-            tint: params.tint ?? null,
+            yOffset: params.yOffset ?? 0,
+            tintHitEffects: params.tintHitEffects,
+            tint: params.tint,
             // zIndex: params.zIndex ?? null,
             // zIndexHitEffects: params.zIndexHitEffects ?? null,
             visibleBeats: params.visibleBeats ?? 0

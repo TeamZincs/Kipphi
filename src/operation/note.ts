@@ -95,7 +95,7 @@ export class NoteRemoveOperation extends Operation {
         if (needsUpdate) {
             const endBeats = TC.toBeats(note.endTime);
             const tailJump = (noteNode.parentSeq as HNList).holdTailJump;
-            const updateFrom = tailJump.getNodeAt(endBeats).previous;
+            const updateFrom = tailJump.getNodeAt(endBeats).previous!;
             noteNode.add(note)
             tailJump.updateRange(updateFrom, noteNode.next);
         } else {
@@ -219,6 +219,7 @@ export class NoteTimeChangeOperation extends ComplexOperation<[
                 if (note.type !== NoteType.hold) { // 非hold，endTime跟随startTime
                     return new NotePropChangeOperation(note, "endTime", noteNode.startTime)
                 }
+                return null;
             })
         );
         this.updatesEditor = true;
@@ -241,11 +242,13 @@ export class NoteTimeChangeOperation extends ComplexOperation<[
             this.subOperations[1].do()
             this.subOperations[2].noteNode = operation.subOperations[2].noteNode
             this.subOperations[2].do()
-            if (this.subOperations[3].operation) {
-                this.subOperations[3].operation.value = operation.subOperations[3].operation.value;
-                this.subOperations[3].operation.do();
+            const changed = this.subOperations[3];
+            const source = operation.subOperations[3];
+            if (changed.operation && source.operation) {
+                changed.operation.value = source.operation.value;
+                changed.operation.do();
             } else {
-                this.subOperations[3] = operation.subOperations[3];
+                this.subOperations[3] = source;
                 this.subOperations[3].do();
             }
             return true;

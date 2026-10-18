@@ -53,13 +53,14 @@ export class NeedsReflowEvent extends OpEvent {
 }
 
 export class OperationEvent extends OpEvent {
-    constructor(t: "do" | "undo" | "redo" | "error" | "needsupdate" | "beforedo", public operation: Operation) {
+    /** 操作尚未构造出来时（如懒操作构造抛错）为undefined */
+    constructor(t: "do" | "undo" | "redo" | "error" | "needsupdate" | "beforedo", public operation: Operation | undefined) {
         super(t);
     }
 }
 
 export class OperationErrorEvent extends OperationEvent {
-    constructor(operation: Operation, public error: Error) {
+    constructor(operation: Operation | undefined, public error: Error) {
         super("error", operation);
     }
 }
@@ -163,7 +164,8 @@ export class OperationList extends EventTarget {
         try {
             op = returnOperation();
         } catch (e) {
-            this.dispatchEvent(new OperationErrorEvent(op, e as Error))
+            // 操作没能构造出来，此时op还是undefined
+            this.dispatchEvent(new OperationErrorEvent(undefined, e as Error))
             return
         }
         this.do(op);
@@ -236,10 +238,11 @@ export class LazyOperation<C extends new (...args: any[]) => any> extends Operat
     }
     do(chart: Chart) {
         this.operation = new this.operationClass(...this.args);
-        this.operation.do(chart);
+        this.operation!.do(chart);
     }
     undo(chart: Chart) {
-        this.operation.undo(chart);
+        // do之前operation尚未实例化
+        this.operation?.undo(chart);
     }
 }
 
@@ -251,7 +254,7 @@ export class LazyOperation<C extends new (...args: any[]) => any> extends Operat
  * 
  * 注意这个操作不懒，会在构造时就实例化子操作
  */
-export class UnionOperation<T extends Operation> extends Operation {
+export class UnionOperation<T extends Operation | null> extends Operation {
     operation: T;
     constructor(matcher: () => T) {
         super();
@@ -262,10 +265,12 @@ export class UnionOperation<T extends Operation> extends Operation {
     }
     // 这样子写不够严密，如果要继承这个类，并且子操作需要谱面，就要重写这个方法的签名
     do(chart?: Chart) {
-        this.operation?.do(chart);
+        // 需要谱面的子操作会重写本方法并收窄参数类型
+        this.operation?.do(chart!);
     }
     undo(chart?: Chart) {
-        this.operation?.undo(chart);
+        // 同上
+        this.operation?.undo(chart!);
     }
 }
 
@@ -289,7 +294,7 @@ export class ComplexOperation<T extends Operation[]> extends Operation {
             if (op.ineffective) {
                 continue;
             }
-            op.do(chart)
+            op.do(chart!)
         }
     }
     undo(chart?: Chart) {
@@ -297,7 +302,7 @@ export class ComplexOperation<T extends Operation[]> extends Operation {
         for (let i = length - 1; i >= 0; i--) {
             const op = this.subOperations[i]
             if (op.ineffective) { continue; }
-            op.undo(chart)
+            op.undo(chart!)
         }
     }
 }

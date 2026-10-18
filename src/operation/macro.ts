@@ -21,7 +21,7 @@ export class MacroTimeReevaluateOperation extends ComplexOperation<EventNodeMacr
 
 export class EventNodeMacroTimeReevaluateOperation extends EventNodeTimeChangeOperation {
     constructor(node: EventStartNode<any>, chart: Chart) {
-        let time: TimeT = node.macroTime?.eval?.(node, chart);
+        let time: TimeT | undefined = node.macroTime?.eval?.(node, chart);
         if (!(Array.isArray(time) && time.length === 3)) {
             time = node.time;
         }
@@ -30,7 +30,8 @@ export class EventNodeMacroTimeReevaluateOperation extends EventNodeTimeChangeOp
 }
 
 export class MacroTimeAssignOperation extends Operation {
-    public originalMacroTime: EventMacroTime;
+    /** 原本可能没有绑定宏 */
+    public originalMacroTime: EventMacroTime | null;
     private timeChangeOperation: EventNodeMacroTimeReevaluateOperation;
     constructor(public macroTime: EventMacroTime, public node: EventStartNode<any>) {
         super();
@@ -49,7 +50,8 @@ export class MacroTimeAssignOperation extends Operation {
 }
 
 export class MacroTimeDeassginOperation extends Operation {
-    public originalMacroTime: EventMacroTime;
+    /** 原本可能没有绑定宏 */
+    public originalMacroTime: EventMacroTime | null;
     constructor(public node: EventStartNode<any>) {
         super();
         this.originalMacroTime = node.macroTime;
@@ -106,7 +108,8 @@ export class MacroValueDeassginOperation extends Operation {
         this.originalMacroValue = node.macro;
     }
     do(chart: Chart) {
-        this.node.macro = null;
+        // 置null表示已解绑，使用处都走了 `macro?.` 之类的守卫
+        this.node.macro = null as unknown as EventMacroValue;
     }
     undo(_chart: Chart) {
         this.node.macro = this.originalMacroValue;
@@ -181,7 +184,8 @@ export class NoteMacroDeassginOperation extends Operation {
         this.originalMacro = note.macro;
     }
     do(chart: Chart) {
-        this.note.macro = null;
+        // 置null表示已解绑，使用处都走了 `macro?.` 之类的守卫
+        this.note.macro = null as unknown as NoteMacro;
     }
     undo(_chart: Chart) {
         this.note.macro = this.originalMacro;

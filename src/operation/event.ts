@@ -338,8 +338,8 @@ export class EventSubstituteOperation<VT extends EventValueESType> extends Compl
             throw err.MUST_INTERPOLATE_TEMPLATE_EASING();
         }
         const srcSeq = easing.eventNodeSequence;
-        const srcStartTime = srcSeq.head.next.time;
-        const srcEndTime = srcSeq.tail.previous.time;
+        const srcStartTime = srcSeq.head.next!.time;
+        const srcEndTime = srcSeq.tail.previous!.time;
         const srcTimeDelta = TC.vsub(srcEndTime, srcStartTime);
         const startValue = node.value;
         const endValue = node.next.value;
@@ -350,7 +350,7 @@ export class EventSubstituteOperation<VT extends EventValueESType> extends Compl
         // startTime + (srcTime - srcStartTime) / srcTimeDelta * timeDelta
         const convertTime = (srcTime: TimeT) => TC.vadd(startTime, TC.vmul(timeDelta, TC.div(TC.vsub(srcTime, srcStartTime), srcTimeDelta)));
         const inserts = [];
-        let currentNode = srcSeq.head.next.next as EventEndNode;
+        let currentNode = srcSeq.head.next!.next as EventEndNode;
         let lastPos: EventStartNode<VT> = node;
         while (true) {
             const startNode = currentNode.next;
@@ -372,7 +372,7 @@ export class EventSubstituteOperation<VT extends EventValueESType> extends Compl
 
             currentNode = next;
         }
-        const evaluatorChange = new EventNodeEvaluatorChangeOperation(node, evaluator.deriveWithEasing((srcSeq.head.next.evaluator as NumericEasedEvaluator).easing));
+        const evaluatorChange = new EventNodeEvaluatorChangeOperation(node, evaluator.deriveWithEasing((srcSeq.head.next!.evaluator as NumericEasedEvaluator).easing));
         const valueChange = new EventNodeValueChangeOperation(node.next, convert(currentNode.value));
         super(...inserts, evaluatorChange, valueChange);
     }
@@ -414,7 +414,7 @@ export class EncapsuleOperation extends ComplexOperation<[MultiNodeDeleteOperati
         // @ts-expect-error 这里序列类型确定，为easing，不需要传入谱面
         new MultiNodeAddOperation(nodeArray, sequence).do();
         // 上面这个操作不能顶替原来的第一个startnode，所以手动来一遍
-        const first = sequence.head.next;
+        const first = sequence.head.next!;
         first.evaluator = nodeArray[0].evaluator;
         first.value = nodeArray[0].value;
 
