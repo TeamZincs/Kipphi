@@ -3,6 +3,7 @@ import { EventMacroTime, EventMacroValue, NoteMacro} from "../macro"
 import { EventStartNode } from "../event";
 import { EventValueESType, TimeT } from "../chartTypes";
 import { Chart } from "../chart";
+import { ExpressionEvaluator, MacroEvaluator } from "../evaluator";
 import { EventNodeTimeChangeOperation, EventNodeValueChangeOperation } from "./event";
 import { Note, notePropTypes } from "../note";
 import { HoldEndTimeChangeOperation, NotePropChangeOperation, NotePropName, NoteSpeedChangeOperation, NoteTimeChangeOperation, NoteYOffsetChangeOperation } from "./note";
@@ -12,7 +13,7 @@ export class MacroTimeReevaluateOperation extends ComplexOperation<EventNodeMacr
     constructor(macroTime: EventMacroTime, chart: Chart) {
         const ops: EventNodeMacroTimeReevaluateOperation[] = [];
         for (const [node, _] of macroTime.consumers) {
-            ops.push(new EventNodeMacroTimeReevaluateOperation(node, chart));
+            ops.push(new EventNodeMacroTimeReevaluateOperation(node as EventStartNode<any>, chart));
         }
         super(...ops);
     }
@@ -39,10 +40,11 @@ export class MacroTimeAssignOperation extends Operation {
         this.node.macroTime = this.macroTime;
         // 宏是可以有随机性的，理论上重做指令可能会产生不同结果
         this.timeChangeOperation = new EventNodeMacroTimeReevaluateOperation(this.node, chart)
+        this.timeChangeOperation.do(chart);
     }
     undo(_chart: Chart) {
         this.node.macroTime = this.originalMacroTime;
-        this.timeChangeOperation.undo();
+        this.timeChangeOperation.undo(_chart);
     }
 }
 
@@ -64,7 +66,7 @@ export class MacroValueReevaluateOperation extends ComplexOperation<EventNodeMac
     constructor(macroValue: EventMacroValue, chart: Chart) {
         const ops: EventNodeMacroValueReevaluateOperation[] = [];
         for (const [node, _] of macroValue.consumers) {
-            ops.push(new EventNodeMacroValueReevaluateOperation(node, chart));
+            ops.push(new EventNodeMacroValueReevaluateOperation(node as EventStartNode<any>, chart));
         }
         super(...ops);
     }
@@ -89,6 +91,7 @@ export class MacroValueAssignOperation extends Operation {
         this.node.macro = this.macroValue;
         // 宏是可以有随机性的，理论上重做指令可能会产生不同结果
         this.valueChangeOperation = new EventNodeMacroValueReevaluateOperation(this.node, chart)
+        this.valueChangeOperation.do(chart);
     }
     undo(chart: Chart) {
         this.node.macro = this.originalMacroValue;
@@ -163,6 +166,7 @@ export class NoteMacroAssignOperation extends Operation {
         this.note.macro = this.macro;
         // 宏是可以有随机性的，理论上重做指令可能会产生不同结果
         this.changeOperation = new NoteNoteMacroReevaluateOperation(this.note, chart);
+        this.changeOperation.do(chart);
     }
     undo(chart: Chart) {
         this.note.macro = this.originalMacro;
@@ -181,6 +185,63 @@ export class NoteMacroDeassginOperation extends Operation {
     }
     undo(_chart: Chart) {
         this.note.macro = this.originalMacro;
+    }
+}
+
+/**
+ * 修改宏的表达式，可撤销
+ *
+ * 宏求值器的表达式字段为expression，其余宏为macro。
+ */
+export class MacroExpressionChangeOperation extends Operation {
+    public originalExpression: string;
+    constructor(
+        public macro: NoteMacro | EventMacroTime | EventMacroValue | MacroEvaluator<any>,
+        public expression: string
+    ) {
+        super();
+        this.originalExpression = this.read();
+    }
+    private read(): string {
+        return this.macro instanceof MacroEvaluator ? this.macro.expression : this.macro.macro;
+    }
+    private write(expression: string) {
+        if (this.macro instanceof MacroEvaluator) {
+            this.macro.expression = expression;
+        } else {
+            this.macro.macro = expression;
+        }
+    }
+    do(_chart: Chart) {
+        this.write(this.expression);
+    }
+    undo(_chart: Chart) {
+        this.write(this.originalExpression);
+    }
+}
+
+/**
+ * 重新编译宏求值器在所有绑定节点上的表达式，可撤销
+ */
+export class MacroEvaluatorReevaluateOperation extends Operation {
+    private originals: [EventStartNode<any>, ExpressionEvaluator<any>][];
+    constructor(public evaluator: MacroEvaluator<any>, public chart: Chart) {
+        super();
+        this.updatesEditor = true;
+        this.originals = [];
+        evaluator.consumers.forEach((expressionEvaluator, node) => {
+            this.originals.push([node, expressionEvaluator]);
+        });
+    }
+    do(_chart: Chart) {
+        for (const [node] of this.originals) {
+            this.evaluator.assignTo(node, this.chart);
+        }
+    }
+    undo(_chart: Chart) {
+        for (const [node, expressionEvaluator] of this.originals) {
+            this.evaluator.consumers.set(node, expressionEvaluator);
+        }
     }
 }
 
