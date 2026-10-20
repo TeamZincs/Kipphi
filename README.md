@@ -677,13 +677,14 @@ Environment, err, KPAError, VERSION, SCHEMA
 
 ```bash
 bun install
-bun run build      # 构建（bun run build/build）
-bun run docs       # 生成 API 文档到 docs/（typedoc，配置见 typedoc.json）
 bun test           # 运行测试
+bun run docs       # 生成 API 文档到 docs/（typedoc，配置见 typedoc.json）
 bunx eslint src    # 静态检查
 ```
 
 - 源码在 `src/`，入口 `src/index.ts`
+- **没有构建步骤**：npm 包直接发布 `src/` 源码（`package.json` 的 `main` / `exports` 都指向 `src/index.ts`，`files` 只带 `src`），下游用 bun / vite 等自带 TS 打包的运行时直接消费
+- 因此仓库里不需要 `dist/`、`build/`，两者都在 `.gitignore` 里
 - 类型检查配置在 `src/tsconfig.json`（已开启 `strict` 与 `strictNullChecks`）
 - 生成的 API 文档在 `docs/`，**不入库**：push 到主分支后由 `.github/workflows/docs.yml` 构建并部署到 GitHub Pages
 - JSON Schema：`src/chartType.schema.json`（KPA1）、`src/chartType2.schema.json`（KPA2）

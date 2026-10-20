@@ -1,10 +1,24 @@
 {
-  "private": true,
-  "workspaces": [
-    "packages/*"
+  "name": "kipphi",
+  "description": "Parse your Phigros Chart(.rpe.json or .kpa.json) into an editor-friendly format.",
+  "version": "2.2.0-beta.1",
+  "author": "Team Zincs (https://github.com/TeamZincs)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TeamZincs/kipphi.git"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
   ],
   "scripts": {
-    "build": "bun run build/build",
+    "test": "bun test",
     "docs": "typedoc",
     "release": "py ignore/release.py"
   },

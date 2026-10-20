@@ -31,11 +31,7 @@ jobs:
       - name: 安装依赖
         run: bun install
 
-      # typedoc 的入口是 packages/package-kipphi/index.ts，
-      # 这个文件（连同 index.d.ts）是 build 生成的，所以要先跑一遍
-      - name: 生成包源码与声明
-        run: bun run build
-
+      # typedoc 直接读 src/index.ts，不需要先构建
       - name: 构建 API 文档
         run: bun run docs
 

@@ -1,7 +1,7 @@
 {
     "$schema": "https://typedoc.org/schema.json",
-    "entryPoints": ["packages/package-kipphi/index.ts"],
+    "entryPoints": ["src/index.ts"],
+    "tsconfig": "src/tsconfig.json",
     "out": "docs",
-    "readme": "none",
-    "tsconfig": "packages/package-kipphi/tsconfig.json"
+    "readme": "none"
 }

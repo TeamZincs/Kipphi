@@ -35,14 +35,17 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 test
 
-packages/*/*
-!packages/*/package.json
+# 发布产物（直接从 src 发 npm 包，不再构建）
+packages
 
 ast*
 
 ignore
 
 .vscode
+
+# build 脚本与产物
+build
 
 # typedoc 产物（交给 CI 构建并部署到 Pages）
 docs
