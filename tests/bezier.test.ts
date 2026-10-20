@@ -58,8 +58,9 @@ it("supports text events", () => {
     expect(evaluator2.eval(node, 0.52)).toBe("5");
     expect(evaluator2.eval(node, 0.67)).toBe("6"); // floor
     const evaluator3 = new TextEasedEvaluator(linearEasing, InterpreteAs.float);
-    expect(evaluator3.eval(node, 0.52)).toBe("5.2");
-    expect(evaluator3.eval(node, 0.67)).toBe("6.7");
+    // 浮点数按千分位四舍五入（见 cee386c）
+    expect(evaluator3.eval(node, 0.52)).toBe("5.200");
+    expect(evaluator3.eval(node, 0.67)).toBe("6.700");
 });
 
 it("supports getting value by seconds or beats", () => {
