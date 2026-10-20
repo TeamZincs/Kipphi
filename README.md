@@ -678,14 +678,14 @@ Environment, err, KPAError, VERSION, SCHEMA
 ```bash
 bun install
 bun run build      # 构建（bun run build/build）
+bun run docs       # 生成 API 文档到 docs/（typedoc，配置见 typedoc.json）
 bun test           # 运行测试
 bunx eslint src    # 静态检查
-bunx typedoc       # 生成 API 文档到 docs/（需先配置入口点）
 ```
 
 - 源码在 `src/`，入口 `src/index.ts`
 - 类型检查配置在 `src/tsconfig.json`（已开启 `strict` 与 `strictNullChecks`）
-- 生成的 API 文档在 `docs/`
+- 生成的 API 文档在 `docs/`，**不入库**：push 到主分支后由 `.github/workflows/docs.yml` 构建并部署到 GitHub Pages
 - JSON Schema：`src/chartType.schema.json`（KPA1）、`src/chartType2.schema.json`（KPA2）
 
 ### 目录结构
@@ -699,6 +699,7 @@ src/
 ├── note.ts             音符与音符树
 ├── bpm.ts              BPM 与拍秒换算
 ├── video.ts            视频序列（2.2.0）
+├── effect.ts           Phira 特效序列与着色器参数（2.3.0）
 ├── easing.ts           缓动
 ├── evaluator.ts        求值器
 ├── macro.ts            宏
@@ -718,6 +719,7 @@ src/
     ├── line.ts         判定线操作
     ├── chart.ts        谱面属性操作
     ├── macro.ts        宏操作
+    ├── effect.ts       特效操作
     └── easy.ts         Op.ez 高层封装
 ```
 

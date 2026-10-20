@@ -43,3 +43,9 @@ ast*
 ignore
 
 .vscode
+
+# typedoc 产物（交给 CI 构建并部署到 Pages）
+docs
+
+# 编辑器工作区
+*.code-workspace

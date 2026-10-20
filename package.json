@@ -5,6 +5,7 @@
   ],
   "scripts": {
     "build": "bun run build/build",
+    "docs": "typedoc",
     "release": "py ignore/release.py"
   },
   "devDependencies": {
