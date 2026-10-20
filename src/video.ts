@@ -126,6 +126,15 @@ export class VideoEventNodeSequence extends EventNodeSequence<string> {
         super(EventType.video, effectiveBeats);
     }
     /**
+     * 取指定拍数处的视频起始节点
+     *
+     * 收窄返回值类型，这样 `chart.video.name.getNodeAt(beats).scale` 不用再自己断言。
+     * @since 2.2.1
+     */
+    override getNodeAt(beats: number, usePrev: boolean = false): VideoEventStartNode {
+        return super.getNodeAt(beats, usePrev) as VideoEventStartNode;
+    }
+    /**
      * 创建一个仅含一个空路径节点的视频序列
      */
     static newVideoSeq(effectiveBeats: number): VideoEventNodeSequence {
