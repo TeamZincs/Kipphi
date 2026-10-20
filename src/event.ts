@@ -1,7 +1,7 @@
 import type { Chart } from "./chart";
 import { EventType, type TimeT, type EventDataKPA, type RGB, type EventDataRPELike, InterpreteAs, type ValueTypeOfEventType, type EventNodeSequenceDataKPA, type EventDataKPA2, type EventNodeSequenceDataKPA2, type EventValueESType, EventValueType, EventValueTypeOfType, FinalEventStartNodeDataKPA2, EvaluatorType, EasingType } from "./chartTypes";
 import { TemplateEasingLib, BezierEasing, Easing, rpeEasingArray, SegmentedEasing, linearEasing, fixedEasing, TemplateEasing, NormalEasing } from "./easing";
-import { ColorEasedEvaluator, EasedEvaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type Evaluator } from "./evaluator";
+import { ColorEasedEvaluator, EasedEvaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, VectorEasedEvaluator, type Evaluator } from "./evaluator";
 import { JumpArray } from "./jumparray";
 
 import TC from "./time";
@@ -58,6 +58,9 @@ export abstract class EventNode<VT extends EventValueESType = number> extends Ev
             this.evaluator = NumericEasedEvaluator.default as unknown as Evaluator<VT>;
         } else if (typeof value === "string") {
             this.evaluator = TextEasedEvaluator.default as unknown as Evaluator<VT>;
+        } else if (Array.isArray(value) && value.length !== 3) {
+            // RGB以外的数组是数值向量（vec2 / vec4）
+            this.evaluator = VectorEasedEvaluator.default as unknown as Evaluator<VT>;
         } else {
             this.evaluator = ColorEasedEvaluator.default as unknown as Evaluator<VT>;
         }
@@ -510,6 +513,7 @@ export class EventNodeSequence<VT extends EventValueESType = number> { // 泛型
                type === EventType.color                               ? [255, 255, 255] :
                type === EventType.video                               ? ""  :
                type === EventType.videoAlpha                          ? 1   :
+               type === EventType.effect                              ? ""  :
                0
     }
     /**

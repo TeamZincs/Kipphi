@@ -35,6 +35,7 @@ const
     NOTE = 0xB00,
     TC = 0xC00,
     MACRO = 0xD00,
+    EFFECT = 0xE00,
     INTERNAL = 0xF00,
 
     OCCPIED = 0x10,
@@ -98,6 +99,22 @@ export enum ERROR_IDS {
     PROTO_PRESENT_IN_NONPARAMETRIC =                MACRO      | INVALID_USAGE | 0,
     PARAMETRIC_MACRO_REQUIRES_PROTO_KEY =           MACRO      | INVALID_DATA  | 4,
     MACRO_NOT_PARAMETRIC =                          MACRO      | INVALID_DATA  | 5,
+
+    INVALID_EFFECT_LIST =                           EFFECT     | INVALID_DATA  | 0,
+    INVALID_EFFECT =                                EFFECT     | INVALID_DATA  | 1,
+    INVALID_EFFECT_TIME =                           EFFECT     | INVALID_DATA  | 2,
+    EFFECT_END_NOT_AFTER_START =                    EFFECT     | INVALID_DATA  | 3,
+    INVALID_EFFECT_SHADER =                         EFFECT     | INVALID_DATA  | 4,
+    INVALID_EFFECT_VARS =                           EFFECT     | INVALID_DATA  | 5,
+    INVALID_EFFECT_ANIM_VAR =                       EFFECT     | INVALID_DATA  | 6,
+    INVALID_EFFECT_ANIM_VAR_EASING =                EFFECT     | INVALID_DATA  | 7,
+    EFFECT_ANIM_VAR_TIME_NOT_INCREMENTAL =          EFFECT     | INVALID_DATA  | 8,
+    EFFECT_ANIM_VAR_OUT_OF_RANGE =                  EFFECT     | INVALID_DATA  | 9,
+    INVALID_EFFECT_GLOBAL =                         EFFECT     | INVALID_DATA  | 10,
+
+    EFFECT_NOT_FOUND =                              EFFECT     | INVALID_USAGE | 0,
+    EFFECT_VAR_NOT_FOUND =                          EFFECT     | INVALID_USAGE | 1,
+    EFFECT_TIME_OVERLAP =                           EFFECT     | INVALID_USAGE | 2,
 }
 
 export const ERRORS = {
@@ -196,6 +213,35 @@ export const ERRORS = {
         `Easing delta cannot be zero. (at ${seqName}, ${toTimeString(time)}`,
     SPEED_0_NOTE_CANNOT_HAVE_NON_0_Y_OFFSET: () =>
         `Speed=0 Note cannot have non-0 yOffset.`,
+
+    INVALID_EFFECT_LIST: (pos: string, value: unknown) =>
+        `Invalid effects list (expected an array but seen '${value}'). At ${pos}`,
+    INVALID_EFFECT: (pos: string, value: unknown) =>
+        `Invalid effect (expected an object but seen '${value}'). At ${pos}`,
+    INVALID_EFFECT_TIME: (pos: string, value: unknown) =>
+        `Invalid effect time tuple (expected [bar, numerator, denominator] but seen '${value}'). At ${pos}`,
+    EFFECT_END_NOT_AFTER_START: (pos: string, start: TimeT, end: TimeT) =>
+        `Effect end ${toTimeString(end)} is not after start ${toTimeString(start)}. At ${pos}`,
+    INVALID_EFFECT_SHADER: (pos: string, value: unknown) =>
+        `Invalid effect shader (expected a non-empty string but seen '${value}'). At ${pos}`,
+    INVALID_EFFECT_VARS: (pos: string, value: unknown) =>
+        `Invalid effect vars (expected an object but seen '${value}'). At ${pos}`,
+    INVALID_EFFECT_ANIM_VAR: (pos: string, value: unknown) =>
+        `Invalid effect animation variable (expected a constant or a keyframe array but seen '${value}'). At ${pos}`,
+    INVALID_EFFECT_ANIM_VAR_EASING: (pos: string, easingType: unknown) =>
+        `Invalid easing type '${easingType}' in effect animation variable. At ${pos}`,
+    EFFECT_ANIM_VAR_TIME_NOT_INCREMENTAL: (pos: string) =>
+        `Effect animation variable keyframe time is not incremental. At ${pos}`,
+    EFFECT_ANIM_VAR_OUT_OF_RANGE: (pos: string) =>
+        `Effect animation variable keyframe is out of the effect's time range (auto-fixed by clipping). At ${pos}`,
+    INVALID_EFFECT_GLOBAL: (pos: string, value: unknown) =>
+        `Invalid effect global flag (expected a boolean but seen '${value}'). At ${pos}`,
+    EFFECT_NOT_FOUND: (pos: string) =>
+        `Effect not found. At ${pos}`,
+    EFFECT_VAR_NOT_FOUND: (name: string, pos: string) =>
+        `Effect variable '${name}' not found. At ${pos}`,
+    EFFECT_TIME_OVERLAP: (id: string, time: TimeT) =>
+        `Effect at ${toTimeString(time)} overlaps another effect in sequence '${id}'`,
 } satisfies Record<keyof typeof ERROR_IDS, (...args: any[]) => string>
 
 type EnumKeys<E extends Record<string, string | number>> = E[keyof E];

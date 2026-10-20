@@ -1,5 +1,5 @@
 import type { Chart } from "./chart";
-import type { EventValueESType, MacroData, MacroEvaluatorBodyData, MacroLink, MacroTimeBodyData, MacroValueBodyData, NoteMacroBodyData, NoteMacroLink, NoteType, RGB, TimeT } from "./chartTypes";
+import type { EventValueESType, MacroData, MacroEvaluatorBodyData, MacroLink, MacroTimeBodyData, MacroValueBodyData, NoteMacroBodyData, NoteMacroLink, NoteType, PhiraAnimVarTuple, RGB, TimeT } from "./chartTypes";
 import { err, ERROR_IDS, KPAError } from "./env";
 import { MacroEvaluator } from "./evaluator";
 import type { EventNode, EventStartNode } from "./event";
@@ -62,7 +62,7 @@ export interface MNote {
     visibleBeats?: number;
     yOffset?: number;
 }
-export type Macroable = number | string | TimeT | RGB | boolean | MNote;
+export type Macroable = number | string | TimeT | RGB | boolean | MNote | PhiraAnimVarTuple;
 export type Macroee = EventNode<EventValueESType> | Note;
 
 export abstract class Macro<T extends Macroable, C extends Macroee, P extends Macroee> {

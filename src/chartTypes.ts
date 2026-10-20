@@ -359,10 +359,69 @@ export enum EventValueType {
     numeric,
     color,
     text,
+    /** 数值向量（vec2 / vec4），用于Phira特效的uniform变量 @since 2.3.0 */
+    vector,
 }
 
-export type EventValueTypeOfType<T extends EventValueESType> = T extends number ? EventValueType.numeric : T extends RGB ? EventValueType.color : EventValueType.text;
-export type EventValueESType = string | number | RGB
+export type EventValueTypeOfType<T extends EventValueESType> =
+    T extends number ? EventValueType.numeric
+    : T extends RGB ? EventValueType.color
+    : T extends string ? EventValueType.text
+    : EventValueType.vector;
+/**
+ * 二元/四元数值向量
+ *
+ * Phira特效的uniform变量可以是vec2或vec4，与RGB（三元组）区分开。
+ *
+ * @since 2.3.0
+ */
+export type PhiraAnimVarTuple = [number, number] | [number, number, number, number];
+/**
+ * Phira动画变量的取值形态：标量或数值向量
+ *
+ * @since 2.3.0
+ */
+export type PhiraAnimVarESType = number | PhiraAnimVarTuple;
+export type EventValueESType = string | number | RGB | PhiraAnimVarTuple
+/**
+ * 特效事件节点数据
+ *
+ * 与Phira的extra.json中的特效对象基本一致（`start`/`end`对应`startTime`/`endTime`），
+ * 但uniform变量表里的每个变量都是完整的KPA2事件序列，
+ * 且时间区间被裁剪进特效区间。
+ *
+ * @since 2.3.0
+ */
+export interface EffectEventDataKPA2 {
+    /** 特效起始时间 */
+    startTime: TimeT;
+    /** 特效结束时间，必须晚于{@linkcode startTime} */
+    endTime: TimeT;
+    /** 着色器名，可以是内置着色器或自定义着色器 */
+    shader: string;
+    /** 是否影响UI元素（连击、暂停按钮等） */
+    global: boolean;
+    /** uniform变量表：变量名 -> 事件序列，可缺省 */
+    vars?: { [name: string]: EventNodeSequenceDataKPA2<PhiraAnimVarESType> };
+}
+
+/**
+ * 特效事件节点序列数据
+ *
+ * 序列内的特效互不重叠。`line`是该序列在`chart.effects`中的下标，
+ * **与判定线无关**，仅为兼容RPE侧“事件序列归属某条线”的编号习惯而存在。
+ *
+ * @since 2.3.0
+ */
+export interface EffectNodeSequenceDataKPA2 {
+    /** 按时间升序排列、互不重叠的特效段 */
+    events: EffectEventDataKPA2[];
+    /** 序列ID */
+    id: string;
+    /** 序列在`chart.effects`中的下标，与判定线无关 */
+    line: number;
+}
+
 /**
  * 五个种类的事件的start/end含义：
  * X/Y方向移动：像素
@@ -656,6 +715,15 @@ export interface ChartDataKPA2 {
         /** 视频不透明度序列，取值0~1，全谱拉通 */
         alpha: EventNodeSequenceDataKPA2<number>;
     }
+    /**
+     * 谱面级特效序列
+     *
+     * 每个元素对应一条"线"，`line`即其在数组中的下标。
+     * KPA1没有该字段，此时保留默认的空数组。
+     *
+     * @since 2.3.0
+     */
+    effects?: EffectNodeSequenceDataKPA2[];
     templateEasings: TemplateEasingBodyData[];
     wrapperEasings: WrapperEasingBodyData[];
     macroEvaluators: MacroEvaluatorBodyData[];
@@ -687,7 +755,9 @@ export enum EventType {
     /** 视频不透明度序列，取值0~1 @since 2.2.0 */
     videoAlpha,
     /** 视频变暗程度序列，取值0~1 @since 2.2.0 */
-    videoDim
+    videoDim,
+    /** 谱面级特效序列，值为着色器名 @since 2.3.0 */
+    effect
 }
 export enum NoteType {
     tap=1,
@@ -697,7 +767,7 @@ export enum NoteType {
 }
 
 
-export type ValueTypeOfEventType<T extends EventType> = [number, number, number, number, number, number, number, number, number, string, RGB, string, number, number][T]
+export type ValueTypeOfEventType<T extends EventType> = [number, number, number, number, number, number, number, number, number, string, RGB, string, number, number, string][T]
 
 export type ExtendedEventTypeName = "scaleX" | "scaleY" | "text" | "color"
 /// #enddeclaration

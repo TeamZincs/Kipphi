@@ -27,6 +27,12 @@ import {
 } from "./video";
 
 import {
+    EffectNodeSequence,
+    PhiraEffectParser,
+} from "./effect";
+import type { EffectStartNode } from "./effect";
+
+import {
     animVarToEventData,
 } from "./extra";
 
@@ -53,6 +59,7 @@ import {
     type BPMSegmentData,
     type ChartDataRPE,
     type ChartDataKPA,
+    type EffectNodeSequenceDataKPA2,
     type JudgeLineDataRPE,
     type EasingDataKPA2,
     EasingType,
@@ -77,10 +84,10 @@ import {
     MacroLink,
     NoteMacroLink
 } from "./chartTypes";
-import { ColorEasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, type EasedEvaluatorOfType } from "./evaluator";
+import { ColorEasedEvaluator, Evaluator, ExpressionEvaluator, NumericEasedEvaluator, TextEasedEvaluator, VectorEasedEvaluator, type EasedEvaluatorOfType } from "./evaluator";
 import { err, ERROR_IDS, KPAError }  from "./env";
 import { MacroLib, EventMacroTime, EventMacroValue, EventMacro, NoteMacro } from "./macro";
-import type { PhiraExtraJson } from "./extraTypes";
+import type { PhiraEffect, PhiraExtraJson } from "./extraTypes";
 
 /// #declaration:global
 
@@ -169,6 +176,18 @@ export class Chart {
         alpha: EventNodeSequence.newSeq(EventType.videoAlpha, 0),
         dim: EventNodeSequence.newSeq(EventType.videoDim, 0)
     };
+
+    /**
+     * 谱面级特效序列数组
+     *
+     * 每个元素是一条"线"，下标即{@linkcode EffectNodeSequence.line}——
+     * **与判定线无关**，仅为兼容RPE侧"事件序列归属某条线"的编号习惯。
+     * 同一条序列内的特效互不重叠。
+     *
+     * @see {@linkcode EffectNodeSequence}
+     * @since 2.3.0
+     */
+    effects: EffectNodeSequence[] = [];
 
     /** 谱面制作所用时间（以秒计） */
     chartingSeconds: number;
@@ -262,6 +281,7 @@ export class Chart {
             }
         }
         if (extraJson) {
+            chart.initEffectsFromExtraJson(extraJson);
             chart.initVideoFromExtraJson(extraJson, chart.getEffectiveBeats());
         }
         chart.countMaxCombo();
@@ -328,6 +348,7 @@ export class Chart {
             chart.macroLib.readTimeMacros((data as ChartDataKPA2).timeMacros ?? []);
             chart.macroLib.readValueMacros((data as ChartDataKPA2).valueMacros ?? []);
             chart.initVideo(data as ChartDataKPA2, chart.getEffectiveBeats());
+            chart.initEffects(data as ChartDataKPA2, chart.getEffectiveBeats());
         } else {
             
             const sequences = (data as ChartDataKPA).eventNodeSequences
@@ -468,6 +489,99 @@ export class Chart {
     }
     
     /**
+     * 从Phira的extra.json初始化特效序列
+     *
+     * extra.json的`effects`是扁平数组，这里按区间打包成若干条序列
+     * （{@linkcode EffectNodeSequence.fromPhiraEffects}），下标即各序列的`line`。
+     * 无效条目会被跳过。
+     *
+     * @param extraJson Phira的extra.json
+     * @since 2.3.0
+     */
+    initEffectsFromExtraJson(extraJson: PhiraExtraJson) {
+        const effects = PhiraEffectParser.parse(extraJson.effects, "effects");
+        this.effects = EffectNodeSequence.fromPhiraEffects(effects, this.getEffectiveBeats());
+    }
+
+    /**
+     * 从KPA2数据初始化特效序列
+     *
+     * KPA1没有该字段，此时保留默认的空数组。
+     *
+     * @param data KPA2谱面数据
+     * @param effectiveBeats 谱面有效拍数
+     * @since 2.3.0
+     */
+    initEffects(data: ChartDataKPA2, effectiveBeats: number) {
+        this.effects = (data.effects ?? []).map((seqData, line) => {
+            const seq = EffectNodeSequence.fromKPA2JSON(seqData, effectiveBeats, `effects[${line}]`);
+            seq.line = line;
+            return seq;
+        });
+    }
+
+    /**
+     * 往特效序列数组末尾追加一条序列，并维护`line`下标
+     * @returns 新序列的`line`
+     * @since 2.3.0
+     */
+    addEffectSequence(sequence: EffectNodeSequence): number {
+        const line = this.effects.length;
+        sequence.line = line;
+        this.effects.push(sequence);
+        return line;
+    }
+
+    /**
+     * 从特效序列数组中移除一条序列，并重新编址`line`
+     * @returns 被移除序列的原下标，不存在时返回`-1`
+     * @since 2.3.0
+     */
+    removeEffectSequence(sequence: EffectNodeSequence): number {
+        const index = this.effects.indexOf(sequence);
+        if (index < 0) {
+            return -1;
+        }
+        this.effects.splice(index, 1);
+        this.renumberEffectLines();
+        return index;
+    }
+
+    /** 让每条特效序列的`line`等于其在数组中的下标 */
+    renumberEffectLines() {
+        for (let i = 0; i < this.effects.length; i++) {
+            this.effects[i].line = i;
+        }
+    }
+
+    /**
+     * 获取指定拍数处激活的特效段
+     * @param beats 拍数
+     * @returns 激活的特效起始节点，按序列顺序
+     * @since 2.3.0
+     */
+    getActiveEffects(beats: number): EffectStartNode[] {
+        const ret: EffectStartNode[] = [];
+        for (const seq of this.effects) {
+            for (const node of seq.activeAt(beats)) {
+                ret.push(node);
+            }
+        }
+        return ret;
+    }
+
+    /** 导出特效序列为KPA2数据 */
+    dumpEffects(): EffectNodeSequenceDataKPA2[] {
+        this.renumberEffectLines();
+        return this.effects.map(seq => seq.dumpEffect());
+    }
+
+    /** 导出特效为Phira的extra.json的`effects`数组 */
+    dumpPhiraEffects(): PhiraEffect[] {
+        return EffectNodeSequence.toPhiraEffects(this.effects);
+    }
+
+    /**
      * 更新有效节拍数
      * @param duration 新的持续时间
      */
@@ -533,6 +647,7 @@ export class Chart {
                 alpha: this.video.alpha.dump(),
                 dim: this.video.dim.dump()
             },
+            effects: this.dumpEffects(),
             orphanLines: orphanLines,
             judgeLineGroups: this.judgeLineGroups.map(g => g.name),
             chartTime: this.chartingSeconds,
@@ -678,6 +793,28 @@ export class Chart {
         }
         return videos;
     }
+
+    /**
+     * 扫描所有用到的自定义特效着色器路径
+     *
+     * 只有以 `/` 开头的着色器名才是谱面包内的自定义着色器（Phira 约定），
+     * 内置着色器由播放器自己提供，不在此列。
+     *
+     * 给谱面播放器的接口，播放器需要在初加载时向谱面包索取这些文件。
+     * @returns 自定义着色器路径集合，保留开头的 `/`，与 `effect.shader` 一致
+     * @since 2.3.0
+     */
+    scanAllShaders(): Set<string> {
+        const shaders: Set<string> = new Set();
+        for (const sequence of this.effects) {
+            for (const effect of sequence.effects()) {
+                if (effect.value.startsWith("/")) {
+                    shaders.add(effect.value);
+                }
+            }
+        }
+        return shaders;
+    }
     
     /**
      * 使用KPA2数据创建一个缓动对象。
@@ -751,6 +888,10 @@ export class Chart {
                 return data.easing.type === EasingType.normal
                     ? ColorEasedEvaluator.evaluatorsOfNormalEasing[data.easing.identifier] as EasedEvaluatorOfType<T>
                     : new ColorEasedEvaluator(this.createEasingFromData(data.easing)) as EasedEvaluatorOfType<T>;
+            case EventValueType.vector:
+                return data.easing.type === EasingType.normal
+                    ? VectorEasedEvaluator.evaluatorsOfNormalEasing[data.easing.identifier] as EasedEvaluatorOfType<T>
+                    : new VectorEasedEvaluator(this.createEasingFromData(data.easing)) as EasedEvaluatorOfType<T>;
             case EventValueType.text:
                 return data.easing.type === EasingType.normal
                     ? TextEasedEvaluator.evaluatorsOfNoEzAndItpAs[data.easing.identifier][(data as TextEasedEvaluatorKPA2).interpretedAs] as EasedEvaluatorOfType<T>
@@ -776,6 +917,10 @@ export class Chart {
                 return easingIsNormal
                     ? ColorEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId] as EasedEvaluatorOfType<T>
                     : new ColorEasedEvaluator(easing) as EasedEvaluatorOfType<T>;
+            case EventValueType.vector:
+                return easingIsNormal
+                    ? VectorEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId] as EasedEvaluatorOfType<T>
+                    : new VectorEasedEvaluator(easing) as EasedEvaluatorOfType<T>;
             case EventValueType.text:
                 return easingIsNormal
                     ? TextEasedEvaluator.evaluatorsOfNoEzAndItpAs[easing.rpeId][interpreteAs ?? InterpreteAs.str] as EasedEvaluatorOfType<T>

@@ -9,7 +9,7 @@ import {
 import TC from "./time";
 
 import type { EventEndNode, EventStartNode, NonLastStartNode } from "./event";
-import { EasingType, EvaluatorType, EventValueType, EventValueTypeOfType, InterpreteAs, MacroEvaluatorBodyData, MacroEvaluatorDataKPA2, type ColorEasedEvaluatorKPA2, type EvaluatorDataKPA2, type EventValueESType, type ExpressionEvaluatorDataKPA2, type NumericEasedEvaluatorKPA2, type RGB, type TextEasedEvaluatorKPA2 } from "./chartTypes";
+import { EasingType, EvaluatorType, EventValueType, EventValueTypeOfType, InterpreteAs, MacroEvaluatorBodyData, MacroEvaluatorDataKPA2, type ColorEasedEvaluatorKPA2, type EvaluatorDataKPA2, type EventValueESType, type ExpressionEvaluatorDataKPA2, type NumericEasedEvaluatorKPA2, type PhiraAnimVarESType, type RGB, type TextEasedEvaluatorKPA2 } from "./chartTypes";
 import type { JudgeLine } from "./judgeline";
 import { Chart } from "./chart";
 import { EVENT_MACROS } from "./macro";
@@ -101,6 +101,10 @@ export abstract class EasedEvaluator<T extends EventValueESType> extends Evaluat
                 return easingIsNormal
                     ? ColorEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId] as EasedEvaluatorOfType<T>
                     : new ColorEasedEvaluator(easing) as EasedEvaluatorOfType<T>;
+            case EventValueType.vector:
+                return easingIsNormal
+                    ? VectorEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId] as EasedEvaluatorOfType<T>
+                    : new VectorEasedEvaluator(easing) as EasedEvaluatorOfType<T>;
             case EventValueType.text:
                 return easingIsNormal
                     ? TextEasedEvaluator.evaluatorsOfNoEzAndItpAs[easing.rpeId][interpretedAs ?? InterpreteAs.str] as EasedEvaluatorOfType<T>
@@ -109,8 +113,12 @@ export abstract class EasedEvaluator<T extends EventValueESType> extends Evaluat
     }
 }
 
-export type EasedEvaluatorOfType<T extends EventValueESType> = T extends number ? NumericEasedEvaluator : T extends RGB ? ColorEasedEvaluator : TextEasedEvaluator;
-export type EasedEvaluatorConstructorOfType<T extends EventValueESType> = T extends number ? typeof NumericEasedEvaluator : T extends RGB ? typeof ColorEasedEvaluator : typeof TextEasedEvaluator;
+export type EasedEvaluatorOfType<T extends EventValueESType> =
+    T extends number ? NumericEasedEvaluator
+    : T extends RGB ? ColorEasedEvaluator
+    : T extends string ? TextEasedEvaluator
+    : VectorEasedEvaluator;
+export type EasedEvaluatorConstructorOfType<T extends EventValueESType> = T extends number ? typeof NumericEasedEvaluator : T extends RGB ? typeof ColorEasedEvaluator : T extends string ? typeof TextEasedEvaluator : typeof VectorEasedEvaluator;
 
 export class NumericEasedEvaluator extends EasedEvaluator<number> {
     constructor(easing: Easing) {
@@ -164,6 +172,40 @@ export class ColorEasedEvaluator extends EasedEvaluator<RGB> {
     }
 }
 
+
+/**
+ * 数值向量缓动求值器
+ *
+ * 逐分量线性插值，用于Phira特效的vec2/vec4型uniform变量。
+ *
+ * @since 2.3.0
+ */
+export class VectorEasedEvaluator extends EasedEvaluator<PhiraAnimVarESType> {
+    constructor(easing: Easing) {
+        super(easing);
+    }
+    private cache?: NumericEasedEvaluatorKPA2
+    override dumpFor(): NumericEasedEvaluatorKPA2 {
+        return this.cache ??= {
+            type: EvaluatorType.eased,
+            easing: this.easing.dump()
+        }
+    }
+    override convert(start: PhiraAnimVarESType, end: PhiraAnimVarESType, progress: number): PhiraAnimVarESType {
+        const from = start as number[];
+        const to = end as number[];
+        return from.map((value, i) => value + (to[i] - value) * progress) as PhiraAnimVarESType;
+    }
+    static default = new VectorEasedEvaluator(linearEasing);
+    static evaluatorsOfNormalEasing: VectorEasedEvaluator[] = rpeEasingArray.map(easing => new VectorEasedEvaluator(easing));
+    override deriveWithEasing(easing: Easing): VectorEasedEvaluator {
+        if (easing instanceof NormalEasing) {
+            return VectorEasedEvaluator.evaluatorsOfNormalEasing[easing.rpeId];
+        } else {
+            return new VectorEasedEvaluator(easing);
+        }
+    }
+}
 
 /**
  * 文本缓动求值器

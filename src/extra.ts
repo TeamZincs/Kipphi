@@ -1,7 +1,7 @@
 import type { Chart } from "./chart";
 import { EventNodeSequence } from "./event";
 import { type EventDataRPELike, type TimeT } from "./chartTypes";
-import { PhiraAnimVar, PhiraExtraJson, PhiraVideo } from "./extraTypes";
+import { PhiraAnimVar, PhiraEffect, PhiraExtraJson, PhiraVideo } from "./extraTypes";
 import { RPEChartCompiler } from "./rpeChartCompiler";
 import { toPhiraScale } from "./video";
 
@@ -69,9 +69,21 @@ export class ExtraJsonCompiler {
     compile(): PhiraExtraJson {
         return {
             bpm: this.chart.timeCalculator.bpmSequence.dumpPhiraBPM(),
-            effects: [],
+            effects: this.dumpEffects(),
             videos: this.dumpVideos()
         }
+    }
+    /**
+     * 导出特效为Phira的`effects`数组
+     *
+     * 由谱面模型中的特效序列拆平而来，按起始时间升序。
+     * 变量序列在构建时已保证关键帧不越出特效区间。
+     *
+     * @returns 特效列表
+     * @since 2.3.0
+     */
+    dumpEffects(): PhiraEffect[] {
+        return this.chart.dumpPhiraEffects();
     }
     /**
      * 导出视频列表
