@@ -34,6 +34,21 @@ interface OpEventMap extends CheckFinalOverrides<DirectlyInstaciableEventMap> {
 }
 
 
+/** 操作的执行方向：`do` 是正向执行（含首次执行与重做），`undo` 是撤销 */
+export type OperationDirection = "do" | "undo";
+
+/** 可以被 `onOperation` 监听的操作类 */
+export type OperationClass = new (...args: any[]) => Operation;
+
+/** `onOperation` 的监听器 */
+export type OperationListener<C extends OperationClass> =
+    (operation: InstanceType<C>, direction: OperationDirection) => void;
+
+interface OperationHook {
+    klass: OperationClass;
+    listener: OperationListener<OperationClass>;
+}
+
 class OpEvent extends Event {
     protected constructor(type: OpEventType) {
         super(type);
@@ -76,10 +91,65 @@ export class MaxComboChangeEvent extends OpEvent {
 export class OperationList extends EventTarget {
     operations: Operation[];
     undoneOperations: Operation[];
+    /** 按操作类注册的监听器 */
+    private readonly hooks: OperationHook[] = [];
     constructor(public readonly chart: Chart) {
         super()
         this.operations = [];
         this.undoneOperations = [];
+    }
+
+    /**
+     * 监听某一类操作的执行与撤销
+     *
+     * 与 `addEventListener("do")` 不同，这里会**穿透**：
+     * - {@linkcode ComplexOperation} 的子操作（如 `NoteSpeedChangeOperation` 里的
+     *   `NotePropChangeOperation` / `NoteRemoveOperation` / `NoteAddOperation`）
+     * - {@linkcode UnionOperation} / {@linkcode LazyOperation} 包装的操作
+     *
+     * 监听的是**类**，子类也会命中（`instanceof`）。被 {@linkcode Operation.rewrite}
+     * 合并掉的变更同样会按 `do` 通知一次——那次变更确实生效了。
+     *
+     * ```ts
+     * operations.onOperation(JudgeLinePropChangeOperation, (op, direction) => {
+     *     if (direction === "do" && op.field === "texture") reload(op.value);
+     * });
+     * ```
+     *
+     * @since 3.0.0
+     */
+    onOperation<C extends OperationClass>(klass: C, listener: OperationListener<C>): void {
+        this.hooks.push({ klass, listener: listener as OperationListener<OperationClass> });
+    }
+
+    /** 取消 `onOperation` 注册的监听器（同一个类 + 同一个函数） */
+    offOperation<C extends OperationClass>(klass: C, listener: OperationListener<C>): void {
+        const index = this.hooks.findIndex(hook => hook.klass === klass && hook.listener === listener);
+        if (index >= 0) this.hooks.splice(index, 1);
+    }
+
+    /** 遍历操作树，给匹配的监听器发通知 */
+    private notifyOperation(operation: Operation | undefined, direction: OperationDirection) {
+        if (!operation || this.hooks.length === 0) return;
+        const visit = (op: Operation) => {
+            for (const hook of this.hooks) {
+                if (!(op instanceof hook.klass)) continue;
+                try {
+                    hook.listener(op, direction);
+                } catch (error) {
+                    // 监听器自己的问题不该影响操作本身
+                    console.error(error);
+                }
+            }
+            if (op instanceof ComplexOperation) {
+                for (const sub of op.subOperations) visit(sub);
+            } else if (op instanceof UnionOperation) {
+                if (op.operation) visit(op.operation);
+            } else if (op instanceof LazyOperation) {
+                if (op.operation) visit(op.operation);
+            }
+        };
+        visit(operation);
     }
     undo() {
         const op = this.operations.pop()
@@ -97,6 +167,7 @@ export class OperationList extends EventTarget {
             }
             this.undoneOperations.push(op)
             this.dispatchEvent(new OperationEvent("undo", op))
+            this.notifyOperation(op, "undo");
             this.processFlags(op);
         } else {
             this.dispatchEvent(OpEvent.create("noundo"))
@@ -118,6 +189,7 @@ export class OperationList extends EventTarget {
             }
             this.operations.push(op)
             this.dispatchEvent(new OperationEvent("redo", op))
+            this.notifyOperation(op, "do");
             this.processFlags(op);
         } else {
             this.dispatchEvent(OpEvent.create("noredo"))
@@ -143,6 +215,8 @@ export class OperationList extends EventTarget {
             if (operation.constructor === lastOp.constructor) {
                 // 返回值指示是否重写成功
                 if (lastOp.rewrite(operation, this.chart)) {
+                    // 这次变更确实生效了，只是被合并进上一条操作，规格上仍算一次 do
+                    this.notifyOperation(operation, "do");
                     this.processFlags(operation)
                     return;
                 }
@@ -157,6 +231,7 @@ export class OperationList extends EventTarget {
         this.undoneOperations = [];
         this.operations.push(operation);
         this.dispatchEvent(new OperationEvent("do", operation));
+        this.notifyOperation(operation, "do");
         this.processFlags(operation);
     }
     tryDo(returnOperation: () => Operation) {

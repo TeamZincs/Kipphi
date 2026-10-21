@@ -430,6 +430,23 @@ list.addEventListener("error", e => console.error(e.error));
 - 构造还有副作用的操作请用 `lazy`：`Op.EventNodePairRemoveOperation.lazy(node)` —— 真正 `do` 时才实例化，避免构造时读到已被前一步改掉的状态
 - `UnionOperation` 装一个可能为空的子操作（比如"非 hold 音符才需要改 endTime"）
 
+### 按操作类监听：`onOperation`
+
+`addEventListener("do")` 只能拿到最外层的那一个操作。想知道「某类操作什么时候真的执行了」，用 `onOperation`：
+
+```ts
+list.onOperation(Op.JudgeLinePropChangeOperation, (op, direction) => {
+    // direction: "do" | "undo"（redo 也算 "do"）
+    if (direction === "do" && op.field === "texture") reloadTexture(op.value);
+});
+list.offOperation(Op.JudgeLinePropChangeOperation, listener);
+```
+
+- 会**穿透**：`ComplexOperation` 的子操作、`UnionOperation` / `LazyOperation` 包装的操作
+- 匹配用 `instanceof`，所以监听基类（比如 `Op.Operation`）能收到所有操作
+- 被 `rewrite` 合并掉的变更也会按 `do` 通知一次（那次变更确实生效了）
+- 通知发生在操作**生效之后**，回调里读到的是新状态；监听器抛错只会 `console.error`，不影响操作本身
+
 ### 用 `ComplexOperation` 组合多步改动
 
 一次用户动作常常要改好几处。若逐个 `do`，撤销就要点 N 次；用 `ComplexOperation` 打包后它们是一个原子操作：
