@@ -426,6 +426,7 @@ list.addEventListener("error", e => console.error(e.error));
 
 - `do(chart)` / `undo(chart)` 必须严格互逆
 - `ineffective` 的操作会被 `OperationList` 跳过
+- `Operation.comboDelta` 描述的物量增量由 `OperationList` 自动应用到 `chart.maxCombo`（撤销取负；`NaN` 表示操作自己说不清，触发 `countMaxCombo()` 全谱重数）。`maxcombochanged` 事件只是通知，监听方**不要**再往 `chart.maxCombo` 上加
 - 连续的同类型操作会尝试 `rewrite` 合并（如连续拖动同一节点只留一条记录）
 - 构造还有副作用的操作请用 `lazy`：`Op.EventNodePairRemoveOperation.lazy(node)` —— 真正 `do` 时才实例化，避免构造时读到已被前一步改掉的状态
 - `UnionOperation` 装一个可能为空的子操作（比如"非 hold 音符才需要改 endTime"）

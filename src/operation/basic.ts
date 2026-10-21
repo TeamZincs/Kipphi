@@ -81,6 +81,10 @@ export class OperationErrorEvent extends OperationEvent {
 }
 
 export class MaxComboChangeEvent extends OpEvent {
+    /**
+     * @param comboDelta 带符号的增量。**已经应用到 `chart.maxCombo` 上了**，
+     * 监听方只应据此刷新 UI，不要再加一遍
+     */
     constructor(public comboDelta: number) {
         super("maxcombochanged");
     }
@@ -168,7 +172,8 @@ export class OperationList extends EventTarget {
             this.undoneOperations.push(op)
             this.dispatchEvent(new OperationEvent("undo", op))
             this.notifyOperation(op, "undo");
-            this.processFlags(op);
+            // 撤销要把物量增量反向应用
+            this.processFlags(op, "undo");
         } else {
             this.dispatchEvent(OpEvent.create("noundo"))
         }
@@ -245,13 +250,21 @@ export class OperationList extends EventTarget {
         }
         this.do(op);
     } 
-    processFlags(operation: Operation) {
-
+    /**
+     * 处理操作留下的标记
+     *
+     * `maxCombo` 也在这里维护：库自己应用增量（撤销时取负），之后派的
+     * `maxcombochanged` 只是通知，监听方不要再加到 `chart.maxCombo` 上。
+     */
+    processFlags(operation: Operation, direction: OperationDirection = "do") {
         if (operation.updatesEditor) {
             this.dispatchEvent(new OperationEvent("needsupdate", operation));
         }
-        if (operation.comboDelta) {
-            this.dispatchEvent(new MaxComboChangeEvent(operation.comboDelta));
+        // NaN 表示操作自己说不清，交给 applyComboDelta 去全谱重数
+        if (typeof operation.comboDelta === "number" && operation.comboDelta !== 0) {
+            const delta = direction === "undo" ? -operation.comboDelta : operation.comboDelta;
+            this.chart.applyComboDelta(delta);
+            this.dispatchEvent(new MaxComboChangeEvent(delta));
         }
         if (operation.reflows) {
             this.dispatchEvent(new NeedsReflowEvent(operation.reflows))

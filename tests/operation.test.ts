@@ -144,6 +144,45 @@ describe("OperationList.onOperation", () => {
         expect(new Op.ChartPropChangeOperation(chart, "name", "x").find(op => op === inner)).toBeNull();
     });
 
+    it("maxCombo 由库自己维护，事件里是带符号的增量", () => {
+        const chart = makeChart();
+        chart.maxCombo = 0;
+        const ops = new Op.OperationList(chart);
+        const deltas: number[] = [];
+        ops.addEventListener("maxcombochanged", (e) => deltas.push(e.comboDelta));
+
+        const makeOp = (delta: number) => {
+            const op = new (class extends Op.Operation {
+                do() { }
+                undo() { }
+            })();
+            op.comboDelta = delta;
+            return op;
+        };
+
+        ops.do(makeOp(1));
+        expect(chart.maxCombo).toBe(1);
+        ops.undo();
+        expect(chart.maxCombo).toBe(0);
+        ops.redo();
+        expect(chart.maxCombo).toBe(1);
+        expect(deltas).toEqual([1, -1, 1]);
+    });
+
+    it("comboDelta 为 NaN 时全谱重数", () => {
+        const chart = makeChart();
+        chart.maxCombo = 999;
+        const ops = new Op.OperationList(chart);
+        const op = new (class extends Op.Operation {
+            do() { }
+            undo() { }
+        })();
+        op.comboDelta = NaN;
+
+        ops.do(op);
+        expect(chart.maxCombo).toBe(0);   // 空谱面
+    });
+
     it("offOperation 之后不再通知", () => {
         const chart = makeChart();
         const ops = new Op.OperationList(chart);

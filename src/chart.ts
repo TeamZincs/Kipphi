@@ -715,6 +715,19 @@ export class Chart {
         }
         this.maxCombo = combo;
     }
+
+    /**
+     * 按增量更新物量，不重数
+     *
+     * `delta` 为 `NaN`（操作自己说不清）时退化成 {@linkcode countMaxCombo} 全谱重数。
+     * `OperationList` 每次操作后都会自动调用，宿主一般不用手动管。
+     */
+    applyComboDelta(delta: number) {
+        this.maxCombo += delta;
+        if (Number.isNaN(this.maxCombo)) {
+            this.countMaxCombo();
+        }
+    }
     
     /**
      * 将UI绑定到某判定线
