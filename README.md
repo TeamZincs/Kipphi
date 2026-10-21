@@ -594,6 +594,8 @@ for (const effect of active) {
 
 kipphi 只负责**解析并保存**：`EffectStartNode.targetRange` 是 `PhiraTargetRange | null`，怎么解释交给播放器（多个范围交叠时谁先谁后也由播放器决定）。
 
+唯一会主动检查的是「谁都决定不了」的情况：两个非 global 特效**时间重叠**、范围**相交但不互相包含**、且**都没写 `exclusive`** 时，交集归谁没有依据。`chart.checkShaderConflicts()` 会在加载（`initEffects*`）时 warn 一条 `SHADER_CONFLICT`，`chart.checkErrors()` 里也包含这一项。
+
 自定义着色器（Phira 约定：名字以 `/` 开头，指向谱面包内的文件）用 `chart.scanAllShaders()` 收集，返回 `Set<string>`（保留开头的 `/`，内置着色器不在其中），播放器可在加载阶段据此向谱面包索取文件。
 
 编辑走 `Operation`，和别的事件一样支持撤销重做：`EffectAddOperation` / `EffectRemoveOperation` / `EffectPropChangeOperation` / `EffectTimeChangeOperation` / `EffectMoveOperation` / `EffectVarChangeOperation` / `EffectVarRemoveOperation`。

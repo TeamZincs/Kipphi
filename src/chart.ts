@@ -501,6 +501,7 @@ export class Chart {
     initEffectsFromExtraJson(extraJson: PhiraExtraJson) {
         const effects = PhiraEffectParser.parse(extraJson.effects, "effects");
         this.effects = EffectNodeSequence.fromPhiraEffects(effects, this.getEffectiveBeats());
+        this.checkShaderConflicts();
     }
 
     /**
@@ -518,6 +519,7 @@ export class Chart {
             seq.line = line;
             return seq;
         });
+        this.checkShaderConflicts();
     }
 
     /**
@@ -1052,6 +1054,60 @@ export class Chart {
         }
         return;
     }
+    /**
+     * 检查特效作用范围冲突
+     *
+     * 同一时刻生效、范围相交但互不包含、且都没写`exclusive`的两个非global特效，
+     * 交集归谁是不确定的（播放器只能按声明顺序取一个），这里统一 warn。
+     *
+     * @since 3.0.0
+     */
+    checkShaderConflicts() {
+        const effects: EffectStartNode[] = [];
+        for (const sequence of this.effects) {
+            for (const effect of sequence.effects()) {
+                if (effect.global || !effect.targetRange) continue;
+                effects.push(effect);
+            }
+        }
+        for (let i = 0; i < effects.length; i++) {
+            const a = effects[i]!;
+            const rangeA = a.targetRange!;
+            for (let j = i + 1; j < effects.length; j++) {
+                const b = effects[j]!;
+                const rangeB = b.targetRange!;
+                if (!Chart.overlapsInTime(a, b)) continue;
+                const lo = Math.max(rangeA.minZIndex, rangeB.minZIndex);
+                const hi = Math.min(rangeA.maxZIndex, rangeB.maxZIndex);
+                if (!(hi > lo)) continue;
+                const nested = (rangeA.minZIndex <= rangeB.minZIndex && rangeA.maxZIndex >= rangeB.maxZIndex)
+                    || (rangeB.minZIndex <= rangeA.minZIndex && rangeB.maxZIndex >= rangeA.maxZIndex);
+                if (nested || rangeA.exclusive || rangeB.exclusive) continue;
+                err.SHADER_CONFLICT(
+                    "effects",
+                    Chart.describeEffectRange(a),
+                    Chart.describeEffectRange(b)
+                ).warn();
+            }
+        }
+    }
+
+    /** 两个特效的时间区间是否重叠（无限延伸的尾段按+∞处理） */
+    private static overlapsInTime(a: EffectStartNode, b: EffectStartNode) {
+        const aStart = TC.toBeats(a.time);
+        const bStart = TC.toBeats(b.time);
+        const aEndTime = a.getEndTime();
+        const bEndTime = b.getEndTime();
+        const aEnd = aEndTime ? TC.toBeats(aEndTime) : Infinity;
+        const bEnd = bEndTime ? TC.toBeats(bEndTime) : Infinity;
+        return aStart < bEnd && bStart < aEnd;
+    }
+
+    private static describeEffectRange(effect: EffectStartNode) {
+        const range = effect.targetRange!;
+        return `'${effect.value}' z[${range.minZIndex}, ${range.maxZIndex})`;
+    }
+
     checkErrors() {
         KPAError.flush();
         for (const [_, seq] of this.sequenceMap) {
@@ -1060,6 +1116,7 @@ export class Chart {
         // 视频的三条序列不在sequenceMap中，单独检查
         this.video.alpha.checkErrors();
         this.video.dim.checkErrors();
+        this.checkShaderConflicts();
     }
     updateAllFloorPositions() {
         for (const [_, seq] of this.sequenceMap) {

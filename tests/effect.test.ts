@@ -190,6 +190,59 @@ describe("targetRange（PhiZone 的扩展）", () => {
         copy.targetRange!.minZIndex = 5;
         expect(node.targetRange!.minZIndex).toBe(1);
     });
+
+    /** 收集构建期间的 warn */
+    const captureWarnings = (run: () => void) => {
+        const warnings: string[] = [];
+        const original = console.warn;
+        console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(" ")); };
+        try {
+            run();
+        } finally {
+            console.warn = original;
+        }
+        return warnings;
+    };
+
+    const conflicts = (warnings: string[]) => warnings.filter(w => w.includes("conflict"));
+
+    const chartWith = (effects: any[]) => makeChart({ bpm: [], effects, videos: [] });
+
+    it("部分相交且都没 exclusive → SHADER_CONFLICT", () => {
+        const warnings = captureWarnings(() => chartWith([
+            { start: [0, 0, 1], end: [4, 0, 1], shader: "/a.frag", targetRange: { minZIndex: 3, maxZIndex: 7 } },
+            { start: [0, 0, 1], end: [4, 0, 1], shader: "/b.frag", targetRange: { minZIndex: 5, maxZIndex: 9 } },
+        ]));
+        expect(conflicts(warnings)).toHaveLength(1);
+    });
+
+    it("嵌套 / exclusive / 时间不重叠 / global 都不算冲突", () => {
+        const cases: any[][] = [
+            // 嵌套
+            [
+                { start: [0, 0, 1], end: [4, 0, 1], shader: "/a.frag", targetRange: { minZIndex: 0, maxZIndex: 9 } },
+                { start: [0, 0, 1], end: [4, 0, 1], shader: "/b.frag", targetRange: { minZIndex: 3, maxZIndex: 4 } },
+            ],
+            // 有一方 exclusive
+            [
+                { start: [0, 0, 1], end: [4, 0, 1], shader: "/a.frag", targetRange: { minZIndex: 3, maxZIndex: 7, exclusive: true } },
+                { start: [0, 0, 1], end: [4, 0, 1], shader: "/b.frag", targetRange: { minZIndex: 5, maxZIndex: 9 } },
+            ],
+            // 时间不重叠
+            [
+                { start: [0, 0, 1], end: [2, 0, 1], shader: "/a.frag", targetRange: { minZIndex: 3, maxZIndex: 7 } },
+                { start: [4, 0, 1], end: [6, 0, 1], shader: "/b.frag", targetRange: { minZIndex: 5, maxZIndex: 9 } },
+            ],
+            // global 不看 targetRange
+            [
+                { start: [0, 0, 1], end: [4, 0, 1], shader: "/a.frag", global: true, targetRange: { minZIndex: 3, maxZIndex: 7 } },
+                { start: [0, 0, 1], end: [4, 0, 1], shader: "/b.frag", targetRange: { minZIndex: 5, maxZIndex: 9 } },
+            ],
+        ];
+        for (const effects of cases) {
+            expect(conflicts(captureWarnings(() => chartWith(effects)))).toHaveLength(0);
+        }
+    });
 });
 
 describe("uniform variable sequences", () => {

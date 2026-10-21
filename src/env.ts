@@ -112,6 +112,7 @@ export enum ERROR_IDS {
     EFFECT_ANIM_VAR_OUT_OF_RANGE =                  EFFECT     | INVALID_DATA  | 9,
     INVALID_EFFECT_GLOBAL =                         EFFECT     | INVALID_DATA  | 10,
     INVALID_EFFECT_TARGET_RANGE =                   EFFECT     | INVALID_DATA  | 11,
+    SHADER_CONFLICT =                               EFFECT     | INVALID_DATA  | 12,
 
     EFFECT_NOT_FOUND =                              EFFECT     | INVALID_USAGE | 0,
     EFFECT_VAR_NOT_FOUND =                          EFFECT     | INVALID_USAGE | 1,
@@ -239,6 +240,9 @@ export const ERRORS = {
         `Invalid effect global flag (expected a boolean but seen '${value}'). At ${pos}`,
     INVALID_EFFECT_TARGET_RANGE: (pos: string, value: unknown) =>
         `Invalid effect target range (expected { minZIndex, maxZIndex } with max > min but seen '${JSON.stringify(value)}'). At ${pos}`,
+    SHADER_CONFLICT: (pos: string, a: string, b: string) =>
+        `Shader target ranges conflict (${a} and ${b} intersect but neither contains the other, `
+        + `and neither is exclusive). At ${pos}`,
     EFFECT_NOT_FOUND: (pos: string) =>
         `Effect not found. At ${pos}`,
     EFFECT_VAR_NOT_FOUND: (name: string, pos: string) =>
