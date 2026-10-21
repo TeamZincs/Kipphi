@@ -119,6 +119,31 @@ describe("OperationList.onOperation", () => {
         expect(seen).toEqual(["do:/a.frag", "do:/b.frag"]);
     });
 
+    it("自定义容器只要重写 find 就能被穿透", () => {
+        const chart = makeChart();
+        const ops = new Op.OperationList(chart);
+        const seen: string[] = [];
+
+        class MyContainer extends Op.Operation {
+            constructor(public inner: Op.Operation) {
+                super();
+            }
+            override find(predicate: (operation: Op.Operation) => boolean): Op.Operation | null {
+                return super.find(predicate) ?? this.inner.find(predicate);
+            }
+            do(c: any) { this.inner.do(c); }
+            undo(c: any) { this.inner.undo(c); }
+        }
+
+        ops.onOperation(Op.ChartPropChangeOperation, (op) => seen.push(String(op.value)));
+        const inner = new Op.ChartPropChangeOperation(chart, "name", "deep");
+        ops.do(new MyContainer(inner));
+
+        expect(seen).toEqual(["deep"]);
+        expect(new MyContainer(inner).find(op => op === inner)).toBe(inner);
+        expect(new Op.ChartPropChangeOperation(chart, "name", "x").find(op => op === inner)).toBeNull();
+    });
+
     it("offOperation 之后不再通知", () => {
         const chart = makeChart();
         const ops = new Op.OperationList(chart);

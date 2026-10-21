@@ -442,10 +442,28 @@ list.onOperation(Op.JudgeLinePropChangeOperation, (op, direction) => {
 list.offOperation(Op.JudgeLinePropChangeOperation, listener);
 ```
 
-- 会**穿透**：`ComplexOperation` 的子操作、`UnionOperation` / `LazyOperation` 包装的操作
+- 会**穿透**容器操作：`ComplexOperation` 的子操作、`UnionOperation` / `LazyOperation` 包装的操作
 - 匹配用 `instanceof`，所以监听基类（比如 `Op.Operation`）能收到所有操作
 - 被 `rewrite` 合并掉的变更也会按 `do` 通知一次（那次变更确实生效了）
 - 通知发生在操作**生效之后**，回调里读到的是新状态；监听器抛错只会 `console.error`，不影响操作本身
+
+穿透靠的是 `Operation.find(predicate)`：返回自己内部（含自己）第一个满足条件的操作，没有返回 `null`。
+默认只检查自己，容器操作重写它——先测自己，再逐个问子操作；`onOperation` 就是靠一次这样的
+遍历把所有命中的操作收集起来的。
+
+```ts
+class Batch extends Op.Operation {
+    constructor(private inner: Op.Operation[]) { super(); }
+    override find(predicate: (op: Op.Operation) => boolean) {
+        return super.find(predicate)
+            ?? this.inner.reduce<Op.Operation | null>((found, op) => found ?? op.find(predicate), null);
+    }
+    do(chart: Chart) { this.inner.forEach(op => op.do(chart)); }
+    undo(chart: Chart) { [...this.inner].reverse().forEach(op => op.undo(chart)); }
+}
+```
+
+这样 `onOperation` 会顺着 `Batch` 找到里面每一层子操作，`new Batch([a, b]).find(op => op === a)` 也会返回 `a`。
 
 ### 用 `ComplexOperation` 组合多步改动
 

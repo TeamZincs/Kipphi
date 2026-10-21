@@ -131,25 +131,25 @@ export class OperationList extends EventTarget {
     /** 遍历操作树，给匹配的监听器发通知 */
     private notifyOperation(operation: Operation | undefined, direction: OperationDirection) {
         if (!operation || this.hooks.length === 0) return;
-        const visit = (op: Operation) => {
+
+        // 一次遍历把命中的（操作, 监听器）全收下来。predicate 恒返回 false，
+        // 这样 find 会走完整棵树——容器操作的 find 应当「先测自己，再逐个问子操作」。
+        const matches: { hook: OperationHook; operation: Operation }[] = [];
+        operation.find(op => {
             for (const hook of this.hooks) {
-                if (!(op instanceof hook.klass)) continue;
-                try {
-                    hook.listener(op, direction);
-                } catch (error) {
-                    // 监听器自己的问题不该影响操作本身
-                    console.error(error);
-                }
+                if (op instanceof hook.klass) matches.push({ hook, operation: op });
             }
-            if (op instanceof ComplexOperation) {
-                for (const sub of op.subOperations) visit(sub);
-            } else if (op instanceof UnionOperation) {
-                if (op.operation) visit(op.operation);
-            } else if (op instanceof LazyOperation) {
-                if (op.operation) visit(op.operation);
+            return false;
+        });
+
+        for (const { hook, operation: matched } of matches) {
+            try {
+                hook.listener(matched, direction);
+            } catch (error) {
+                // 监听器自己的问题不该影响操作本身
+                console.error(error);
             }
-        };
-        visit(operation);
+        }
     }
     undo() {
         const op = this.operations.pop()
@@ -306,6 +306,15 @@ export abstract class Operation {
     abstract do(chart: Chart): void
     abstract undo(chart: Chart): void
     rewrite(op: this, chart: Chart): boolean {return false;}
+    /**
+     * 在自己内部（含自己）查找操作，返回第一个让 `predicate` 为 `true` 的
+     *
+     * 找不到返回 `null`。默认只检查自己（没有内部操作）；容器操作重写它：
+     * 先用 `predicate(this)` 测自己，再逐个询问子操作。
+     */
+    find(predicate: (operation: Operation) => boolean): Operation | null {
+        return predicate(this) ? this : null;
+    }
     toString(): string {
         return this.constructor.name;
     }
@@ -340,6 +349,10 @@ export class LazyOperation<C extends new (...args: any[]) => any> extends Operat
         super();
         this.operationClass = operationClass;
         this.args = args;
+    }
+    override find(predicate: (operation: Operation) => boolean): Operation | null {
+        // do 之前还没实例化
+        return super.find(predicate) ?? this.operation?.find(predicate) ?? null;
     }
     do(chart: Chart) {
         this.operation = new this.operationClass(...this.args);
@@ -379,6 +392,9 @@ export class UnionOperation<T extends Operation | null> extends Operation {
             this.ineffective = true;
         }
     }
+    override find(predicate: (operation: Operation) => boolean): Operation | null {
+        return super.find(predicate) ?? this.operation?.find(predicate) ?? null;
+    }
     // 这样子写不够严密，如果要继承这个类，并且子操作需要谱面，就要重写这个方法的签名
     do(chart?: Chart) {
         // 需要谱面的子操作会重写本方法并收窄参数类型
@@ -414,6 +430,14 @@ export class ComplexOperation<T extends Operation[]> extends Operation {
         this.reflows = sub.reduce((prev, op) => prev | op.reflows, 0);
         this.updatesEditor = sub.some((op) => op.updatesEditor);
         this.comboDelta = sub.reduce((prev, op) => prev + op.comboDelta, 0);
+    }
+    override find(predicate: (operation: Operation) => boolean): Operation | null {
+        if (predicate(this)) return this;
+        for (const sub of this.subOperations) {
+            const found = sub.find(predicate);
+            if (found) return found;
+        }
+        return null;
     }
     // 这样子写不够严密，如果要继承这个类，并且子操作需要谱面，就要重写这个方法的签名
     do(chart?: Chart) {
