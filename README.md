@@ -573,6 +573,27 @@ for (const effect of active) {
 - 每个 uniform 的时间区间都被裁剪进特效自身的区间，直接 `getValueAt(beats)` 即可
 - 特效序列的 id 形如 `#${line}.fx`（`EFFECT_SEQUENCE_ID_PREFIX`），只是为了对齐 RPE 侧「序列归属某条线」的编号习惯，**与判定线无关**
 
+### 作用范围（PhiZone 的 `targetRange`）
+
+[PhiZone Player](https://github.com/PhiZone/Player) 给 Phira 补了一个可选字段，让一个特效只作用于 Z 轴上一段相邻的对象：
+
+```json
+{
+  "start": [293, 0, 1],
+  "end": [300, 0, 1],
+  "shader": "/example.glsl",
+  "targetRange": { "minZIndex": 3, "maxZIndex": 4 },
+  "vars": {}
+}
+```
+
+- `minZIndex` 含、`maxZIndex` 不含
+- `exclusive`（可选）：与另一个特效的范围**相交但互不包含**时，是否把交集「吞掉」归自己
+- `global` 为 `true` 时该字段无效
+- Z 序号是**各播放器自己的图层划分**，不能跨实现通用；kipphi 播放器里 `0` 是底图、`3`~`8` 是音符层、`9` 是谱面 UI、`10` 是只放帧率/时间的覆盖层
+
+kipphi 只负责**解析并保存**：`EffectStartNode.targetRange` 是 `PhiraTargetRange | null`，怎么解释交给播放器（多个范围交叠时谁先谁后也由播放器决定）。
+
 自定义着色器（Phira 约定：名字以 `/` 开头，指向谱面包内的文件）用 `chart.scanAllShaders()` 收集，返回 `Set<string>`（保留开头的 `/`，内置着色器不在其中），播放器可在加载阶段据此向谱面包索取文件。
 
 编辑走 `Operation`，和别的事件一样支持撤销重做：`EffectAddOperation` / `EffectRemoveOperation` / `EffectPropChangeOperation` / `EffectTimeChangeOperation` / `EffectMoveOperation` / `EffectVarChangeOperation` / `EffectVarRemoveOperation`。

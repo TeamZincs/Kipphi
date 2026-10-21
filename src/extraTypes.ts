@@ -1,4 +1,4 @@
-import { PhiraAnimVarESType, TimeT } from "./chartTypes";
+import { PhiraAnimVarESType, PhiraTargetRange, TimeT } from "./chartTypes";
 
 
 export interface PhiraExtraJson {
@@ -36,6 +36,8 @@ export interface PhiraAnimVarEvent<T extends PhiraAnimVarESType> {
  */
 export type PhiraEffectVars = { [name: string]: PhiraAnimVar<PhiraAnimVarESType> };
 
+export type { PhiraTargetRange };
+
 /**
  * Phira谱面特效
  *
@@ -55,6 +57,12 @@ export interface PhiraEffect {
     global?: boolean;
     /** 着色器uniform变量表，可缺省 */
     vars?: PhiraEffectVars;
+    /**
+     * 作用范围（PhiZone Player 的扩展），缺省表示整个谱面
+     *
+     * `global` 为 `true` 时该字段无效。
+     */
+    targetRange?: PhiraTargetRange;
 }
 
 export interface PhiraVideo {

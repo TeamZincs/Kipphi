@@ -34,6 +34,7 @@ import {
     type PhiraAnimVarEvent,
     type PhiraEffect,
     type PhiraEffectVars,
+    type PhiraTargetRange,
 } from "./extraTypes";
 
 import { CONST_EVALUATOR } from "./evaluator";
@@ -113,6 +114,12 @@ export class EffectStartNode extends EventStartNode<string> {
     /** 是否影响UI元素（连击、暂停按钮等） */
     global: boolean = false;
     /**
+     * 作用范围（PhiZone Player 的扩展），`null`表示整个谱面
+     *
+     * `global`为`true`时该字段无效。
+     */
+    targetRange: PhiraTargetRange | null = null;
+    /**
      * uniform变量表：变量名 -> 事件序列
      *
      * 每个序列的时间区间都被裁剪进本特效的`[start, end]`，
@@ -125,10 +132,17 @@ export class EffectStartNode extends EventStartNode<string> {
      * @param time 特效起始时间
      * @param shader 着色器名，空串表示没有特效
      * @param global 是否影响UI元素
+     * @param targetRange 作用范围，缺省为整个谱面
      */
-    constructor(time: TimeT, shader: string, global: boolean = false) {
+    constructor(
+        time: TimeT,
+        shader: string,
+        global: boolean = false,
+        targetRange: PhiraTargetRange | null = null
+    ) {
         super(time, shader);
         this.global = global;
+        this.targetRange = targetRange;
         // 段内着色器名恒定，缓动没有任何意义
         // @ts-expect-error 去哪那么多规矩啊
         this.evaluator = CONST_EVALUATOR;
@@ -193,7 +207,12 @@ export class EffectStartNode extends EventStartNode<string> {
         if (!TC.gt(effect.end, effect.start)) {
             throw err.EFFECT_END_NOT_AFTER_START(pos, effect.start, effect.end);
         }
-        const node = new EffectStartNode(effect.start, effect.shader, effect.global ?? PHIRA_EFFECT_DEFAULT_GLOBAL);
+        const node = new EffectStartNode(
+            effect.start,
+            effect.shader,
+            effect.global ?? PHIRA_EFFECT_DEFAULT_GLOBAL,
+            effect.targetRange ? { ...effect.targetRange } : null
+        );
         const vars = effect.vars ?? {};
         for (const name of Object.keys(vars)) {
             const animVar = PhiraEffectParser.parseAnimVar(vars[name], `${pos}.vars.${name}`, effect.start, effect.end);
@@ -220,13 +239,15 @@ export class EffectStartNode extends EventStartNode<string> {
             end: [...end.time] as TimeT,
             shader: this.value,
             global: this.global,
-            vars
+            vars,
+            ...(this.targetRange ? { targetRange: { ...this.targetRange } } : {})
         };
     }
 
     override clone(offset?: TimeT): EffectStartNode {
         const ret = super.clone(offset) as EffectStartNode;
         ret.global = this.global;
+        ret.targetRange = this.targetRange ? { ...this.targetRange } : null;
         ret.vars = new Map();
         for (const [name, seq] of this.vars) {
             ret.vars.set(name, EffectStartNode.cloneVarSequence(seq, offset));
@@ -533,6 +554,7 @@ export class EffectNodeSequence extends EventNodeSequence<string> {
         }
         node.value = EMPTY_EFFECT_SHADER;
         node.global = false;
+        node.targetRange = null;
         node.vars = new Map();
         // @ts-expect-error 常量求值器
         node.evaluator = CONST_EVALUATOR;
@@ -587,7 +609,8 @@ export class EffectNodeSequence extends EventNodeSequence<string> {
                 endTime: [...end.time] as TimeT,
                 shader: node.value,
                 global: node.global,
-                vars
+                vars,
+                ...(node.targetRange ? { targetRange: { ...node.targetRange } } : {})
             });
         }
         return {
@@ -724,7 +747,38 @@ export class PhiraEffectParser {
         }
         const global = typeof obj.global === "boolean" ? obj.global : PHIRA_EFFECT_DEFAULT_GLOBAL;
         const vars = this.parseVars(obj.vars, pos, start, end);
-        return { start, end, shader: obj.shader, global, vars };
+        const targetRange = this.parseTargetRange(obj.targetRange, `${pos}.targetRange`);
+        return {
+            start, end, shader: obj.shader, global, vars,
+            ...(targetRange ? { targetRange } : {})
+        };
+    }
+
+    /**
+     * 解析`targetRange`（PhiZone Player 的扩展）
+     *
+     * `global`为`true`时该字段无效，但这里仍然解析出来，
+     * 由使用方（播放器）决定要不要忽略。
+     *
+     * @returns 缺省或无效时返回`null`（无效时已warn）
+     */
+    static parseTargetRange(raw: unknown, pos: string): PhiraTargetRange | null {
+        if (raw === undefined || raw === null) {
+            return null;
+        }
+        if (typeof raw !== "object" || Array.isArray(raw)) {
+            err.INVALID_EFFECT_TARGET_RANGE(pos, raw).warn();
+            return null;
+        }
+        const obj = raw as Record<string, unknown>;
+        const min = obj.minZIndex;
+        const max = obj.maxZIndex;
+        if (typeof min !== "number" || typeof max !== "number"
+            || !Number.isFinite(min) || !Number.isFinite(max) || !(max > min)) {
+            err.INVALID_EFFECT_TARGET_RANGE(pos, raw).warn();
+            return null;
+        }
+        return { minZIndex: min, maxZIndex: max, exclusive: obj.exclusive === true };
     }
 
     /**
@@ -914,7 +968,8 @@ export class PhiraEffectParser {
                         this.varSeqToPhiraAnimVar(seqData)
                     ])
                 )
-                : {}
+                : {},
+            ...(data.targetRange ? { targetRange: { ...data.targetRange } } : {})
         };
     }
 

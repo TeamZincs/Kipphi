@@ -392,6 +392,30 @@ export type EventValueESType = string | number | RGB | PhiraAnimVarTuple
  *
  * @since 2.3.0
  */
+/**
+ * 特效的作用范围（PhiZone Player 对 Phira 的扩展）
+ *
+ * 限定一个特效只作用于 Z 轴上一段相邻的绘制对象。`global` 为 `true` 时该字段无效。
+ *
+ * 注意：Z 序号是**各播放器自己的图层划分**，不同实现之间并不通用，
+ * 只能按自己的图层约定来解释（kipphi 播放器里 0 是底图、3~8 是音符层、
+ * 9 是谱面 UI、10 是只放帧率/时间的覆盖层）。
+ *
+ * @since 3.0.0
+ */
+export interface PhiraTargetRange {
+    /** 最小 Z 序号，含 */
+    minZIndex: number;
+    /** 最大 Z 序号，不含 */
+    maxZIndex: number;
+    /**
+     * 与另一个特效的范围相交、但彼此都不包含对方时，是否把交集「吞掉」（归本特效）
+     *
+     * 缺省 `false`。
+     */
+    exclusive?: boolean;
+}
+
 export interface EffectEventDataKPA2 {
     /** 特效起始时间 */
     startTime: TimeT;
@@ -403,6 +427,8 @@ export interface EffectEventDataKPA2 {
     global: boolean;
     /** uniform变量表：变量名 -> 事件序列，可缺省 */
     vars?: { [name: string]: EventNodeSequenceDataKPA2<PhiraAnimVarESType> };
+    /** 作用范围（PhiZone Player 的扩展），可缺省；`global` 为 `true` 时无效 */
+    targetRange?: PhiraTargetRange;
 }
 
 /**

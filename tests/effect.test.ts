@@ -144,6 +144,54 @@ describe("PhiraEffectParser", () => {
     });
 });
 
+describe("targetRange（PhiZone 的扩展）", () => {
+    /** 走一遍解析器，再构建节点 */
+    const make = (targetRange: unknown) => {
+        const parsed = PhiraEffectParser.parseEffect({
+            start: [0, 0, 1],
+            end: [4, 0, 1],
+            shader: "/a.frag",
+            targetRange,
+        }, "effects[0]");
+        return EffectStartNode.fromPhiraEffect(parsed!);
+    };
+
+    it("解析并在互转时保留", () => {
+        const targetRange = { minZIndex: 3, maxZIndex: 4, exclusive: true };
+        expect(make(targetRange).targetRange).toEqual(targetRange);
+
+        // 走一遍序列，确认 dump 回 Phira 时也带得出去
+        const effects = PhiraEffectParser.parse([
+            { start: [0, 0, 1], end: [4, 0, 1], shader: "/a.frag", targetRange },
+        ]);
+        const sequences = EffectNodeSequence.fromPhiraEffects(effects, 30);
+        expect(EffectNodeSequence.toPhiraEffects(sequences)[0]!.targetRange).toEqual(targetRange);
+    });
+
+    it("exclusive 缺省为 false", () => {
+        expect(make({ minZIndex: 0, maxZIndex: 9 }).targetRange)
+            .toEqual({ minZIndex: 0, maxZIndex: 9, exclusive: false });
+    });
+
+    it("不写 targetRange 时为 null", () => {
+        expect(make(undefined).targetRange).toBeNull();
+    });
+
+    it("非法区间只忽略这一项，特效本身保留", () => {
+        const node = make({ minZIndex: 4, maxZIndex: 4 });
+        expect(node.targetRange).toBeNull();
+        expect(node.value).toBe("/a.frag");
+    });
+
+    it("clone 是深拷贝", () => {
+        const node = make({ minZIndex: 1, maxZIndex: 2 });
+        const copy = node.clone();
+        expect(copy.targetRange).toEqual({ minZIndex: 1, maxZIndex: 2, exclusive: false });
+        copy.targetRange!.minZIndex = 5;
+        expect(node.targetRange!.minZIndex).toBe(1);
+    });
+});
+
 describe("uniform variable sequences", () => {
     const FROM: [number, number, number] = [0, 0, 1];
     const TO: [number, number, number] = [4, 0, 1];
